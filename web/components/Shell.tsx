@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { refreshAll } from '@/lib/client';
 import { PERSONAS, personaOf, initials } from '@/lib/personas';
+import { PERSONA_EVENT } from '@/lib/usePersona';
 
 interface Session { persona: string; unlocked: boolean; mode: 'live' | 'local'; pinRequired: boolean }
 
@@ -21,6 +22,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     if (!r.ok) { setErr(j.message); return; }
     setErr('');
     setS(prev => (prev ? { ...prev, persona: j.persona, unlocked: j.unlocked } : prev));
+    window.dispatchEvent(new CustomEvent(PERSONA_EVENT, { detail: j.persona }));
     refreshAll();
   }
 

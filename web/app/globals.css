@@ -131,6 +131,8 @@ h3 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
 .tile.featured .btn { background: #fff; color: var(--ink); }
 .tile.lime { background: var(--lime); cursor: default; }
 .tile.lime:hover { transform: none; }
+.tiles-head { margin: 4px 0 -8px; font-size: 1.05rem; }
+.tile.learn { max-width: 560px; }
 .tile-top { display: flex; justify-content: space-between; align-items: center; }
 .tile-name { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .tile-amt { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }

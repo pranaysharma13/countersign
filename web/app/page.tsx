@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { PERSONAS, initials } from '@/lib/personas';
 import { refreshAll, useTables, type Row, type Tables } from '@/lib/client';
-import { money, HOLD_LABEL, daysUntil } from '@/lib/format';
+import { money, HOLD_LABEL, daysUntil, isSandbox } from '@/lib/format';
 
 const MONEY_HOLD = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING'];
 const SEVERITY = ['PROMPT_INJECTION', 'PAYEE_CHANGE_PENDING', 'PO_CEILING', 'PROPOSED_CHARGE', 'PRICE_VARIANCE', 'DUPLICATE_REVIEW'];
@@ -91,11 +91,12 @@ export default function Landing() {
 }
 
 function Preview({ t }: { t: Tables }) {
-  const invoices = t.invoice;
+  const invoices = t.invoice.filter(i => !isSandbox(i));
   const rev = (inv: Row) => t.invoice_revision.find(r => r.id === inv.active_revision_id);
-  const openHolds = t.hold.filter(h => h.status === 'open');
-  const holdsOf = (inv: Row) => openHolds.filter(h => h.revision_id === inv.active_revision_id);
   const unpaid = invoices.filter(i => i.payment_status !== 'settled');
+  const unpaidRevs = new Set(unpaid.map(i => i.active_revision_id));
+  const openHolds = t.hold.filter(h => h.status === 'open' && unpaidRevs.has(h.revision_id));
+  const holdsOf = (inv: Row) => openHolds.filter(h => h.revision_id === inv.active_revision_id);
   const asked = unpaid.reduce((s, i) => s + (Number(rev(i)?.balance_requested_cents) || 0), 0);
   const held = openHolds.filter(h => MONEY_HOLD.includes(h.code)).reduce((s, h) => s + (Number(h.amount_cents) || 0), 0);
   const caughtBills = unpaid.filter(i => holdsOf(i).length > 0).length;
@@ -139,8 +140,8 @@ function Preview({ t }: { t: Tables }) {
 
       <section className="bento bento-gauge">
         <div className="card-kicker">On hold until fixed</div>
-        <Gauge held={caughtBills} total={invoices.length} />
-        <p className="small muted bento-foot">Bills on hold until someone fixes them.</p>
+        <Gauge held={caughtBills} total={unpaid.length} />
+        <p className="small muted bento-foot">Open bills with something to fix before paying.</p>
       </section>
 
       {worst && (
@@ -202,7 +203,7 @@ function Gauge({ held, total }: { held: number; total: number }) {
   const on = total ? Math.round((held / total) * ticks) : 0;
   return (
     <div className="gauge">
-      <svg viewBox="0 0 200 110" role="img" aria-label={`${held} of ${total} bills on hold until someone fixes them`}>
+      <svg viewBox="0 0 200 110" role="img" aria-label={`${held} of ${total} open bills on hold until someone fixes them`}>
         {Array.from({ length: ticks + 1 }, (_, i) => {
           const a = Math.PI - (i / ticks) * Math.PI;
           const r1 = 78, r2 = i % 6 === 0 ? 96 : 92;

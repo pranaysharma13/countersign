@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { call, newId, useTables, type CallResult, type Row } from '@/lib/client';
 import { money, HOLD_LABEL } from '@/lib/format';
 import { HoldChips, Loading, Outcome } from '@/components/parts';
@@ -16,6 +16,8 @@ const KINDS = [
 
 type JobResult = { status?: string; invoice_number?: string; reason?: string; extraction?: string };
 const parse = (raw: unknown): Row => { try { return JSON.parse(String(raw || '{}')); } catch { return {}; } };
+const stamp = (v: unknown): number => Number(Array.isArray(v) ? v[0] : v) || 0;
+const MINE_KEY = 'cs_sneak_mine';
 
 export default function SneakCharge() {
   const { data: t, error } = useTables(['invoice', 'hold', 'job'], 800);
@@ -24,9 +26,13 @@ export default function SneakCharge() {
   const [note, setNote] = useState('');
   const [result, setResult] = useState<CallResult | null>(null);
   const [mine, setMine] = useState<string | null>(null);
+  const [mode, setMode] = useState<'live' | 'local' | null>(null);
+  useEffect(() => { fetch('/api/session').then(r => r.json()).then(s => setMode(s.mode)).catch(() => {}); }, []);
+  useEffect(() => { setMine(sessionStorage.getItem(MINE_KEY)); }, []);
 
   if (!t) return <Loading error={error} />;
-  const jobs = [...t.job.filter(j => j.kind === 'sneak_charge')].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+  const offline = mode === 'local';
+  const jobs = [...t.job.filter(j => j.kind === 'sneak_charge')].sort((a, b) => stamp(b.created_at) - stamp(a.created_at));
   const chosen = KINDS.find(k => k.id === kind)!;
   // The sandbox invoice a submission became (its number is in the job result), and the holds the checks opened.
   const outcome = (job: Row | undefined) => {
@@ -63,7 +69,7 @@ export default function SneakCharge() {
               payload_json: JSON.stringify({ kind, amount_cents: Number.isFinite(cents) ? cents : 0, note }),
             }, { asPublic: true });
             setResult(r);
-            if (r.outcome === 'ok') setMine(id);
+            if (r.outcome === 'ok') { setMine(id); sessionStorage.setItem(MINE_KEY, id); }
           }}>
             <label className="f">Kind of charge
               <select value={kind} onChange={e => setKind(e.target.value as typeof kind)} aria-label="Kind of charge">
@@ -77,7 +83,13 @@ export default function SneakCharge() {
               <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Optional. Hidden instructions are ignored." />
             </label>
             <p className="small muted">Usually opens: {HOLD_LABEL[chosen.hold] ?? chosen.hold}. The checks decide.</p>
-            <button className="btn" type="submit">Submit as a judge</button>
+            {offline && (
+              <div className="notice stop" role="status">
+                This copy runs on local demo data, so there is no checker to read a submission. Set DATA_SOURCE=live in
+                web/.env.local and start the Python worker.
+              </div>
+            )}
+            <button className="btn" type="submit" disabled={offline}>Submit as a judge</button>
             <Outcome r={result} />
           </form>
         </section>
@@ -91,10 +103,12 @@ export default function SneakCharge() {
                   <p style={{ marginTop: 0 }}><strong>Judge sandbox</strong> · {my.inv.invoice_number} · not paid
                     {my.r.extraction ? <span className="small muted"> · reading: {my.r.extraction}</span> : null}</p>
                   {my.holds.length ? <HoldChips holds={my.holds} /> : <p className="muted" style={{ margin: 0 }}>No holds: the checks found nothing wrong.</p>}
-                  <p style={{ marginBottom: 0 }}><Link href={`/invoices/${my.inv.id}`}>Open {my.inv.invoice_number}</Link></p>
+                  <Link className="btn" style={{ marginTop: 12 }} href={`/invoices/${my.inv.id}`}>See what it caught on {my.inv.invoice_number}</Link>
                 </>
               ) : my.r.reason ? <p className="muted" style={{ margin: 0 }}>{my.r.reason}</p>
-              : <p className="muted" style={{ margin: 0 }}>Countersign is reading it…</p>}
+              : <p className="muted" style={{ margin: 0 }}>
+                  {myJob.status === 'done' ? 'Checking it against the quote and purchase order…' : 'Reading the invoice (live AI read, a few seconds)…'}
+                </p>}
           </section>
           <section className="sheet pad" aria-labelledby="tries">
             <h2 id="tries">Submissions</h2>
@@ -105,7 +119,9 @@ export default function SneakCharge() {
                 const o = outcome(j);
                 return (
                   <li key={j.id}>
-                    <span className="t">{o.inv ? o.inv.invoice_number : j.status}</span>
+                    <span className="t">
+                      {o.inv ? <Link href={`/invoices/${o.inv.id}`}>{o.inv.invoice_number}</Link> : j.status === 'done' ? 'checking' : 'reading'}
+                    </span>
                     <span>{KINDS.find(k => k.id === p.kind)?.label ?? p.kind} {p.amount_cents ? money(p.amount_cents) : ''}
                       {p.note ? <div className="small muted">{p.note}</div> : null}
                       {o.holds.length ? <div className="small">{o.holds.map(h => HOLD_LABEL[h.code] ?? h.code).join(' · ')}</div> : null}
