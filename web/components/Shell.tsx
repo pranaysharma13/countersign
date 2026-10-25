@@ -6,8 +6,8 @@ import { refreshAll } from '@/lib/client';
 
 const PERSONAS = [
   { id: 'owner', label: 'Dana Marlow, owner' },
-  { id: 'purchasing', label: 'Jordan Reyes, purchasing' },
-  { id: 'receiver', label: 'Ana Ruiz, superintendent' },
+  { id: 'purchasing', label: 'Jordan Pike, purchasing' },
+  { id: 'receiver', label: 'Luis Ortega, superintendent' },
   { id: 'bookkeeper', label: 'Sam Okafor, bookkeeper' },
 ];
 
@@ -31,6 +31,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   async function reset() {
+    if (s?.mode === 'live') {
+      const r = await fetch('/api/call', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reducer: 'enqueue_job', args: { id: `job_reset_${Date.now()}`, kind: 'reset_demo', payload_json: '{}' } }),
+      }).then(x => x.json());
+      setErr(r.outcome === 'ok' || r.outcome === 'duplicate' ? 'Reset queued for the worker.' : (r.message || 'Could not queue reset'));
+      refreshAll();
+      return;
+    }
     const r = await fetch('/api/reset', { method: 'POST' }).then(x => x.json());
     setErr(r.ok ? '' : r.message);
     refreshAll();
@@ -38,9 +47,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   const nav = [
     { href: '/', label: 'Work queue', on: path === '/' },
-    { href: '/invoices/inv_1042', label: 'Invoice BM-1042', on: path === '/invoices/inv_1042' },
-    { href: '/invoices/inv_1042/approve', label: 'Approval review', on: path.endsWith('/approve') },
-    { href: '/purchases/pur_2201', label: 'Purchase PO-2201', on: path.startsWith('/purchases') },
+    { href: '/invoices/inv_bm23104', label: 'Invoice BM-23104', on: path === '/invoices/inv_bm23104' },
+    { href: '/invoices/inv_bm23104/approve', label: 'Approval review', on: path.endsWith('/approve') },
+    { href: '/purchases/pur_baymix_oak', label: 'Purchase MF-PO-1031', on: path.startsWith('/purchases') },
+    { href: '/changes', label: 'Change requests', on: path.startsWith('/changes') },
+    { href: '/receive/inv_bm23104', label: 'Confirm receipt', on: path.startsWith('/receive') },
+    { href: '/sneak', label: 'Sneak a charge', on: path.startsWith('/sneak') },
   ];
 
   return (
@@ -70,7 +82,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <button className="btn secondary" type="submit">Unlock</button>
             </form>
           )}
-          {s?.mode === 'local' && s.persona === 'owner' && <button className="btn secondary" onClick={reset}>Reset demo</button>}
+          {s?.persona === 'owner' && <button className="btn secondary" onClick={reset}>{s.mode === 'live' ? 'Queue live reset' : 'Reset demo'}</button>}
           {err && <div className="notice stop" role="alert">{err}</div>}
         </div>
       </aside>

@@ -1,12 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { use, useState } from 'react';
-import { useTables, call, newId, type Row, type Tables, type CallResult } from '@/lib/client';
-import { money, day, when, time, ids, parse, qty, HOLD_LABEL, ROLE_LABEL } from '@/lib/format';
-import { StatusStrip, Evidence, Loading, Outcome } from '@/components/parts';
+import { useTables, call, type Row, type Tables, type CallResult } from '@/lib/client';
+import { money, day, time, ids, HOLD_LABEL, ROLE_LABEL, assessmentLines } from '@/lib/format';
+import { StatusStrip, Evidence, Loading, Outcome, ReceiptForm } from '@/components/parts';
 
 const TABLES = ['invoice', 'invoice_revision', 'invoice_line', 'assessment', 'hold', 'supplier', 'supplier_contact', 'purchase',
-  'project', 'document', 'source_fragment', 'email_message', 'outbox', 'agent_step', 'audit_log', 'receipt_attestation',
+  'project', 'document', 'source_file', 'source_fragment', 'email_message', 'outbox', 'agent_step', 'audit_log', 'receipt_attestation',
   'change_request', 'proposal', 'extraction_run'];
 const ACTION_WORDS: Record<string, string> = {
   record_invoice: 'recorded the invoice', record_invoice_revision: 'recorded a revision', record_invoice_line: 'recorded a line',
@@ -19,11 +19,6 @@ const ACTION_WORDS: Record<string, string> = {
 };
 const OWNER_RESOLVABLE = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING', 'DUPLICATE_REVIEW',
   'EXTRACTION_REVIEW', 'CONTRACT_REVIEW', 'PROMPT_INJECTION', 'SUPPLIER_RISK'];
-
-interface DetailLine {
-  line: string; claimed_cents: number; accepted_cents: number; pending_cents: number; variance_cents?: number;
-  calculation: string; fragment_ids: string[]; status: string; uncertainty?: string;
-}
 
 export default function InvoiceCase({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -68,7 +63,7 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
           {assessment ? <Reconciliation a={assessment} rev={rev!} /> : <div className="sheet pad muted">Countersign is still checking this invoice.</div>}
           {assessment && <Ledger a={assessment} t={t} />}
           <Holds holds={holds} t={t} />
-          <ReceiptPanel inv={inv} rev={rev} t={t} />
+          <ReceiptForm inv={inv} rev={rev} t={t} />
           <Revisions revs={revs} active={inv.active_revision_id} />
         </div>
         <div className="stack">
@@ -107,8 +102,9 @@ function Reconciliation({ a, rev }: { a: Row; rev: Row }) {
 }
 
 function Ledger({ a, t }: { a: Row; t: Tables }) {
-  const lines = parse<DetailLine[]>(a.details_json, []);
-  const total = (k: keyof DetailLine) => lines.reduce((s, l) => s + (Number(l[k]) || 0), 0);
+  const lines = assessmentLines(a.details_json);
+  const total = (k: 'claimed_cents' | 'accepted_cents' | 'pending_cents' | 'variance_cents') =>
+    lines.reduce((s, l) => s + (Number(l[k]) || 0), 0);
   return (
     <section className="sheet" aria-labelledby="lines">
       <div className="pad" style={{ paddingBottom: 0 }}>
@@ -180,48 +176,6 @@ function Holds({ holds, t }: { holds: Row[]; t: Tables }) {
           )}
         </div>
       ))}
-      <Outcome r={result} />
-    </section>
-  );
-}
-
-function ReceiptPanel({ inv, rev, t }: { inv: Row; rev?: Row; t: Tables }) {
-  const material = t.invoice_line.filter(l => l.revision_id === rev?.id && l.kind === 'material');
-  const billed = material.reduce((s, l) => s + l.quantity_milli, 0);
-  const unit = material[0]?.unit ?? 'cy';
-  const atts = t.receipt_attestation.filter(a => a.invoice_id === inv.id);
-  const [q, setQ] = useState('');
-  const [reason, setReason] = useState('');
-  const [result, setResult] = useState<CallResult | null>(null);
-  return (
-    <section className="sheet pad" aria-labelledby="receipt">
-      <h2 id="receipt">Receipt</h2>
-      <p className="small" style={{ marginTop: 0 }}>
-        Countersign can't see what was delivered. Receipt is a signed statement by the superintendent, labeled as manually confirmed.
-        {billed > 0 && <> Billed: <strong>{qty(billed, unit)}</strong>.</>}
-      </p>
-      {atts.map(a => (
-        <div key={a.id} className="notice ok small" style={{ marginBottom: 8 }}>
-          <strong>{a.label.replace('_', ' ').toLowerCase()}</strong>: {qty(a.quantity_milli, a.unit)} ({a.scope}). “{a.reason}” {ROLE_LABEL[a.attested_by_role]}, {when(a.created_at)}
-        </div>
-      ))}
-      {inv.receipt_status !== 'manually_confirmed' && (
-        <form className="row" onSubmit={async e => {
-          e.preventDefault();
-          setResult(await call('attest_receipt', {
-            id: newId('att'), invoice_id: inv.id, scope: 'All deliveries on this invoice',
-            quantity_milli: Math.round(Number(q) * 1000), unit, reason,
-          }));
-        }}>
-          <label className="f" style={{ width: 130 }}>Quantity received
-            <input type="number" min="0" step="0.001" value={q} onChange={e => setQ(e.target.value)} placeholder={billed ? String(billed / 1000) : ''} />
-          </label>
-          <label className="f" style={{ flex: 1, minWidth: 200 }}>How you know
-            <input type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Checked against the pour log" />
-          </label>
-          <button className="btn secondary" type="submit" disabled={!q || !reason.trim()} style={{ alignSelf: 'flex-end' }}>Confirm receipt (superintendent)</button>
-        </form>
-      )}
       <Outcome r={result} />
     </section>
   );

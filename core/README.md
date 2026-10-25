@@ -133,8 +133,8 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 
 ## Known gaps (as of this commit)
 
-- Step D (web side): the upload/email intake endpoint and file preview for v2. Audit export.
+- File preview for the nine BayMix documents: `GET /` lists them and `GET /files/{source_file_id}` serves the PDF or `.eml` from the seed when `storage_path` is empty. Audit export is still open.
+- Judge page: `sneak_charge` opens the matching hold on the active revision and never pays.
 - A first real Droid run (needs `FACTORY_API_KEY`), the citation-backed "why?" explanation (a separate call that can't change amounts), and a small call that reads the fuel-surcharge parameters for the fuel variant.
-- Variants: scoped amendment, fuel surcharge (Apify diesel index), supplier risk (CRS), prompt injection on supplier documents, judge page.
+- Variants: scoped amendment, fuel surcharge (Apify diesel actor still unset — license actor too), supplier risk (CRS sandbox keys are wired; mapping of the live BLJ payload is still coarse).
 - Settlement decisions on disputed lines (`decide_disputed_line`, CONTRACT v2.2): next, now that step B's core works. Until then, money holds clear only through a corrected invoice.
-- CRS business-report mapping and the Apify Actors are still to come (`integrations/`).
