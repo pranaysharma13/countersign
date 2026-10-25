@@ -394,7 +394,7 @@ function Clarifications({ inv, t, mode }: { inv: Row; t: Tables; mode: string | 
           {o.status === 'draft' && (
             <div className="row" style={{ marginTop: 10 }}>
               <button className="btn" onClick={async () => setResult(await call('approve_outbox', { id: o.id }))}>Send to supplier</button>
-              <span className="small muted">Countersign wrote this draft. Only purchasing or the owner can send it.</span>
+              <span className="small muted">Clerk wrote this draft. Only purchasing or the owner can send it.</span>
             </div>
           )}
         </div>
@@ -442,7 +442,7 @@ function AgentSteps({ wi, t }: { wi: string; t: Tables }) {
   if (!steps.length) return null;
   return (
     <section aria-labelledby="steps">
-      <h2 id="steps">What Countersign did</h2>
+      <h2 id="steps">What Clerk did</h2>
       <ol className="timeline">
         {steps.map(s => (
           <li key={s.id}><span className="t">{time(s.at)}</span>

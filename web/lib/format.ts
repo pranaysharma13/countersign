@@ -115,7 +115,7 @@ export const HOLD_LABEL: Record<string, string> = {
   SUPPLIER_RISK: 'Supplier flag',
 };
 export const HOLD_DETAIL: Record<string, string> = {
-  PROMPT_INJECTION: 'This PDF included a line written for an automated system, not for a person. Countersign treated it as printed text and did not follow it. The line items still stand on their own.',
+  PROMPT_INJECTION: 'This PDF included a line written for an automated system, not for a person. Clerk treated it as printed text and did not follow it. The line items still stand on their own.',
   PAYEE_CHANGE_PENDING: 'They asked us to pay a different bank account than the one already on file.',
   PO_CEILING: 'The purchase order has a cap. This bill goes over it.',
   PROPOSED_CHARGE: 'This extra was mentioned. Nobody agreed to it in the app.',
@@ -148,7 +148,7 @@ export function safeReason(text: string): string {
 }
 
 export const ROLE_LABEL: Record<string, string> = {
-  owner: 'Owner', purchasing: 'Buyer', receiver: 'Site', bookkeeper: 'Books', agent: 'Countersign',
+  owner: 'Owner', purchasing: 'Buyer', receiver: 'Site', bookkeeper: 'Books', agent: 'Clerk',
   gateway: 'Bank transfer', sync: 'Inbox', supplier: 'Supplier', admin: 'Setup', '': '—',
 };
 
