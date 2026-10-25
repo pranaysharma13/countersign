@@ -367,7 +367,21 @@ def test_crs_public_records_open_supplier_risk_through_the_pipeline(tmp_path):
     assert len(s.rows("hold", code="SUPPLIER_RISK")) == 1
 
 
-def test_a_supplier_with_no_public_records_opens_no_risk_hold(opening, tmp_path):
-    receive(opening, INVOICE_R1, tmp_path)
-    worker.drain(opening)
+def test_a_supplier_with_no_public_records_opens_no_risk_hold(opening):
     assert not opening.rows("hold", code="SUPPLIER_RISK")  # BayMix's test identity has none
+
+
+def test_a_crs_call_that_fails_holds_instead_of_passing(tmp_path, monkeypatch):
+    """Live CRS configured but unreachable: crs.py falls back to the mock table, which says "no records". That's a
+    check that didn't run, so the pipeline holds (fail safe) rather than treating BayMix as clean."""
+    from countersign.integrations import crs
+    monkeypatch.setattr(crs, "business_report", lambda ref: {"liens": [], "judgments": [], "bankruptcies": [],
+                                                             "crs_ref": ref, "source": "mock_fallback"})
+    s = FakeStore()
+    seed_setup(s)
+    for doc in (QUOTE, PO, WEEKEND_1, WEEKEND_2, WEEKEND_3, WAITING_1, INVOICE_R1):
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    hold = s.rows("hold", code="SUPPLIER_RISK")
+    assert len(hold) == 1 and hold[0]["status"] == "open" and "couldn't be reached" in hold[0]["reason"]
+    assert json.loads(hold[0]["evidence_json"])["source"] == "mock_fallback"

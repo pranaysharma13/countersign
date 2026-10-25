@@ -146,7 +146,7 @@ One Droid session per invoice revision, inside that invoice's `process_document`
 
 - Only the CRS sandbox's **provided test identities** (each fictional supplier has a `crs_ref` like `crs_test_business_02`).
 - What we use: business public records (liens, judgments, bankruptcies). Any record opens `SUPPLIER_RISK` for the owner. Nothing is decided automatically against the supplier.
-- When: the pipeline asks for every invoice it records. The hold's reason and evidence say whether the data is mock or live.
+- When: the pipeline asks for every invoice it records. The hold's reason and evidence say whether the data is mock or live. If live CRS is set up but the call fails, the invoice is held too ("CRS couldn't be reached"), never treated as clean. The judge page's sandbox supplier has no CRS identity, so it isn't checked.
 - Today it's **mock**: the sandbox credentials and the Postman collection with the business-report endpoint haven't arrived, so `core/countersign/integrations/crs.py` uses a small table of the test identities. The live call and its field mapping are a placeholder until then.
 
 ## Known limitations
