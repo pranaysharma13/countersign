@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "build:local": "node scripts/build-local.mjs",
+    "gen": "python3 scripts/gen_reducer_args.py"
   },
   "dependencies": {
     "spacetimedb": "2.13.0"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
   }

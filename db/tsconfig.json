@@ -9,5 +9,5 @@
     "esModuleInterop": true,
     "types": []
   },
-  "include": ["src", "test"]
+  "include": ["src", "test", "local"]
 }
