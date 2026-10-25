@@ -252,7 +252,7 @@ Format: `name(args in order)` — allowed roles — effect. `request_id` is alwa
 - `finish_job(request_id, job_id, ok, result_json, error)` — the claimer — → `done`/`failed`. For `scam_submit`/`legit_submit`, `result_json` includes `{"work_item_id"}` so the judge's phone can follow it.
 
 ### 4.6 Bank changes — P1
-- `request_bank_change(request_id, id, sub_id, new_account_ref, new_last4, new_owner_name, requested_via)` — `sync`, `agent` — creates `bank_change` (`pending`), a work item of kind `bank_change`, and a `bank_change` proposal.
+- `request_bank_change(request_id, id, sub_id, new_account_ref, new_last4, new_owner_name, requested_via)` — `sync`, `agent` — creates `bank_change` (`pending`), a work item `wi_<id>` of kind `bank_change` (state `held`, `entity_id` = the bank change id), and a proposal `prop_<id>` of kind `bank_change` (`payee_account_ref` = the new account).
 - `record_verification(request_id, id, bank_change_id, method, result, detail)` — `agent`
 - `decide_proposal` on a `bank_change` proposal, approve → **denied unless both `callback_phone_on_file` and `crs_idv` have a `pass`**; otherwise updates the sub's bank fields (the only path), bank change `approved`.
 
@@ -311,5 +311,10 @@ Root `.env` (Python reads it; see `.env.example`). The web uses `web/.env.local`
 
 ---
 
-## 7. Changelog
+## 7. Reference implementation
+
+`core/countersign/fake_store.py` is a runnable Python copy of these rules, used for Python tests before the real module is up. If the module and the fake disagree, this file decides; raise it in team chat.
+
+## 8. Changelog
 - v1 — initial contract.
+- v1 clarification — §4.6: IDs of the work item and proposal that `request_bank_change` creates.
