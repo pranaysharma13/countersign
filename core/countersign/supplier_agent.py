@@ -22,7 +22,8 @@ from typing import Any
 
 from . import reducers as R
 from .clarify import disputed, outbox_id, recipient, subject
-from .commercial import CHECKS, Assessment, InvoiceBundle, _run, assess, assess_line, bundle_from_store, effective_classification
+from .commercial import (CHECKS, Assessment, InvoiceBundle, _run, assess, assess_line, blocking_holds, bundle_from_store,
+                         effective_classification)
 from .config import settings
 from .ids import hold_id
 from .money import fmt
@@ -247,6 +248,8 @@ class V2Tools:
         latest = max(self.store.rows("assessment", revision_id=a.revision_id), key=lambda r: r["version"], default=None)
         if latest is None or latest["fingerprint"] != a.fingerprint:
             return {"proposed": False, "reason": "the recorded assessment is out of date; it will be reassessed first"}
+        if blocking_holds(a):
+            return {"proposed": False, "reason": f"not while holds are open ({', '.join(sorted(blocking_holds(a)))}): {a.next_action}"}
         if a.proposed_payment_cents <= 0:
             return {"proposed": False, "reason": f"the assessment proposes no payment: {a.next_action}"}
         pid = propose_payment(self.store, b, a, latest["id"])

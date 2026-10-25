@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { listInbox, liveTokens } from '@/lib/server/gmail';
+import { GmailError, clearTokens, listInbox, liveTokens } from '@/lib/server/gmail';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +10,10 @@ export async function GET() {
     const letters = await listInbox(t.access_token);
     return NextResponse.json({ letters, email: t.email });
   } catch (e) {
-    return NextResponse.json({ letters: [], email: '', error: e instanceof Error ? e.message : 'gmail_failed' }, { status: 502 });
+    if (e instanceof GmailError) {
+      if (e.reconnect) await clearTokens();
+      return NextResponse.json({ letters: [], email: '', error: e.message, code: e.code }, { status: e.status });
+    }
+    return NextResponse.json({ letters: [], email: '', error: 'Could not read Gmail.' }, { status: 502 });
   }
 }

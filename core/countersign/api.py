@@ -1,22 +1,30 @@
-"""Small HTTP API on the demo laptop (port 8000): upload a bill PDF, preview stored files, export an invoice's audit.
+"""Small HTTP API on the demo laptop (port 8000): upload a bill PDF, take in a received email (`POST /intake`), preview
+stored files, export an invoice's audit.
 
 Everything else goes through SpacetimeDB. Run: uv run --project core uvicorn countersign.api:app --port 8000
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 from pathlib import Path
+from typing import Literal
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+import anthropic
+import httpx
+
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
+from pydantic import BaseModel, Field
 
-from . import audit_export
+from . import audit_export, intake, why
 from . import reducers as R
 from .config import FILES_DIR
 from .ids import sha8, sha256_hex
-from .store import get_store, one
+from .store import StoreError, get_store, one
 from .supplier_docs import file_bytes
 from .companion_world import COMPANION_DOCS
 from .sandbox import SANDBOX_DOCS
@@ -108,6 +116,39 @@ async def upload(file: UploadFile = File(...), from_address: str = Form(""), sub
     return {"work_item_id": wi_id, "source_file_id": src_id}
 
 
+class MailIn(BaseModel):
+    source: Literal["gmail"]
+    message_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    raw_base64url: str = Field(max_length=56 * 1024 * 1024)  # 40 MB decoded
+    received_at_iso: str = Field("", max_length=40)
+
+
+@app.post("/intake")
+def intake_mail(mail: MailIn, x_countersign_intake: str = Header("")) -> dict:
+    """One received email (Gmail's `format=raw`), sent by the web server when a person presses Import. Recorded as
+    the sync role: the body becomes one document, each PDF attachment another, and each is queued for reading.
+    Mail is data: nothing in it is followed or fetched. Sending the same message again records nothing new.
+
+    The `X-Countersign-Intake` header can't be sent cross-site without a CORS preflight, which only the web app's
+    origin passes, so another page in the browser can't post mail here."""
+    if x_countersign_intake != "1":
+        raise HTTPException(403, "missing X-Countersign-Intake header")
+    try:
+        raw = base64.urlsafe_b64decode(mail.raw_base64url + "=" * (-len(mail.raw_base64url) % 4))
+    except (binascii.Error, ValueError):
+        raise HTTPException(400, "the message isn't valid base64url") from None
+    try:
+        result = intake.ingest_mail(store, raw, {"source": mail.source, f"{mail.source}_message_id": mail.message_id},
+                                    mail.received_at_iso, files_dir=FILES_DIR)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from None
+    except (StoreError, httpx.HTTPError) as e:
+        raise HTTPException(503, f"Couldn't reach SpacetimeDB to record the email ({type(e).__name__})") from None
+    except RuntimeError as e:  # the module refused a record
+        raise HTTPException(502, str(e)) from None
+    return {"source": mail.source, "message_id": mail.message_id, **result}
+
+
 _MEDIA = {".pdf": "application/pdf", ".eml": "message/rfc822"}
 
 
@@ -150,3 +191,15 @@ def invoice_audit(invoice_id: str, fmt: str = Query("json", alias="format", patt
         return Response(content=audit_export.to_csv(export), media_type="text/csv",
                         headers={"Content-Disposition": f'attachment; filename="audit_{invoice_id}.csv"'})
     return export
+
+
+@app.get("/invoices/{invoice_id}/why", response_model=None)
+def invoice_why(invoice_id: str, line: str = "", hold: str = ""):
+    """A cited explanation of one line or one hold, from its own source documents. Read-only: it can't change
+    amounts, holds or approvals."""
+    try:
+        return why.explain(store, invoice_id, line_id=line, hold_id=hold)
+    except why.NotFound as e:
+        raise HTTPException(404, str(e)) from None
+    except anthropic.APIError as e:
+        raise HTTPException(502, f"Couldn't get an explanation from Claude right now ({type(e).__name__})") from None

@@ -59,21 +59,21 @@ export default function Landing() {
 
           <section className="home-people" aria-labelledby="who">
             <div className="home-people-head">
-              <h2 id="who">Who is opening the books?</h2>
+              <h2 id="who">Open the books</h2>
               <span className="small muted">Demo company · no Google login</span>
             </div>
             <div className="people">
-              {PERSONAS.map((p, i) => (
+              {PERSONAS.filter(p => p.id === 'owner').map(p => (
                 <button
                   key={p.id}
                   type="button"
-                  className={`person${i === 0 ? ' featured' : ''}`}
+                  className="person featured"
                   disabled={busy !== null}
                   onClick={() => enter(p.id)}
                 >
                   <span className="avatar">{initials(p.name)}</span>
                   <span className="person-body">
-                    <span className="person-name">{p.name} <span className="chip idle">{p.role}</span></span>
+                    <span className="person-name">{p.name}</span>
                     <span className="person-does">{busy === p.id ? 'Opening…' : p.does}</span>
                   </span>
                   <span className="person-go" aria-hidden="true">→</span>

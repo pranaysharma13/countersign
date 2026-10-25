@@ -7,11 +7,6 @@ export const PERSONAS = [
 
 export type PersonaId = (typeof PERSONAS)[number]['id'];
 
-export function personaLabel(id: string): string {
-  const p = PERSONAS.find(x => x.id === id);
-  return p ? `${p.name}, ${p.role.toLowerCase()}` : id;
-}
-
 export function personaOf(id: string) {
   return PERSONAS.find(x => x.id === id);
 }

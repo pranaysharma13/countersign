@@ -698,6 +698,12 @@ def assess(b: InvoiceBundle) -> Assessment:
         next_owner_role=owner, fingerprint=fingerprint(b), inputs=input_digest(b))
 
 
+def blocking_holds(a: Assessment) -> set[str]:
+    """Holds that would block approval. On a partially disputed invoice the money holds still listed are the
+    ones the owner settled ("pay agreed, dispute the rest"), which the module keeps `disputed`, not open."""
+    return set(a.hold_amounts()) - (MONEY_HOLDS if a.commercial_status == "partially_disputed" else set())
+
+
 def ready_to_post_bill(a: Assessment) -> bool:
     """CONTRACT §9.6: the bill is booked only once it's commercially accepted and receipt is attested.
     A partially disputed invoice is booked at what's authorised (§9.9)."""

@@ -8,11 +8,12 @@ const STATUS: Record<string, Record<string, [string, Tone]>> = {
   commercial: {
     pending: ['Checking', 'idle'], matches: ['Matches the order', 'ok'],
     differences_under_review: ['Does not match', 'hold'], contract_review: ['Needs a look', 'hold'],
+    partially_disputed: ['Agreed part only', 'hold'],
   },
   receipt: { not_required: ['Not needed', 'ok'], required: ['Not confirmed', 'hold'], manually_confirmed: ['Confirmed', 'ok'] },
   payee: { verified: ['Checked', 'ok'], change_pending: ['New account', 'stop'], unverified: ['Not checked', 'stop'] },
   approval: { none: ['Waiting', 'idle'], approved: ['Approved', 'ok'], stale: ['Out of date', 'hold'], rejected: ['Rejected', 'stop'] },
-  payment: { not_ready: ['Not yet', 'idle'], ready: ['Ready', 'act'], submitted: ['Sending', 'act'], settled: ['Paid', 'ok'], failed: ['Failed', 'stop'] },
+  payment: { not_ready: ['Not yet', 'idle'], ready: ['Ready', 'act'], submitted: ['Sending', 'act'], settled: ['Paid', 'ok'], partially_settled: ['Agreed part paid', 'hold'], failed: ['Failed', 'stop'] },
 };
 
 export function Status({ kind, value }: { kind: keyof typeof STATUS; value: string }) {

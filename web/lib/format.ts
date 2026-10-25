@@ -1,3 +1,5 @@
+import type { Row } from './client';
+
 // Money is integer cents end to end; formatting is the only place it becomes text.
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 export const money = (cents: number | null | undefined) => (cents == null ? '—' : usd.format(cents / 100));
@@ -69,7 +71,7 @@ export const parse = <T,>(json: string, fallback: T): T => { try { return JSON.p
 
 /** Assessment details: the old local seed stored a line array; Python's seed stores `{ lines: [...] }` with `description`. */
 export interface AssessmentLine {
-  line: string; claimed_cents: number; accepted_cents: number; pending_cents: number; variance_cents: number;
+  line_id: string; line: string; claimed_cents: number; accepted_cents: number; pending_cents: number; variance_cents: number;
   calculation: string; fragment_ids: string[]; status: string; uncertainty?: string;
 }
 export function assessmentLines(detailsJson: string): AssessmentLine[] {
@@ -80,6 +82,7 @@ export function assessmentLines(detailsJson: string): AssessmentLine[] {
     const l = (row && typeof row === 'object') ? row as Record<string, unknown> : {};
     const status = String(l.status ?? '');
     return {
+      line_id: String(l.line_id ?? ''),
       line: String(l.line ?? l.description ?? ''),
       claimed_cents: Number(l.claimed_cents) || 0,
       accepted_cents: Number(l.accepted_cents) || 0,
@@ -153,10 +156,25 @@ export interface BillLike {
   approval_status: string;
 }
 
+/** A table row read as a bill: a missing or non-string field reads as '' (rows come from any data source). */
+function asBill(row: BillLike | Row): BillLike {
+  const s = (v: unknown) => (typeof v === 'string' ? v : '');
+  return {
+    next_owner_role: s(row.next_owner_role), next_action: s(row.next_action), payment_status: s(row.payment_status),
+    commercial_status: s(row.commercial_status), approval_status: s(row.approval_status),
+  };
+}
+
 /** One sentence a builder can read. Hold codes stay internal. */
-export function billStory(inv: BillLike | Record<string, any>, holds: Array<{ code: string } | Record<string, any>>): string {
+/** Hold codes from hold rows; a row without a string code contributes nothing. */
+const holdCodes = (holds: readonly ({ code: string } | Row)[]) =>
+  new Set(holds.map(h => h.code).filter((c): c is string => typeof c === 'string'));
+
+export function billStory(row: BillLike | Row, holds: readonly ({ code: string } | Row)[]): string {
+  const inv = asBill(row);
   if (inv.payment_status === 'settled') return 'Already paid.';
-  const codes = new Set(holds.map(h => h.code));
+  if (inv.payment_status === 'partially_settled') return 'We paid the part we agreed. The rest stays disputed until they correct the invoice or agree a credit.';
+  const codes = holdCodes(holds);
   if (codes.has('PROMPT_INJECTION')) return 'This invoice included a hidden instruction. We ignored it. The line items still match the order.';
   if (codes.has('PAYEE_CHANGE_PENDING')) return 'They asked us to send money to a new bank account.';
   if (codes.has('PO_CEILING')) return 'They billed more than the purchase order allows.';
@@ -168,9 +186,11 @@ export function billStory(inv: BillLike | Record<string, any>, holds: Array<{ co
   return inv.next_action;
 }
 
-export function nextStep(inv: BillLike | Record<string, any>, holds: Array<{ code: string } | Record<string, any>>): { role: string; action: string } {
+export function nextStep(row: BillLike | Row, holds: readonly ({ code: string } | Row)[]): { role: string; action: string } {
+  const inv = asBill(row);
   if (inv.payment_status === 'settled') return { role: '', action: 'Nothing left to do.' };
-  const codes = new Set(holds.map(h => h.code));
+  if (inv.payment_status === 'partially_settled') return { role: 'purchasing', action: 'Wait for a corrected invoice or an agreed credit for the disputed amount.' };
+  const codes = holdCodes(holds);
   if (codes.has('PROMPT_INJECTION')) return { role: 'owner', action: 'Record that the hidden instruction was ignored, then review the line items.' };
   if (codes.has('SUPPLIER_RISK')) return { role: 'owner', action: 'Read the supplier flag before anyone pays.' };
   if (codes.has('PAYEE_CHANGE_PENDING')) return { role: 'owner', action: 'Call someone already on file. Confirm the new account.' };

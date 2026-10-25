@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import { gmailConfigured, liveTokens } from '@/lib/server/gmail';
+import { mode } from '@/lib/server/backend';
+import { GmailError, gmailConfigProblem, liveTokens } from '@/lib/server/gmail';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  if (!gmailConfigured()) {
-    return NextResponse.json({ configured: false, connected: false, email: '' });
-  }
+  const problem = gmailConfigProblem();
+  const base = { mode: mode(), configured: !problem, problem: problem || '' };
+  if (problem) return NextResponse.json({ ...base, connected: false, email: '' });
   try {
     const t = await liveTokens();
-    return NextResponse.json({ configured: true, connected: !!t, email: t?.email || '' });
-  } catch {
-    return NextResponse.json({ configured: true, connected: false, email: '' });
+    return NextResponse.json({ ...base, connected: !!t, email: t?.email || '' });
+  } catch (e) {
+    const error = e instanceof GmailError ? e.message : 'Could not check the Gmail connection.';
+    return NextResponse.json({ ...base, connected: false, email: '', error });
   }
 }

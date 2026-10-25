@@ -39,7 +39,16 @@ Deploy on Vercel with **Root Directory = `web`**. Set the same env vars (live UR
 The home page is a cover sheet: what Countersign does, then four people to open the books (demo sign-in, no Google). Bills is a card per invoice: who, how much, what's wrong, and who acts next.
 
 ### Inbox — `/inbox`
-Connect a demo Gmail (OAuth, keys in `web/.env.local`). Live letters appear on this page. On-file vendor letters from the seed stay below so the case still works. Mail is data, never an instruction.
+Connect a demo Gmail (OAuth, read-only). Live letters appear on this page, each with an **Import** button. On-file vendor letters stay below so the case still works. Mail is data, never an instruction.
+
+**Gmail setup** (keys go in `web/.env.local`; the web app doesn't read the root `.env`):
+1. Google Cloud Console: create a project, then APIs & Services → Library → **Gmail API** → Enable.
+2. OAuth consent screen: **External**, publishing status **Testing**, and add the demo Gmail under **Test users**.
+3. Credentials → Create credentials → **OAuth client ID** → **Web application**. Authorized redirect URI: `http://localhost:3001/api/gmail/callback`. A Google **API key** (`AIza…`) won't work.
+4. Put `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` and `GMAIL_REDIRECT_URI` in `web/.env.local` and restart the web app. `npm run check:gmail` says which names are present in each file and whether they have the right shape, without printing any value.
+5. Open `http://localhost:3001/inbox` → **Connect Gmail**. Google shows "Google hasn't verified this app": that's expected for a Testing app; choose **Continue**, then allow read access. Testing-mode sign-ins expire after 7 days; the page then asks you to connect again.
+
+**Import** (needs live mode: `DATA_SOURCE=live`, SpacetimeDB, `run_worker.py` and the Python API on :8000). Nothing is imported until a person presses Import. The web server fetches the message whole (`format=raw`) and posts it to the Python API's `POST /intake`, which records, as the sync role, the email's text as one document and each `application/pdf` attachment as another (15 MB each; other attachments are listed as skipped, never opened). Links and remote content are never fetched. Each document is read and checked like any other, and shows **From Gmail**. Importing the same message again changes nothing. Tokens stay in an httpOnly cookie on the server's responses; they're never logged or put in `NEXT_PUBLIC_*`.
 
 ### 2. Invoice case — `/invoices/[id]` (the demo opens here)
 - **What we'd pay, and why:** the reconciliation from the latest assessment, running claimed, under review, accepted, deposit and payable. Differences are "under review", never "saved".

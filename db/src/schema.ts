@@ -608,6 +608,24 @@ export const payment_approval = table({ name: 'payment_approval', public: true }
   created_at: t.timestamp(),
 });
 
+// v2.2 (CONTRACT §9.9): the owner's decision on one disputed line when the supplier won't correct the invoice.
+export const settlement_decision = table({ name: 'settlement_decision', public: true }, {
+  id: t.string().primaryKey(),
+  invoice_id: t.string().index('btree'),
+  revision_id: t.string().index('btree'),
+  invoice_line_id: t.string(),
+  decision: t.string(),
+  amount_cents: t.i64(),
+  assessment_fingerprint: t.string(),
+  change_request_id: t.string(),
+  outbox_id: t.string(),
+  note: t.string(),
+  decided_by_identity: t.string(),
+  decided_by_role: t.string(),
+  status: t.string(),
+  created_at: t.timestamp(),
+});
+
 const spacetimedb = schema(
   {
     actor, request_result, audit_log, job, config,
@@ -618,6 +636,7 @@ const spacetimedb = schema(
     authority, supplier, supplier_contact, payee_profile, document, source_fragment, email_message,
     extraction_run, purchase, term, change_request, invoice, invoice_revision, invoice_line,
     assessment, hold, receipt_attestation, deposit, deposit_allocation, outbox, payment_approval,
+    settlement_decision,
   },
   { CASE_CONVERSION_POLICY: CaseConversionPolicy.None },
 );
