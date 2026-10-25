@@ -46,7 +46,7 @@ def seed_setup(store: Store, identities: dict[str, str] | None = None) -> None:
                             PAYEE_V1.last4, PAYEE_V1.bank_name, PAYEE_V1.requested_via), "payee profile")
 
 
-def seed_document(store: Store, doc: SourceDoc, files_dir: Path | None = None) -> str:
+def seed_document(store: Store, doc: SourceDoc, files_dir: Path | None = None, source_kind: str = "seed") -> str:
     """Record one document, its fragments and (for email) its message. Returns its sha256."""
     data = file_bytes(doc)
     sha = sha256_hex(data)
@@ -57,7 +57,7 @@ def seed_document(store: Store, doc: SourceDoc, files_dir: Path | None = None) -
         storage = str(files_dir / doc.filename)
     src_id = f"src_{sha[:8]}"
     meta = doc.email
-    _ok(R.record_source_file(store, src_id, "seed", doc.filename, sha, meta.ingested_at_iso if meta else "",
+    _ok(R.record_source_file(store, src_id, source_kind, doc.filename, sha, meta.ingested_at_iso if meta else "",
                              meta.from_address if meta else "", meta.subject if meta else "", storage), f"source {doc.id}")
     _ok(R.record_document(store, doc.id, doc.kind, src_id, sha, doc.filename, 0 if meta else len(doc.pages)), f"document {doc.id}")
     for f in fragments(doc):
