@@ -23,5 +23,15 @@
   },
   "change_requests": [],
   "acceptances": [],
-  "internal_approval_claims": []
+  "internal_approval_claims": [],
+  "payee_change_requests": [
+    {
+      "last4": "7703",
+      "bank_name": "Harbor Wire Bank",
+      "quote": "Please remit invoice NL-441 to our new Harbor Wire Bank account ending 7703.",
+      "fragments": [
+        "frag_em_nl_bank_1_p0_l3"
+      ]
+    }
+  ]
 }

@@ -174,9 +174,18 @@ def _email(store: Store, ext: dict[str, Any]) -> dict[str, Any]:
     supplier = _email_supplier(store, one(store, "email_message", document_id=ext["document_id"]) or {})
     if supplier is None:
         return needs_review(store, ext["document_id"], "the email isn't from or to a supplier on file")
+    changed = record_payee_changes(store, ext, supplier["id"])  # an email asking to pay a new account (SPEC §8)
+    for profile_id in changed:
+        last4 = (one(store, "payee_profile", id=profile_id) or {}).get("last4", "????")
+        for inv in store.rows("invoice", supplier_id=supplier["id"]):
+            if inv["active_revision_id"] and inv["payment_status"] not in {"settled", "partially_settled"}:
+                _step(store, inv["id"], "decision", f"An email from {supplier['name']} asks to be paid into a new account "
+                      f"ending {last4}; recorded it as a pending payee change. The owner verifies it by calling a contact "
+                      "already on file.", {"payee_profile_id": profile_id, "document_id": ext["document_id"]})
     if not ext.get("change_requests") and not ext.get("acceptances"):
         claims = ext.get("internal_approval_claims", [])
-        return {"status": "nothing_to_record", "ignored_approval_claims": len(claims)}
+        return {"status": "payee_change_pending" if changed else "nothing_to_record", "payee_profile_ids": changed,
+                "ignored_approval_claims": len(claims)}
     open_ = [p for p in store.rows("purchase", supplier_id=supplier["id"]) if p["status"] != "closed"]
     if not open_:
         raise NotYet(f"no purchase on file yet for {supplier['name']}")
@@ -188,7 +197,7 @@ def _email(store: Store, ext: dict[str, Any]) -> dict[str, Any]:
             "acceptances": len(ext.get("acceptances", [])), "ignored_approval_claims": len(claims)}
 
 
-def _payee_changes(store: Store, ext: dict[str, Any], supplier_id: str) -> list[str]:
+def record_payee_changes(store: Store, ext: dict[str, Any], supplier_id: str) -> list[str]:
     """A document asking to be paid into a different account becomes a pending payee profile. The module
     then opens PAYEE_CHANGE_PENDING on the supplier's open invoices; only the owner can verify it, by
     calling a contact already on file. The same account again, or the verified one, records nothing."""
@@ -225,7 +234,7 @@ def _invoice(store: Store, ext: dict[str, Any], injected: list[str]) -> dict[str
     _step(store, invoice_id, "plan", f"Read {ext['document_id']} ({ext.get('label', ext.get('mode', ''))}) and linked it "
           f"to PO {po_number}", {"revision_id": revision_id, "model": ext.get("model", "fixture"),
                                  "latency_ms": ext.get("latency_ms")})
-    for profile_id in _payee_changes(store, ext, matches[0]["supplier_id"]):
+    for profile_id in record_payee_changes(store, ext, matches[0]["supplier_id"]):
         last4 = (one(store, "payee_profile", id=profile_id) or {}).get("last4", "????")
         _step(store, invoice_id, "decision", f"The invoice asks to be paid into a new account ending {last4}; recorded it as "
               "a pending payee change. The owner verifies it by calling a contact already on file.",
