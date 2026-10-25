@@ -3,7 +3,9 @@
 Claude turns documents into records; this module decides, line by line, what is authorised,
 what is pending and what is a variance, and which holds block payment. It never pays less
 silently: the proposed payment is the full balance requested when everything claimed is
-authorised, otherwise $0 and a request for a corrected invoice or an agreed credit.
+authorised, otherwise $0 and a request for a corrected invoice or an agreed credit. The one
+exception is the owner's recorded decision on each disputed line (CONTRACT §9.9): then the
+agreed part is proposed and the disputed rest stays open.
 Same inputs -> same numbers -> same fingerprint.
 """
 
@@ -18,11 +20,12 @@ from . import reducers as R
 from .checks import CheckOutcome
 from .ids import hold_id
 from .money import extend_up, fmt, fmt_qty
-from .store import Store, dumps, one
+from .store import Store, StoreError, dumps, one
 
 POLICY_VERSION = "commercial-2026-10-24.1"
 COMMERCIAL_HOLDS = {"PRICE_VARIANCE", "PROPOSED_CHARGE", "USAGE_EVIDENCE_MISSING", "PO_CEILING", "DUPLICATE_REVIEW",
                     "EXTRACTION_REVIEW", "CONTRACT_REVIEW", "PROMPT_INJECTION"}
+MONEY_HOLDS = {"PRICE_VARIANCE", "PROPOSED_CHARGE", "USAGE_EVIDENCE_MISSING", "PO_CEILING"}  # the module reads these per line
 HOLD_ORDER = ["CONTRACT_REVIEW", "EXTRACTION_REVIEW", "DUPLICATE_REVIEW", "PRICE_VARIANCE", "PROPOSED_CHARGE",
               "USAGE_EVIDENCE_MISSING", "PO_CEILING", "PROMPT_INJECTION", "SUPPLIER_RISK", "RECEIPT_NOT_VERIFIED",
               "PAYEE_CHANGE_PENDING", "APPROVAL_STALE"]
@@ -53,6 +56,12 @@ class LineResult:
     uncertainty: str = ""
     fragment_ids: list[str] = field(default_factory=list)
     awaiting_decision_by: str = ""  # the supplier confirmed it; only our in-app decision is missing (role with authority)
+    decision: str = ""  # the owner's settlement decision that applies to this line (§9.9), if any
+    decision_id: str = ""
+
+    @property
+    def disputed_cents(self) -> int:
+        return self.pending_cents + self.variance_cents if self.hold_code in MONEY_HOLDS else 0
 
 
 @dataclass
@@ -72,6 +81,7 @@ class InvoiceBundle:
     document: dict[str, Any] | None = None
     others: list[dict[str, Any]] = field(default_factory=list)  # same supplier: {"invoice","revision","lines","document"}
     authorities: list[dict[str, Any]] = field(default_factory=list)  # who may decide changes, and up to what amount
+    decisions: list[dict[str, Any]] = field(default_factory=list)  # active settlement decisions on this revision (§9.9)
 
 
 @dataclass
@@ -103,11 +113,20 @@ class Assessment:
         return {h.code: h.amount_cents for h in self.holds}
 
     def details(self) -> dict[str, Any]:
-        return {"lines": [asdict(l) for l in self.lines], "checks": [asdict(c) for c in self.checks],
+        return {"lines": [_line_detail(l) for l in self.lines], "checks": [asdict(c) for c in self.checks],
                 "holds": [asdict(h) for h in self.holds], "deposit_applied_cents": self.deposit_applied_cents,
                 "conditional_payment_cents": self.conditional_payment_cents,
                 "under_review_cents": self.under_review_cents, "clarification_points": self.clarification_points,
                 "note": "Amounts under review are not savings until the supplier agrees.", "inputs": self.inputs}
+
+
+def _line_detail(l: LineResult) -> dict[str, Any]:
+    """The module reads `line_id`, `hold_code`, `pending_cents` and `variance_cents` of every line (§9.9), and
+    `hold_code` is '' or a money hold there; a line's other review code is kept as `review_hold_code`."""
+    d = asdict(l)
+    if l.hold_code and l.hold_code not in MONEY_HOLDS:
+        d["hold_code"], d["review_hold_code"] = "", l.hold_code
+    return d
 
 
 # ---------------------------------------------------------------- decision records
@@ -249,6 +268,32 @@ def assess_line(b: InvoiceBundle, l: dict[str, Any]) -> LineResult:
     else:
         _charge_line(b, l, r)
     return r
+
+
+def apply_decisions(b: InvoiceBundle, lines: list[LineResult]) -> None:
+    """The owner's settlement decisions (§9.9). One applies only while its amount still equals the line's
+    disputed amount; otherwise the line is disputed again and needs a new decision."""
+    by_line = {d["invoice_line_id"]: d for d in b.decisions}
+    for r in lines:
+        d = by_line.get(r.line_id)
+        disputed = r.disputed_cents
+        if d is None or disputed <= 0:
+            continue
+        if int(d["amount_cents"]) != disputed:
+            r.uncertainty = (f"{r.uncertainty} The owner's decision {d['id']} was for {fmt(int(d['amount_cents']))}, "
+                             f"but {fmt(disputed)} is disputed now, so it no longer applies.").strip()
+            continue
+        r.decision, r.decision_id = d["decision"], d["id"]
+        if d["decision"] == "accept_as_billed":
+            r.calculation = (f"{r.calculation}; the owner accepted the {fmt(disputed)} difference as billed "
+                             f"({d['id']})").lstrip("; ")
+            r.accepted_cents += disputed
+            r.pending_cents = r.variance_cents = 0
+            r.status, r.hold_code, r.classification, r.uncertainty = "accepted", "", "AUTHORISED_FIXED", ""
+        else:
+            r.status = "disputed"
+            r.uncertainty = (f"Disputed by the owner's decision {d['id']}: the agreed part is paid, {fmt(disputed)} stays "
+                             "open until the supplier sends a corrected invoice or an agreed credit.")
 
 
 # ---------------------------------------------------------------- checks (each may open holds)
@@ -487,6 +532,7 @@ def input_digest(b: InvoiceBundle) -> dict[str, Any]:
         "others": {o["invoice"]["id"]: _row_hash({"invoice": _identity(o["invoice"]), "revision": o["revision"], "lines": o["lines"],
                                                   "document_sha256": (o.get("document") or {}).get("sha256", "")})
                    for o in b.others},
+        **({"settlement_decisions": rows(b.decisions)} if b.decisions else {}),
     }
 
 
@@ -538,11 +584,15 @@ def _next(status: str, codes: set[str], under_review: int, proposed: int, lines:
         return "receiver", "Superintendent: confirm what was received (manual attestation)."
     if "PAYEE_CHANGE_PENDING" in codes or "SUPPLIER_RISK" in codes:
         return "owner", "Verify the payee change by calling a contact already on file."
+    if status == "partially_disputed":
+        return "owner", (f"Review and approve the {fmt(proposed)} agreed payment once the notice to the supplier is sent; "
+                         f"{fmt(under_review)} stays disputed.")
     return "owner", f"Review and approve the {fmt(proposed)} payment."
 
 
 def assess(b: InvoiceBundle) -> Assessment:
     lines = [assess_line(b, l) for l in sorted(b.lines, key=lambda l: l["id"])]
+    apply_decisions(b, lines)
     checks, holds = [], []
     for code, fn, hold_code in CHECKS:
         outcome, hs = _run(code, fn, hold_code, b, lines)
@@ -557,16 +607,30 @@ def assess(b: InvoiceBundle) -> Assessment:
     available, _ = deposit_numbers(b)
     applied = int(b.revision["deposit_shown_cents"]) if int(b.revision["deposit_shown_cents"]) <= available else 0
     balance = int(b.revision["balance_requested_cents"])
+    # A money hold is settled for now when every disputed line it covers has the owner's "pay agreed, dispute
+    # the rest" decision. PO_CEILING covers no line, so only a correction settles it.
+    disputed_lines = lambda code: [r for r in lines if r.hold_code == code and r.disputed_cents > 0]
+    settled = {c for c in codes & MONEY_HOLDS if c != "PO_CEILING" and disputed_lines(c)
+               and all(r.decision == "pay_agreed_dispute_rest" for r in disputed_lines(c))}
     status = ("contract_review" if "CONTRACT_REVIEW" in codes
-              else "differences_under_review" if codes & COMMERCIAL_HOLDS else "matches")
-    # Never silently pay less: all of the balance requested, or nothing and a request for a correction.
-    proposed = balance if status == "matches" and authorised == claimed and claimed - applied == balance else 0
+              else "differences_under_review" if (codes & COMMERCIAL_HOLDS) - settled
+              else "partially_disputed" if settled else "matches")
     under_review = pending + variance
+    # Never silently pay less: all of the balance requested, or nothing and a request for a correction; or,
+    # when the owner decided every disputed line, what's authorised (the notice tells the supplier).
+    if status == "matches":
+        proposed = balance if authorised == claimed and claimed - applied == balance else 0
+    elif status == "partially_disputed":
+        proposed = authorised - applied if authorised + under_review == claimed and authorised > applied else 0
+    else:
+        proposed = 0
     owner, action = _next(status, codes, under_review, proposed, lines)
     ours = sum(r.pending_cents for r in lines if r.awaiting_decision_by)
     summary = (f"Claimed {fmt(claimed)}: {fmt(authorised)} authorised, {fmt(variance)} price variance, {fmt(pending)} pending"
                + (f" ({fmt(ours)} of it waits for our own decision). " if ours else ". ")
-               + (f"{fmt(under_review)} under review (not savings until the supplier agrees)." if under_review
+               + (f"The owner decided every disputed line: {fmt(proposed)} agreed proposed after the {fmt(applied)} deposit; "
+                  f"{fmt(under_review)} stays disputed (not savings until the supplier agrees)." if status == "partially_disputed"
+                  else f"{fmt(under_review)} under review (not savings until the supplier agrees)." if under_review
                   else f"Everything claimed is authorised; {fmt(proposed)} proposed after the {fmt(applied)} deposit."))
     return Assessment(
         revision_id=b.revision["id"], claimed_cents=claimed, authorised_cents=authorised, pending_cents=pending,
@@ -579,8 +643,9 @@ def assess(b: InvoiceBundle) -> Assessment:
 
 
 def ready_to_post_bill(a: Assessment) -> bool:
-    """CONTRACT §9.6: the bill is booked only once it's commercially accepted and receipt is attested."""
-    return a.commercial_status == "matches" and "RECEIPT_NOT_VERIFIED" not in a.hold_amounts()
+    """CONTRACT §9.6: the bill is booked only once it's commercially accepted and receipt is attested.
+    A partially disputed invoice is booked at what's authorised (§9.9)."""
+    return a.commercial_status in {"matches", "partially_disputed"} and "RECEIPT_NOT_VERIFIED" not in a.hold_amounts()
 
 
 # ---------------------------------------------------------------- store glue
@@ -588,6 +653,17 @@ def ready_to_post_bill(a: Assessment) -> bool:
 
 def _sorted(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda r: str(r.get("id", "")))
+
+
+def active_decisions(store: Store, **filters: Any) -> list[dict[str, Any]]:
+    """Active settlement decisions (§9.9). A module without the v2.2 table has none. Reading none can only lower
+    what's proposed (an undecided disputed line proposes $0), so this never pays more than the decisions allow."""
+    try:
+        return _sorted(store.rows("settlement_decision", status="active", **filters))
+    except StoreError as e:
+        if "settlement_decision" in str(e):
+            return []
+        raise
 
 
 def bundle_from_store(store: Store, invoice_id: str) -> InvoiceBundle:
@@ -608,13 +684,14 @@ def bundle_from_store(store: Store, invoice_id: str) -> InvoiceBundle:
         invoice=inv, revision=rev, lines=_sorted(store.rows("invoice_line", revision_id=rev["id"])),
         purchase=one(store, "purchase", id=pid) if pid else None,
         terms=_sorted(store.rows("term", purchase_id=pid)) if pid else [],
-        change_requests=_sorted(store.rows("change_request", purchase_id=pid)) if pid else [],
+        change_requests=_sorted([c for c in store.rows("change_request", purchase_id=pid) if c["kind"] != "settlement"]) if pid else [],
         deposits=deposits,
         allocations=_sorted([a for d in deposits for a in store.rows("deposit_allocation", deposit_id=d["id"])]),
         attestations=_sorted(store.rows("receipt_attestation", invoice_id=invoice_id)),
         payee_profiles=_sorted(store.rows("payee_profile", supplier_id=inv["supplier_id"])),
         authorities=sorted(store.rows("authority"), key=lambda a: (a["role"], str(a["identity"]))),
-        document=one(store, "document", id=rev["document_id"]), others=others)
+        document=one(store, "document", id=rev["document_id"]), others=others,
+        decisions=active_decisions(store, revision_id=rev["id"]))
 
 
 def record(store: Store, a: Assessment, role: str = "agent") -> str:

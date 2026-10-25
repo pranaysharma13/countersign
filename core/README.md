@@ -92,7 +92,7 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 
 Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions, the outbox (`draft_outbox`, `approve_outbox`, `mark_outbox`), supplier payments (`propose_supplier_payment`, `approve_supplier_payment`, `reject_supplier_payment`, `start_payment` re-check, `record_payment`, `record_deposit_allocation`, with the module's `makeStale`), and the job rules (attempts, leases, backoff, §9.5 kinds). Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
 
-Not yet: CONTRACT v2.2 (`decide_disputed_line`, `resolve_hold` refusing money holds).
+CONTRACT v2.2 (§9.9): `decide_disputed_line` with every invalid and denied rule, the `settlement_decision` table, `resolve_hold` refusing the four money holds, `disputed` holds that don't block approval, `partially_disputed` and `partially_settled`, and corrections superseding decisions and disputed holds. Choices the TypeScript module should mirror: a money hold closes only when it covers at least one disputed line, so `PO_CEILING` clears only through a correction; and an active "pay agreed, dispute the rest" notice that isn't `sent` blocks approval and `start_payment` ("notice to supplier not sent"). Open: a decision whose amount no longer matches the line can't be replaced on the same revision, because the line still has an `active` decision; nothing is paid meanwhile (the assessment proposes $0).
 
 ## Run against the SpacetimeDB module
 
@@ -138,4 +138,4 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 - Judge page: `sneak_charge` opens the matching hold on the active revision and never pays.
 - A first real Droid run (needs `FACTORY_API_KEY`), the citation-backed "why?" explanation (a separate call that can't change amounts), and a small call that reads the fuel-surcharge parameters for the fuel variant.
 - Variants: scoped amendment, fuel surcharge (Apify diesel actor still unset — license actor too), supplier risk (CRS sandbox keys are wired; mapping of the live BLJ payload is still coarse).
-- Settlement decisions on disputed lines (`decide_disputed_line`, CONTRACT v2.2): next, now that step B's core works. Until then, money holds clear only through a corrected invoice.
+- Settlement decisions (CONTRACT v2.2) are in the Python side and the reference module; the SpacetimeDB module still needs them. Until it has the `settlement_decision` table, the assessment reads no decisions.
