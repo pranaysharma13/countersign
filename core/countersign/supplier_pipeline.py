@@ -23,6 +23,7 @@ from .extractions import (NotYet, find_fixture, purchase_id_for, record_email_ex
                           record_purchase, validated, values)
 from .ids import hold_id, sha8
 from .injection import scan_document
+from .integrations import crs
 from .money import fmt
 from .store import Store, one
 
@@ -239,6 +240,7 @@ def _invoice(store: Store, ext: dict[str, Any], injected: list[str]) -> dict[str
         _step(store, invoice_id, "decision", f"The invoice asks to be paid into a new account ending {last4}; recorded it as "
               "a pending payee change. The owner verifies it by calling a contact already on file.",
               {"payee_profile_id": profile_id})
+    supplier_risk(store, ext, invoice_id, revision_id, matches[0]["supplier_id"])
     if injected:  # data, never instructions: flag it and keep going
         R.open_hold(store, "agent", hold_id(revision_id, "PROMPT_INJECTION"), revision_id, "PROMPT_INJECTION", 0,
                     f"The invoice contains text aimed at an automated system, treated as data and ignored: \"{injected[0][:160]}\"",
@@ -249,6 +251,30 @@ def _invoice(store: Store, ext: dict[str, Any], injected: list[str]) -> dict[str
 
     return {"status": "recorded", "invoice_id": invoice_id, "revision_id": revision_id,
             **investigate(store, invoice_id, reading=ext["document_id"])}
+
+
+def supplier_risk(store: Store, ext: dict[str, Any], invoice_id: str, revision_id: str, supplier_id: str) -> str | None:
+    """SPEC §8: CRS public records (liens, judgments, bankruptcies) on the supplier open SUPPLIER_RISK for the
+    owner. Mock test identities unless CRS credentials are set; the reason says which. A retry opens nothing new."""
+    sup = one(store, "supplier", id=supplier_id) or {}
+    if not sup.get("crs_ref"):
+        return None
+    rep = crs.business_report(sup["crs_ref"])
+    found = [(kind, r) for kind in ("judgments", "liens", "bankruptcies") for r in rep.get(kind) or []]
+    if not found:
+        return None
+    what = "; ".join(f"a {r.get('type', kind[:-1])} of {fmt(int(r.get('amount_cents') or 0))} filed {r.get('filed', 'on an unknown date')}"
+                     for kind, r in found)
+    source = "CRS" if rep.get("source") == "crs" else "CRS (mock test data)"
+    hid = hold_id(revision_id, "SUPPLIER_RISK")
+    res = R.open_hold(store, "agent", hid, revision_id, "SUPPLIER_RISK", 0,
+                      f"{source} reports {what} for {sup.get('name', supplier_id)}. Payment is held for the owner.",
+                      {"crs_ref": sup["crs_ref"], "source": rep.get("source"), "records": [r for _, r in found],
+                       "fragment_ids": (ext.get("fields", {}).get("supplier_name") or {}).get("fragments") or []})
+    if res.ok:
+        _step(store, invoice_id, "decision", f"{source} reports public records for {sup.get('name', supplier_id)}; "
+              "opened SUPPLIER_RISK", {"hold_id": hid, "crs_ref": sup["crs_ref"], "source": rep.get("source")})
+    return hid
 
 
 def process_document(store: Store, document_id: str) -> dict[str, Any]:

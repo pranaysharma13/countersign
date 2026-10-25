@@ -341,3 +341,33 @@ def test_no_payment_is_proposed_while_an_injection_hold_is_open(tmp_path):
     assert {h["code"] for h in s.rows("hold", revision_id=inv["active_revision_id"], status="open")} == {"PROMPT_INJECTION"}
     assert latest(s, inv["active_revision_id"])["proposed_payment_cents"] == 74_000  # the numbers still say what's owed
     assert not s.rows("proposal", work_item_id=f"wi_{HARBOR_INVOICE_ID}")
+
+
+def test_crs_public_records_open_supplier_risk_through_the_pipeline(tmp_path):
+    """Peak's invoice matches and receipt is attested; CRS (mock test identity crs_test_business_02) reports a
+    civil judgment, so the pipeline opens SUPPLIER_RISK and nothing is proposed. A retry opens nothing new."""
+    from countersign.companion_seed import seed_companion_parties
+    from countersign.companion_world import PEAK_DOCS, PEAK_INVOICE_ID, PF_INVOICE, PF_QTY_MILLI
+
+    s = FakeStore()
+    seed_setup(s)
+    seed_companion_parties(s)
+    for doc in PEAK_DOCS:
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    assert R.attest_receipt(s, "att_pf_30", PEAK_INVOICE_ID, "Form panels", PF_QTY_MILLI, "panel", "Counted").ok
+    worker.drain(s)
+    inv = s.rows("invoice", id=PEAK_INVOICE_ID)[0]
+    holds = s.rows("hold", revision_id=inv["active_revision_id"], status="open")
+    assert [h["code"] for h in holds] == ["SUPPLIER_RISK"]
+    assert "civil judgment of $12,400.00 filed 2025-11-03" in holds[0]["reason"] and "mock" in holds[0]["reason"]
+    assert json.loads(holds[0]["evidence_json"])["source"] == "mock"
+    assert not s.rows("proposal", work_item_id=f"wi_{PEAK_INVOICE_ID}")
+    supplier_pipeline.process_document(s, PF_INVOICE.id)
+    assert len(s.rows("hold", code="SUPPLIER_RISK")) == 1
+
+
+def test_a_supplier_with_no_public_records_opens_no_risk_hold(opening, tmp_path):
+    receive(opening, INVOICE_R1, tmp_path)
+    worker.drain(opening)
+    assert not opening.rows("hold", code="SUPPLIER_RISK")  # BayMix's test identity has none
