@@ -22,7 +22,7 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 1. **Documents** (`supplier_world.py`, `supplier_docs.py`): quote with terms (price changes need mutual written agreement; fuel surcharge tied to the weekly diesel index), acknowledged PO, the weekend-delivery and waiting-charge email threads, invoice BM-23104 and its corrected revision. Rendered reproducibly; every line becomes an immutable source fragment (`frag_<doc>_p<page>_l<line>`).
 2. **Extraction** (`extractions.py`): a labelled fixture (or, from step C, Claude) says what each document contains. Every material value cites fragments of its own document, its quote must match them after whitespace normalization, and every money value must appear in its quote. Missing facts are null with a reason. Bad evidence = an `invalid` run and nothing recorded.
 3. **Records**: purchase, terms, change requests, supplier acceptances, invoice, revisions and lines go through reducers. A corrected invoice supersedes the earlier revision only with an evidenced notice for the same supplier and number. An email saying "approved" is never recorded as an approval.
-4. **Assessment** (`commercial.py`, no model calls): per line, claimed vs. accepted vs. pending vs. variance; independent holds (`PRICE_VARIANCE`, `PROPOSED_CHARGE`, `RECEIPT_NOT_VERIFIED`, ...); a fingerprint of every input; the proposed payment is the full balance requested or $0, never silently less.
+4. **Assessment** (`commercial.py`, no model calls): per line, claimed vs. accepted vs. pending vs. variance; independent holds (`PRICE_VARIANCE`, `PROPOSED_CHARGE`, `RECEIPT_NOT_VERIFIED`, ...); a fingerprint of every input; the proposed payment is the full balance requested or $0, never silently less. A charge the supplier confirmed but we haven't decided in the app goes to whoever has authority for that amount (purchasing up to its limit, otherwise the owner), and nothing is drafted to the supplier until it's decided.
 5. **Books** (`supplier_ledger.py`): CONTRACT §9.6 journals with idempotent ids.
 
 ## Intake and the worker (step B core, done)
@@ -30,11 +30,11 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 1. **Intake** (`intake.py`, sync): keeps the original bytes and SHA-256, records the document and its fragments (and the email, for `.eml`), and queues `process_document`. The document id comes from the bytes, so receiving a file twice records nothing new and queues no second job. Any PDF or email that isn't a known fixture is cut into one fragment per text line. In fixture mode it goes to review, because there's no labelled extraction for it and nothing is guessed.
 2. **`process_document`** (`supplier_pipeline.py`, agent): fixture extraction (live Claude in step C), evidence check, then records what the document establishes.
    - A quote and its PO become a purchase once both are read, in either order.
-   - An email goes to its supplier's single open purchase. If there are several, it goes to review; if there's none yet, the job retries.
-   - An invoice links by its PO number, then is assessed. When there are differences, the clarification is drafted to the simulated outbox.
+   - An email goes to its supplier's single open purchase. If there are several, it goes to review; if there's none yet, the job retries. An acceptance whose proposal hasn't been read yet also retries.
+   - An invoice links by its PO number, retrying until that purchase is on file, then is assessed. A line that names a change not on file yet retries too; a charge that names no change is recorded unlinked and disputed (a surprise charge). When there are differences, the clarification is drafted to the simulated outbox.
 3. **Reassessment:** every drain round and every few seconds of polling, the worker reassesses any open invoice whose inputs changed (a receipt attestation, a purchasing decision, a new email). It records a new assessment only when the fingerprint changed.
 4. **Outbox:** a person approves the draft (`approve_outbox`); `send_outbox` marks it sent with a `simulated-` delivery ref. Nothing leaves the laptop.
-5. **Failures:** the module retries a failed job (10 s, 20 s backoff, three attempts) and hands a dead worker's job to another after its 5-minute lease. When retries run out on `process_document`, the document is marked failed, and an invoice revision it backs gets `EXTRACTION_REVIEW`. A failure never produces an approval. Handlers are idempotent, so a retried job never duplicates a record.
+5. **Failures:** the module retries a failed job (10 s, 20 s backoff, three attempts) and hands a dead worker's job to another after its 5-minute lease. Anything a person must look at ends with the document in `needs_review`, with the reason in an `invalid` extraction run: no labelled extraction, bad evidence, ambiguous linking, or retries run out (any document type; an invoice revision it backs also gets `EXTRACTION_REVIEW`). A failure never produces an approval. Handlers are idempotent, so a retried job never duplicates a record.
 
 ## Key files
 
@@ -70,10 +70,10 @@ v2 (supplier invoices):
 ```bash
 uv run --project core python scripts/setup_actors.py         # once per fresh module (now includes purchasing and receiver)
 uv run --project core python scripts/load_supplier_seed.py   # the demo's opening state; --all adds the reply and revision 2
-uv run --project core python scripts/run_worker.py           # leave running: processes documents, reassesses, sends (simulated)
+uv run --project core python scripts/run_worker.py           # only after the check passes: processes documents, reassesses, sends (simulated)
 ```
 
-`load_supplier_seed.py` hasn't been run against a live module from this branch yet; the same replay is tested against the module reference.
+Right after loading, `load_supplier_seed.py` compares the module with the Python reference (`countersign/seed_check.py`). It replays the same seed locally and compares the rows the seed created, column by column, skipping columns that legitimately differ: timestamps, identities, request ids, auto-increment ids and `audit_log`. It also checks, per invoice, that the fingerprint Python computes from the module's rows equals the module's latest assessment; otherwise the worker would record an extra version. Any difference prints as a `MISMATCH` line (exit code 2); `--check-only` runs the comparison without loading. Not yet run against a live module from this branch.
 
 v1 (subcontractor bills):
 

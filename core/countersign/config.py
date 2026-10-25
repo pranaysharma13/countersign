@@ -39,7 +39,10 @@ class Settings:
     )
 
     anthropic_api_key: str = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""))
-    anthropic_model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5-5"))
+    # `or`: a blank line copied from .env.example (ANTHROPIC_MODEL=) must still get the default
+    anthropic_model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL") or "claude-opus-5-5")
+    extraction_effort: str = field(default_factory=lambda: os.getenv("EXTRACTION_EFFORT") or "medium")  # Opus 5.5's default
+    extraction_timeout: float = field(default_factory=lambda: float(os.getenv("EXTRACTION_TIMEOUT") or "120"))
     factory_api_key: str = field(default_factory=lambda: os.getenv("FACTORY_API_KEY", ""))
     droid_model: str = field(default_factory=lambda: os.getenv("DROID_MODEL", ""))
 

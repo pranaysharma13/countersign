@@ -281,3 +281,19 @@ def test_clarification_explains_each_line_and_never_offers_to_pay_less(store):
     assert R.draft_outbox(store, "ob_x", INVOICE_ID, "ctc_nobody", "s", "b").outcome == "invalid"
     a_clean = replace(a, lines=[replace(r, pending_cents=0, variance_cents=0) for r in a.lines])
     assert draft(b, a_clean, recipient(store, BAYMIX.id)) is None
+
+
+def test_a_charge_only_we_can_decide_goes_to_whoever_has_authority_not_the_supplier():
+    from countersign.clarify import record_draft
+
+    s = build(purchasing_approves_weekend=False)  # BayMix confirmed $1,200; purchasing hasn't decided in the app
+    b = bundle_from_store(s, INVOICE_ID)
+    a = assess(b)
+    assert line(a, "extra").awaiting_decision_by == "purchasing"  # $1,200 is within purchasing's $2,000
+    assert a.next_owner_role == "purchasing" and "Weekend delivery, Saturday Oct 10 pour ($1,200.00)" in a.next_action
+    assert a.under_review_cents == 350_000 + 22_500 + 120_000
+    assert record_draft(s, b, a) is None and s.rows("outbox") == []  # one complete email, after our decision
+    assert not any("Weekend" in p for p in a.clarification_points)
+    big = replace(b, change_requests=[{**c, "amount_cents": 250_000} if c["id"] == WEEKEND_CR_ID else c for c in b.change_requests])
+    assert line(assess(big), "extra").awaiting_decision_by == "owner"  # above purchasing's limit
+    assert assess(big).next_owner_role == "owner"
