@@ -2,8 +2,10 @@
 
 For the next session working on the Python side. Read `CLAUDE.md` first; this file only says where things stand.
 
-**State.** `main` = `0e320ee` (PR #24). Python suite: 203 passed (`cd core && uv run pytest -q`). `db/` vitest: 62 passed
-(`cd db && npx vitest run`). Working branch `claude/task-jtrcyx` is level with `main`; after each merge it's reset onto `main`.
+**State (finish session).** Python work is on `py/core`; the module and web fixes the teammates agreed to are on
+`fix/finish` (which merges `py/core`). Neither is merged to `main` yet. Python suite: 220 passed. `db/` vitest: 77 passed on
+`fix/finish`. The web build needs `fix/finish` (the `billStory`/`nextStep` fix lives there), so check `py/core` together
+with it: merge both into a throwaway branch and run all four checks.
 
 **How this user works.** Plan first and get agreement before building anything non-trivial. PRs are merged with a merge
 commit once the user says so. The repo has no CI, so run both suites before every push.
@@ -19,6 +21,17 @@ commit once the user says so. The repo has no CI, so run both suites before ever
 | #22 | Bank-change emails go through the payee path (SPEC §8); Northline's seed uses it | `supplier_pipeline.record_payee_changes`, `tests/test_bank_change_email.py` |
 | #23 | Audit export `GET /invoices/{id}/audit` (JSON or `?format=csv`) | `audit_export.py`, `tests/test_audit_export.py` |
 | #24 | Scoped amendment (SPEC §8): a date-scoped price never covers deliveries outside it | `commercial.period_fit`, `variant_fixtures.py`, `tests/test_scoped_amendment.py` |
+
+### Finish session (py/core and fix/finish)
+| What | Where |
+|---|---|
+| Seed for "BayMix won't correct" (§9.9): both lines decided pay-agreed, notices sent, receipt attested, $73,700 proposed | `settlement_seed.py`, `data/seeds/baymix_wont_correct.json` |
+| `load_supplier_seed.py` skips a seed the module already matches (after `reset_demo_v2.py`) | `scripts/load_supplier_seed.py` |
+| Cited "why?" explanation, read-only, fixture mode | `why.py`, `api.py` (`GET /invoices/{id}/why`), `tests/test_why.py` |
+| No payment proposed while `PROMPT_INJECTION` / `SUPPLIER_RISK` (or any non-stale hold) is open | `supplier_pipeline.propose_payment` |
+| CRS asked on every recorded invoice; `SUPPLIER_RISK` on public records (mock test identities) | `supplier_pipeline.supplier_risk` |
+| Scorecard v2: 18 scenarios through the real pipeline vs a hand-written key | `scorecard_v2.py`, `data/answer_keys/scorecard_v2.json`, `data/scorecard_v2.{json,md}` |
+| fix/finish: web build, judge page from the job result, audit link, v2.2 in the module + UI, Why? button | `db/`, `web/` |
 
 ### Rules worth knowing before you touch these
 - **v2.2 (reference module).** `resolve_hold` denies the four money holds whatever their status. A money hold closes only
@@ -57,22 +70,19 @@ commit once the user says so. The repo has no CI, so run both suites before ever
 | CRS supplier risk (original item 4) | The Postman collection (in the repo or uploaded); `CRS_USERNAME` and `CRS_PASSWORD` as environment secrets; network access to `api-sandbox.stitchcredit.com`. Until then `integrations/crs.py` stays in mock mode. Don't invent a payload mapping. |
 | Fuel surcharge from the diesel index | Apify diesel actor id + `APIFY_TOKEN` |
 | First real Droid run | `FACTORY_API_KEY` |
-| Cited "why?" explanation | `ANTHROPIC_API_KEY`, to verify live. It must never change amounts or approvals. |
+| Cited "why?" explanation, live | `ANTHROPIC_API_KEY`, to run it once live. Fixture mode and the request shape are tested. |
+| A real SpacetimeDB run (item 3) and Maincloud | The `spacetime` CLI (install.spacetimedb.com is blocked by this environment's network policy) and `spacetime login`. Rehearsed so far against a stand-in that runs the module's code behind the same HTTP API. |
 
 ## Open questions (shared files: need both coders)
 1. **A v2.2 decision whose amount stops matching** can't be replaced on the same revision: the line still has an `active`
    decision, so a new one is invalid. Nothing is paid meanwhile (the assessment proposes $0). Suggested contract change:
    `record_assessment` supersedes active decisions whose amount no longer matches and reopens their holds.
 2. **Superseded decisions' notice drafts** stay `draft` after a correction and could still be sent.
-3. Confirm the TypeScript module puts the unsent-notice check in approval as well as `start_payment`.
+3. ~~Confirm the TypeScript module puts the unsent-notice check in approval as well as `start_payment`.~~ Done on `fix/finish` (`blockedReasons`).
 
-## For the TypeScript side (from the PR descriptions)
-- #18: `partially_disputed` / `partially_settled` in `db/src/logic_v2.ts` and in the labels in `web/components/parts.tsx`;
-  `decide_disputed_line` and the `settlement_decision` table in the module. Until the module has that table, Python
-  reads no decisions.
-- #19: `web/app/sneak/page.tsx` still uses `t.invoice[0]` and says "The hold appears on the live invoice". It should show
-  the sandbox invoice (the job result carries `invoice_number`) and the real expected holds.
-- #23: a "Download audit" link to `http://localhost:8000/invoices/<id>/audit?format=csv`.
+## For the TypeScript side
+The three asks from #18, #19 and #23 are done on `fix/finish`, with the teammates' agreement: v2.2 in the module and
+the invoice page, the judge page showing the sandbox invoice and its holds, and a "Download audit" link.
 
 ## Known quirks
 - `tests/test_end_to_end.py::test_stress_judges_every_attack_and_repeated_real_bills` fails only when the live-extraction

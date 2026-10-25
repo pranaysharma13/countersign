@@ -8,11 +8,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import anthropic
+
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
-from . import audit_export
+from . import audit_export, why
 from . import reducers as R
 from .config import FILES_DIR
 from .ids import sha8, sha256_hex
@@ -150,3 +152,15 @@ def invoice_audit(invoice_id: str, fmt: str = Query("json", alias="format", patt
         return Response(content=audit_export.to_csv(export), media_type="text/csv",
                         headers={"Content-Disposition": f'attachment; filename="audit_{invoice_id}.csv"'})
     return export
+
+
+@app.get("/invoices/{invoice_id}/why", response_model=None)
+def invoice_why(invoice_id: str, line: str = "", hold: str = ""):
+    """A cited explanation of one line or one hold, from its own source documents. Read-only: it can't change
+    amounts, holds or approvals."""
+    try:
+        return why.explain(store, invoice_id, line_id=line, hold_id=hold)
+    except why.NotFound as e:
+        raise HTTPException(404, str(e)) from None
+    except anthropic.APIError as e:
+        raise HTTPException(502, f"Couldn't get an explanation from Claude right now ({type(e).__name__})") from None
