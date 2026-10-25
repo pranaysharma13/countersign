@@ -1,5 +1,5 @@
 export const PERSONAS = [
-  { id: 'owner', name: 'John Smith', role: 'Owner', does: 'Says yes or no to paying.' },
+  { id: 'owner', name: 'Dana Marlow', role: 'Owner', does: 'Says yes or no to paying.' },
   { id: 'purchasing', name: 'Jordan Pike', role: 'Buyer', does: 'Asks the supplier to fix a bill.' },
   { id: 'receiver', name: 'Luis Ortega', role: 'Site', does: 'Confirms what arrived.' },
   { id: 'bookkeeper', name: 'Sam Okafor', role: 'Books', does: 'Reads everything. Does not pay.' },
