@@ -2,7 +2,7 @@
 
 **Owner:** TypeScript developer · **Branch:** `ts/app` · **Port:** 3001
 
-The controller's workspace for supplier invoices (CONTRACT §9.7). Every screen polls the module once a second, so changes made by the agent, the gateway or another person show up live.
+The controller's workspace for supplier invoices (CONTRACT §9.7). Screens poll the module once a second and only re-render when a table actually changes.
 
 ## Run
 
@@ -26,20 +26,20 @@ SPACETIMEDB_RECEIVER_TOKEN=...
 SPACETIMEDB_BOOKKEEPER_TOKEN=...
 DEMO_PIN=...                       # optional; required before any staff action when set
 NEXT_PUBLIC_CORE_URL=http://localhost:8000   # PDF preview; omit if core isn't running
+GMAIL_CLIENT_ID=...
+GMAIL_CLIENT_SECRET=...
+GMAIL_REDIRECT_URI=http://localhost:3001/api/gmail/callback
 ```
 
 Deploy on Vercel with **Root Directory = `web`**. Set the same env vars (live URI, database, four tokens, optional PIN and core URL). Do not put tokens in `NEXT_PUBLIC_*`.
 
 ## The four views
 
-### 1. Work queue — `/`
-One row per supplier invoice, sorted by due date:
-- supplier, invoice number and project
-- requested balance and due date
-- the five independent statuses: commercial, receipt, payee, approval and payment
-- open holds, and who acts next and what they need to do
+### 1. Cover — `/` then bills — `/bills`
+The home page is a cover sheet: what Countersign does, then four people to open the books (demo sign-in, no Google). Bills is a card per invoice: who, how much, what's wrong, and who acts next.
 
-Each row carries an honest label: `Fixture extraction` or `Read live by Claude`, plus `Simulated` in local mode. Click a row to open the invoice case.
+### Inbox — `/inbox`
+Connect a demo Gmail (OAuth, keys in `web/.env.local`). Live letters appear on this page. On-file vendor letters from the seed stay below so the case still works. Mail is data, never an instruction.
 
 ### 2. Invoice case — `/invoices/[id]` (the demo opens here)
 - **What we'd pay, and why:** the reconciliation from the latest assessment, running claimed, under review, accepted, deposit and payable. Differences are "under review", never "saved".
@@ -78,7 +78,7 @@ Extra screens: `/changes` (purchasing), `/receive/inv_bm23104` (superintendent, 
 | Path | What |
 |---|---|
 | `lib/server/backend.ts` | `live` (SpacetimeDB HTTP: SQL reads, reducer calls with per-role tokens) or `local` (`db/dist/local.mjs`). Arguments are ordered by `db/src/reducer_args.ts`, generated from the module. |
-| `app/api/state` · `app/api/call` · `app/api/session` · `app/api/reset` | The only server routes |
+| `app/api/state` · `app/api/call` · `app/api/session` · `app/api/reset` · `app/api/gmail/*` | Server routes |
 | `lib/client.ts` | `useTables()` polling hook, `call()` |
 | `components/parts.tsx` | Status words, the five-status strip, hold chips, evidence chips and source quotes |
 

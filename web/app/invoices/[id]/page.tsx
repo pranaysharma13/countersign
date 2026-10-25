@@ -2,8 +2,9 @@
 import Link from 'next/link';
 import { use, useState } from 'react';
 import { useTables, call, type Row, type Tables, type CallResult } from '@/lib/client';
-import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, assessmentLines, billStory, nextStep } from '@/lib/format';
-import { StatusStrip, Evidence, Loading, Outcome } from '@/components/parts';
+import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, assessmentLines, billStory, nextStep, safeReason, ceilingCopy } from '@/lib/format';
+import { StatusStrip, Evidence, Loading, Outcome, sourceOf, Papers } from '@/components/parts';
+import { fileHref } from '@/lib/files';
 
 const TABLES = ['invoice', 'invoice_revision', 'invoice_line', 'assessment', 'hold', 'supplier', 'supplier_contact', 'purchase',
   'project', 'document', 'source_file', 'source_fragment', 'email_message', 'outbox', 'agent_step', 'audit_log', 'receipt_attestation',
@@ -17,15 +18,15 @@ const ACTION_WORDS: Record<string, string> = {
   decide_payee_profile: 'decided a bank change', add_payee_profile: 'recorded a bank change request', enqueue_job: 'queued work',
   claim_job: 'picked up work', finish_job: 'finished work',
 };
-const OWNER_RESOLVABLE = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING', 'DUPLICATE_REVIEW',
-  'EXTRACTION_REVIEW', 'CONTRACT_REVIEW', 'PROMPT_INJECTION', 'SUPPLIER_RISK'];
+const OWNER_RESOLVABLE = ['DUPLICATE_REVIEW', 'EXTRACTION_REVIEW', 'CONTRACT_REVIEW', 'PROMPT_INJECTION', 'SUPPLIER_RISK'];
+const MONEY_HOLD = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING'];
 
 export default function InvoiceCase({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: t, mode, error } = useTables(TABLES);
   if (!t) return <Loading error={error} />;
   const inv = t.invoice.find(i => i.id === id);
-  if (!inv) return <div className="empty">No bill {id}. Check the <Link href="/">bills list</Link>.</div>;
+  if (!inv) return <div className="empty">No bill {id}. Check the <Link href="/bills">bills list</Link>.</div>;
 
   const revs = t.invoice_revision.filter(r => r.invoice_id === id).sort((a, b) => a.revision - b.revision);
   const rev = revs.find(r => r.id === inv.active_revision_id);
@@ -39,16 +40,20 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
     <div className="stack">
       <div className="head">
         <div>
-          <div className="small muted"><Link href="/">Bills</Link> / {sup?.name}</div>
-          <h1>{sup?.name} · {inv.invoice_number}</h1>
+          <div className="small muted"><Link href="/bills">Bills</Link> · {inv.invoice_number}</div>
+          <h1>{sup?.name ?? 'Supplier'}</h1>
           <p className="lede">{billStory(inv, holds)}</p>
+          <div className="case-amt">{money(rev?.balance_requested_cents)}</div>
           <p className="small muted" style={{ marginTop: 6 }}>
             {pur ? <>Order <Link href={`/purchases/${pur.id}`}>{pur.po_number}</Link>. </> : 'No purchase order. '}
             Dated {day(inv.invoice_date)}, due {day(inv.due_date)}.{rev && rev.revision > 1 ? ` Revision ${rev.revision} is the one that counts.` : ''}
           </p>
         </div>
         <div className="row">
-          <Link className="btn" href={`/invoices/${id}/approve`}>Pay or reject</Link>
+          {inv.payment_status === 'settled' ? null
+            : holds.length > 0
+              ? <a className="btn" href="#holds">Review what's blocking</a>
+              : <Link className="btn" href={`/invoices/${id}/approve`}>Review payment</Link>}
         </div>
       </div>
 
@@ -61,12 +66,17 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
 
       <div className="split">
         <div className="stack">
-          {assessment ? <Reconciliation a={assessment} rev={rev!} /> : <div className="sheet pad muted">Still checking this bill.</div>}
-          {assessment && <Ledger a={assessment} t={t} />}
-          <Holds holds={holds} t={t} />
+          {assessment ? <Reconciliation a={assessment} rev={rev!} holds={holds} /> : <div className="sheet pad muted">Still checking this bill.</div>}
+          {assessment && <Ledger a={assessment} holds={holds} t={t} />}
+          <Holds holds={holds} inv={inv} pur={pur} t={t} />
           <Revisions revs={revs} active={inv.active_revision_id} />
         </div>
         <div className="stack">
+          <Papers docs={[
+            t.document.find(d => d.id === rev?.document_id),
+            t.document.find(d => d.id === pur?.po_document_id),
+            t.document.find(d => d.id === pur?.quote_document_id),
+          ].filter(Boolean) as Row[]} t={t} />
           <Clarifications inv={inv} t={t} mode={mode} />
           <Thread inv={inv} sup={sup} pur={pur} t={t} />
           <details className="sheet pad activity">
@@ -80,9 +90,11 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
   );
 }
 
-function Reconciliation({ a, rev }: { a: Row; rev: Row }) {
-  const review = a.variance_cents + a.pending_cents;
-  const accepted = a.authorised_cents;
+function Reconciliation({ a, rev, holds }: { a: Row; rev: Row; holds: Row[] }) {
+  const over = holds.find(h => h.code === 'PO_CEILING');
+  const overAmt = over ? Number(over.amount_cents) || 0 : 0;
+  const review = a.variance_cents + a.pending_cents + overAmt;
+  const accepted = Math.max(0, a.authorised_cents - overAmt);
   return (
     <section className="sheet pad" aria-labelledby="recon">
       <h2 id="recon">This bill</h2>
@@ -103,15 +115,16 @@ function Reconciliation({ a, rev }: { a: Row; rev: Row }) {
   );
 }
 
-function Ledger({ a, t }: { a: Row; t: Tables }) {
+function Ledger({ a, holds, t }: { a: Row; holds: Row[]; t: Tables }) {
   const lines = assessmentLines(a.details_json);
+  const over = holds.find(h => h.code === 'PO_CEILING');
   const total = (k: 'claimed_cents' | 'accepted_cents' | 'pending_cents' | 'variance_cents') =>
     lines.reduce((s, l) => s + (Number(l[k]) || 0), 0);
   return (
     <section className="sheet" aria-labelledby="lines">
       <div className="pad" style={{ paddingBottom: 0 }}>
-        <h2 id="lines">Each line</h2>
-        <p className="small muted" style={{ marginTop: -4 }}>Click a source to read the exact words on the document.</p>
+        <h2 id="lines">Line items</h2>
+        <p className="small muted" style={{ marginTop: -4 }}>Open a source to read the page of the document.</p>
       </div>
       <div className="scroll">
         <table className="ledger">
@@ -119,65 +132,103 @@ function Ledger({ a, t }: { a: Row; t: Tables }) {
           <tbody>
             {lines.map((l, i) => {
               const review = (l.variance_cents ?? 0) + l.pending_cents;
+              const overAmt = over && l.status === 'accepted' ? Number(over.amount_cents) : 0;
+              const notAgreed = review || overAmt;
               return (
-                <tr key={i} className={l.status === 'under_review' ? 'under' : l.status === 'pending' ? 'pending' : ''}>
+                <tr key={i} className={notAgreed ? 'under' : ''}>
                   <td className="desc">
                     <strong>{l.line}</strong>
                     <div className="calc">{l.calculation}</div>
+                    {overAmt > 0 && <div className="calc">{ceilingCopy(over.evidence_json, over.reason)}</div>}
                     {l.uncertainty && <div className="calc"><em>{l.uncertainty}</em></div>}
                     <Evidence ids={l.fragment_ids} t={t} />
                   </td>
                   <td className="num">{money(l.claimed_cents)}</td>
                   <td className="num">{money(l.accepted_cents)}</td>
-                  <td className="num" style={{ color: review ? 'var(--hold)' : undefined }}>{review ? money(review) : '—'}</td>
-                  <td>{l.status === 'accepted' ? <span className="st ok">OK</span>
-                    : l.status === 'pending' ? <span className="st hold">Waiting</span>
-                      : <span className="st hold">Not agreed</span>}</td>
+                  <td className="num" style={{ color: notAgreed ? 'var(--hold)' : undefined }}>{notAgreed ? money(notAgreed) : '—'}</td>
+                  <td>{overAmt > 0 ? <span className="st hold">Over the order</span>
+                    : l.status === 'accepted' ? <span className="st ok">OK</span>
+                      : l.status === 'pending' ? <span className="st hold">Waiting</span>
+                        : <span className="st hold">Not agreed</span>}</td>
                 </tr>
               );
             })}
           </tbody>
           <tfoot><tr><td>Total</td><td className="num">{money(total('claimed_cents'))}</td><td className="num">{money(total('accepted_cents'))}</td>
-            <td className="num">{money(total('pending_cents') + total('variance_cents'))}</td><td /></tr></tfoot>
+            <td className="num">{money(total('pending_cents') + total('variance_cents') + (over ? Number(over.amount_cents) : 0))}</td><td /></tr></tfoot>
         </table>
       </div>
     </section>
   );
 }
 
-function Holds({ holds, t }: { holds: Row[]; t: Tables }) {
+function Holds({ holds, inv, pur, t }: { holds: Row[]; inv: Row; pur?: Row; t: Tables }) {
   const [note, setNote] = useState<Record<string, string>>({});
   const [result, setResult] = useState<CallResult | null>(null);
   return (
     <section className="sheet pad" aria-labelledby="holds">
       <h2 id="holds">What's blocking payment</h2>
-      {holds.length === 0 && <p className="muted" style={{ margin: 0 }}>Nothing. Each block clears on its own — clearing one never clears another.</p>}
-      {holds.map(h => (
-        <div key={h.id} style={{ padding: '10px 0', borderTop: '1px solid var(--rule-2)' }}>
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <span className={`chip ${h.code === 'PAYEE_CHANGE_PENDING' ? 'stop' : ''}`}>{HOLD_LABEL[h.code] ?? h.code}</span>
-            {h.amount_cents > 0 && <span className="num small">{money(h.amount_cents)}</span>}
-          </div>
-          <div className="small" style={{ marginTop: 4 }}>{HOLD_DETAIL[h.code] ?? h.reason}</div>
-          <Evidence ids={ids(h.evidence_json)} t={t} />
-          {OWNER_RESOLVABLE.includes(h.code) ? (
-            <form className="row" style={{ marginTop: 8 }} onSubmit={async e => {
-              e.preventDefault();
-              setResult(await call('resolve_hold', { id: h.id, note: note[h.id] ?? '' }));
-            }}>
-              <input type="text" placeholder="Why you're allowing this (required)" value={note[h.id] ?? ''} aria-label={`Note for ${h.code}`}
-                onChange={e => setNote({ ...note, [h.id]: e.target.value })} style={{ flex: 1, minWidth: 200 }} />
-              <button className="btn secondary" type="submit" disabled={!(note[h.id] ?? '').trim()}>Allow this (owner)</button>
-            </form>
-          ) : (
-            <div className="small muted" style={{ marginTop: 6 }}>
-              {h.code === 'RECEIPT_NOT_VERIFIED' ? 'Clears when someone on site confirms the delivery.'
-                : h.code === 'PAYEE_CHANGE_PENDING' ? 'Clears when the owner calls a number already on file — never a number from the request.'
-                  : 'The owner has to allow this, in writing, here.'}
+      {holds.length === 0 && <p className="muted" style={{ margin: 0 }}>Nothing is blocking. Each block clears on its own — clearing one never clears another.</p>}
+      <div className="hold-list">
+        {holds.map(h => {
+          const injection = h.code === 'PROMPT_INJECTION';
+          const frags = ids(h.evidence_json).map(id => t.source_fragment.find(f => f.id === id)).filter(Boolean) as Row[];
+          const src = frags[0] ? sourceOf(frags[0], t) : '';
+          const doc = frags[0] ? t.document.find(d => d.id === frags[0].document_id) : undefined;
+          const href = fileHref(doc, frags[0]?.page);
+          return (
+            <div key={h.id} className={injection ? 'finding' : 'hold-item'}>
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <span className={`chip ${injection || h.code === 'PAYEE_CHANGE_PENDING' ? 'stop' : ''}`}>{HOLD_LABEL[h.code] ?? h.code}</span>
+                {h.amount_cents > 0 && <span className="num small">{money(h.amount_cents)}</span>}
+              </div>
+              <p className="hold-copy">
+                {h.code === 'PO_CEILING'
+                  ? ceilingCopy(h.evidence_json, h.reason || HOLD_DETAIL[h.code])
+                  : (HOLD_DETAIL[h.code] ?? h.reason)}
+              </p>
+              {injection ? (
+                <p className="hold-src">
+                  Found on {src || 'the invoice'}. The instruction was not followed.
+                  {href ? <> · <a href={href} target="_blank" rel="noreferrer">Open invoice PDF</a></> : null}
+                </p>
+              ) : h.code === 'PO_CEILING' ? (
+                <p className="hold-src">
+                  {h.reason}
+                  {pur?.po_document_id || inv.active_revision_id ? ' Compare the purchase order and this invoice in Documents.' : ''}
+                </p>
+              ) : (
+                <Evidence ids={ids(h.evidence_json)} t={t} />
+              )}
+              {OWNER_RESOLVABLE.includes(h.code) ? (
+                <form className="row" style={{ marginTop: 12 }} onSubmit={async e => {
+                  e.preventDefault();
+                  setResult(await call('resolve_hold', { id: h.id, note: note[h.id] ?? '' }));
+                }}>
+                  <input
+                    type="text"
+                    placeholder={injection ? 'What you reviewed (required)' : 'Why you are clearing this (required)'}
+                    value={note[h.id] ?? ''}
+                    aria-label={injection ? 'Review note' : `Note for ${HOLD_LABEL[h.code] ?? h.code}`}
+                    onChange={e => setNote({ ...note, [h.id]: e.target.value })}
+                    style={{ flex: 1, minWidth: 200 }}
+                  />
+                  <button className="btn secondary" type="submit" disabled={!(note[h.id] ?? '').trim()}>
+                    {injection ? 'Record review' : 'Clear this hold'}
+                  </button>
+                </form>
+              ) : (
+                <div className="small muted" style={{ marginTop: 8 }}>
+                  {h.code === 'RECEIPT_NOT_VERIFIED' ? 'Clears when someone on site confirms the delivery.'
+                    : h.code === 'PAYEE_CHANGE_PENDING' ? 'Clears when the owner calls a number already on file — never a number from the request.'
+                      : MONEY_HOLD.includes(h.code) ? 'Ask the supplier for a corrected invoice, or accept the extra on each line. This cannot be waved from here.'
+                        : 'This stays open until the matching event happens.'}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
+          );
+        })}
+      </div>
       <Outcome r={result} />
     </section>
   );
@@ -292,7 +343,7 @@ function Timeline({ inv, revs, t }: { inv: Row; revs: Row[]; t: Tables }) {
           <li key={a.id}><span className="t">{time(a.at)}</span>
             <span className={a.outcome === 'denied' ? 'denied' : ''}>
               <strong>{ROLE_LABEL[a.actor_role] ?? a.actor_role}</strong> {ACTION_WORDS[a.action] ?? a.action.replaceAll('_', ' ')}
-              {a.outcome === 'denied' ? `, refused: ${a.reason}` : a.reason ? `: ${a.reason}` : ''}
+              {a.outcome === 'denied' ? `, refused: ${safeReason(a.reason)}` : a.reason ? `: ${safeReason(a.reason)}` : ''}
             </span></li>
         ))}
       </ol>

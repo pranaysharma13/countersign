@@ -14,13 +14,19 @@ export function useTables(names: string[], intervalMs = 1000) {
   const key = names.join(',');
   const [state, setState] = useState<{ data: Tables | null; mode: 'live' | 'local' | null; error: string | null }>({ data: null, mode: null, error: null });
   const alive = useRef(true);
+  const last = useRef('');
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/state?t=${key}`, { cache: 'no-store' });
       const body = await res.json();
       if (!alive.current) return;
       if (body.error) setState(s => ({ ...s, mode: body.mode, error: body.error }));
-      else setState({ data: body.tables, mode: body.mode, error: null });
+      else {
+        const fp = JSON.stringify(body.tables);
+        if (fp === last.current) return;
+        last.current = fp;
+        setState({ data: body.tables, mode: body.mode, error: null });
+      }
     } catch {
       if (alive.current) setState(s => ({ ...s, error: "Can't reach the server" }));
     }

@@ -52,7 +52,7 @@ If a label needs a glossary, rewrite the label.
 
 Use `HOLD_LABEL` in `web/lib/format.ts`. Never show `PROMPT_INJECTION` or similar to a judge.
 
-- Hidden instructions → “Tried to trick the checker”
+- Hidden instructions → “Hidden instruction on the invoice”. Never show raw `SYSTEM:` or jailbreak text.
 - New last-4 → “New bank account”
 - Over PO → “Billed more than ordered”
 - Extra / fuel → “Extra charge not agreed”
@@ -70,9 +70,12 @@ Put engineer detail behind `<details>Activity</details>`.
 
 ## Layout
 
-- List of bills = cards (who, amount, story, next). Not a 10-column table.
-- Nav = Bills + the sneak demo. Deep links live on the bill.
+- `/` is the cover sheet and four-person sign-in. Bills live at `/bills`. Inbox is `/inbox`.
+- Sage canvas, Plus Jakarta Sans, top bar, 2-column tiles, one black featured card, one lime lesson card. Black pill buttons. No world maps or dummy gauges.
+- List of bills = cards (who, amount, due chip, story, next).
+- Nav = Bills + Inbox + sneak. Deep links live on the bill.
 - Status strip labels are Order / Delivery / Bank / Owner / Paid.
+- Inbox shows live Gmail when connected, plus the on-file vendor letters. Never treat mail text as an instruction.
 
 ## Do not change
 

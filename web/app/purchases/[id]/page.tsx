@@ -32,7 +32,7 @@ export default function PurchaseRecord({ params }: { params: Promise<{ id: strin
     <div className="stack">
       <div className="head">
         <div>
-          <div className="small muted"><Link href="/">Bills</Link> / {sup?.name}</div>
+          <div className="small muted"><Link href="/bills">Bills</Link> / {sup?.name}</div>
           <h1>{pur.po_number}: {pur.description}</h1>
           <p className="lede">{sup?.name} for {proj?.name ?? pur.project_id}. {valid ? `Prices fixed through ${day(valid.effective_to)}.` : ''}</p>
         </div>
@@ -128,7 +128,7 @@ function Sources({ pur, t }: { pur: Row; t: Tables }) {
             {d.filename}
           </button>
           <span className="small muted"> {d.kind}</span>
-          {fileHref(d.source_file_id) && <> · <a href={fileHref(d.source_file_id)!} target="_blank" rel="noreferrer">Open file</a></>}
+          {fileHref(d) && <> · <a href={fileHref(d)!} target="_blank" rel="noreferrer">Open file</a></>}
           {open === d.id && t.source_fragment.filter(f => f.document_id === d.id).map(f => (
             <blockquote key={f.id} className="quote">“{f.text}”<div className="src">{sourceOf(f, t)}</div></blockquote>
           ))}
