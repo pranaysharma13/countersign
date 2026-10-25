@@ -93,13 +93,14 @@ export default function Landing() {
 function Preview({ t }: { t: Tables }) {
   const invoices = t.invoice;
   const rev = (inv: Row) => t.invoice_revision.find(r => r.id === inv.active_revision_id);
-  const openHolds = t.hold.filter(h => h.status === 'open');
-  const holdsOf = (inv: Row) => openHolds.filter(h => h.revision_id === inv.active_revision_id);
   const unpaid = invoices.filter(i => i.payment_status !== 'settled');
+  const unpaidRevs = new Set(unpaid.map(i => i.active_revision_id));
+  const openHolds = t.hold.filter(h => h.status === 'open' && unpaidRevs.has(h.revision_id));
+  const holdsOf = (inv: Row) => openHolds.filter(h => h.revision_id === inv.active_revision_id);
   const asked = unpaid.reduce((s, i) => s + (Number(rev(i)?.balance_requested_cents) || 0), 0);
   const held = openHolds.filter(h => MONEY_HOLD.includes(h.code)).reduce((s, h) => s + (Number(h.amount_cents) || 0), 0);
   const caughtBills = unpaid.filter(i => holdsOf(i).length > 0).length;
-  const pct = invoices.length ? Math.round((caughtBills / invoices.length) * 100) : 0;
+  const pct = unpaid.length ? Math.round((caughtBills / unpaid.length) * 100) : 0;
 
   const stages = [
     { k: 'Arrived', n: invoices.length },
@@ -139,9 +140,9 @@ function Preview({ t }: { t: Tables }) {
       </section>
 
       <section className="bento bento-gauge">
-        <div className="card-kicker">Caught before paying</div>
+        <div className="card-kicker">Open bills on hold</div>
         <Gauge pct={pct} />
-        <p className="small muted bento-foot">{caughtBills} of {invoices.length} bills are held until someone fixes them.</p>
+        <p className="small muted bento-foot">{caughtBills} of {unpaid.length} open bills have something to fix before paying.</p>
       </section>
 
       {worst && (
@@ -203,7 +204,7 @@ function Gauge({ pct }: { pct: number }) {
   const on = Math.round((pct / 100) * ticks);
   return (
     <div className="gauge">
-      <svg viewBox="0 0 200 110" role="img" aria-label={`${pct}% of bills caught before paying`}>
+      <svg viewBox="0 0 200 110" role="img" aria-label={`${pct}% of open bills on hold`}>
         {Array.from({ length: ticks + 1 }, (_, i) => {
           const a = Math.PI - (i / ticks) * Math.PI;
           const r1 = 78, r2 = i % 6 === 0 ? 96 : 92;

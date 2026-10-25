@@ -154,7 +154,7 @@ export interface BillLike {
 }
 
 /** One sentence a builder can read. Hold codes stay internal. */
-export function billStory(inv: BillLike, holds: { code: string }[]): string {
+export function billStory(inv: BillLike | Record<string, any>, holds: Array<{ code: string } | Record<string, any>>): string {
   if (inv.payment_status === 'settled') return 'Already paid.';
   const codes = new Set(holds.map(h => h.code));
   if (codes.has('PROMPT_INJECTION')) return 'This invoice included a hidden instruction. We ignored it. The line items still match the order.';
@@ -168,7 +168,7 @@ export function billStory(inv: BillLike, holds: { code: string }[]): string {
   return inv.next_action;
 }
 
-export function nextStep(inv: BillLike, holds: { code: string }[]): { role: string; action: string } {
+export function nextStep(inv: BillLike | Record<string, any>, holds: Array<{ code: string } | Record<string, any>>): { role: string; action: string } {
   if (inv.payment_status === 'settled') return { role: '', action: 'Nothing left to do.' };
   const codes = new Set(holds.map(h => h.code));
   if (codes.has('PROMPT_INJECTION')) return { role: 'owner', action: 'Record that the hidden instruction was ignored, then review the line items.' };
