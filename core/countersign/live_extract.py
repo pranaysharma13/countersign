@@ -22,7 +22,7 @@ import anthropic
 
 from .config import settings
 
-PROMPT_VERSION = "extract-v1"
+PROMPT_VERSION = "extract-v1.1"  # v1.1: invoice payee_change_requests
 MAX_TOKENS = 32_000  # adaptive thinking counts toward it; streaming avoids HTTP timeouts
 
 STR, INT, BOOL = {"type": "string"}, {"type": "integer"}, {"type": "boolean"}
@@ -85,7 +85,9 @@ INVOICE_FACTS = ("supplier_name", "invoice_number", "invoice_date", "due_date", 
                  "supersedes_invoice_number", "supersedes_invoice_date", "revision", "tax_cents")
 INVOICE_LINE = obj(kind=enum(*LINE_KINDS), description=STR, quantity_milli=INT, unit=STR, unit_price_cents=INT,
                    amount_cents=INT, change_request_ref=STR, quote=STR, fragments=FRAGS)
-INVOICE = obj(facts=facts(*INVOICE_FACTS), lines=arr(INVOICE_LINE), instructions_found=arr(STR))
+PAYEE_CHANGE = obj(last4=STR, bank_name=STR, quote=STR, fragments=FRAGS)
+INVOICE = obj(facts=facts(*INVOICE_FACTS), lines=arr(INVOICE_LINE), payee_change_requests=arr(PAYEE_CHANGE),
+              instructions_found=arr(STR))
 
 BOOL_FACTS = {"incorporates_terms"}
 INT_FACTS = {"revision"}  # plus every *_cents fact
@@ -118,7 +120,10 @@ TASKS = {
     "invoice": "Return one facts entry for each fact name. supersedes_* are set only if the invoice says it replaces or "
                "corrects an earlier invoice. currency is the 3-letter code. Then record every invoice line. For a line "
                "that bills a charge from the change requests on file, change_request_ref is that ref; otherwise \"\". "
-               "Never link a line to a change request that isn't listed.",
+               "Never link a line to a change request that isn't listed. payee_change_requests: only when the invoice "
+               "says the supplier's bank or payment details have changed or asks to be paid into a new account; last4 "
+               "is that account's last four digits and the quote must contain them. An ordinary \"remit to\" line is "
+               "not a change: leave the list empty.",
 }
 
 
@@ -289,8 +294,10 @@ def invoice_ext(document_id: str, out: dict[str, Any], metas: list[dict[str, Any
         lines.append({"kind": kind, "description": l["description"], "quantity_milli": l["quantity_milli"],
                       "unit": l["unit"], "unit_price_cents": l["unit_price_cents"], "amount_cents": l["amount_cents"],
                       "links": links, "quote": l["quote"], "fragments": l["fragments"]})
+    changes = [{"last4": c["last4"].strip(), "bank_name": c["bank_name"], "quote": c["quote"], "fragments": c["fragments"]}
+               for c in out["payee_change_requests"]]
     return {**envelope(document_id, "invoice", metas), "fields": fields, "lines": lines,
-            "instructions_found": out["instructions_found"]}
+            "payee_change_requests": changes, "instructions_found": out["instructions_found"]}
 
 
 def read_email(document_id: str, meta: dict[str, Any], fragments: list[dict[str, Any]], on_file: list[str],

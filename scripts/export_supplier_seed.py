@@ -2,7 +2,8 @@
 
     uv run --project core python scripts/export_supplier_seed.py
 
-Writes data/seeds/baymix_opening.json and data/seeds/baymix_correction.json (committed): ordered
+Writes data/seeds/baymix_opening.json, baymix_correction.json, queue_companions.json and
+judge_sandbox.json (committed, the judge page's sandbox supplier and purchase): ordered
 lists of {"role", "reducer", "args"} with named args in CONTRACT order. Same bytes every run. Re-run
 after changing the fixtures, the world, the assessment or the clarification; a test fails if stale.
 """
@@ -10,6 +11,7 @@ after changing the fixtures, the world, the assessment or the clarification; a t
 import _path  # noqa: F401
 
 from countersign.companion_seed import COMPANION_SEED, export_companion_seed, write_companion_fixtures
+from countersign.sandbox import SANDBOX_SEED, export_sandbox_seed
 from countersign.supplier_seed import SEEDS_DIR, export_seeds, seed_bytes
 
 
@@ -23,6 +25,9 @@ def main() -> None:
     companions = export_companion_seed()
     (SEEDS_DIR / COMPANION_SEED).write_bytes(seed_bytes(companions))
     print(f"{COMPANION_SEED:26} {len(companions):>4} calls  {', '.join(sorted({c['reducer'] for c in companions}))}")
+    sandbox = export_sandbox_seed()
+    (SEEDS_DIR / SANDBOX_SEED).write_bytes(seed_bytes(sandbox))
+    print(f"{SANDBOX_SEED:26} {len(sandbox):>4} calls  {', '.join(sorted({c['reducer'] for c in sandbox}))}")
     print(f"Wrote {SEEDS_DIR}")
 
 

@@ -135,7 +135,7 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 ## Known gaps (as of this commit)
 
 - File preview for the nine BayMix documents: `GET /` lists them and `GET /files/{source_file_id}` serves the PDF or `.eml` from the seed when `storage_path` is empty. Audit export is still open.
-- Judge page: `sneak_charge` opens the matching hold on the active revision and never pays.
+- Judge page: each `sneak_charge` builds a real invoice on the sandbox supplier (`countersign/sandbox.py`, seeded from `data/seeds/judge_sandbox.json`) and sends it through `process_document`; the real checks open the holds. Fixture mode uses an extraction generated from the judge's inputs (labelled generated); live mode has Claude read the PDF. A bank change goes through the new payee path (`payee_change_requests` -> a pending `add_payee_profile`), so the module opens `PAYEE_CHANGE_PENDING`. The pending profile stays until the owner rejects it, so later sandbox invoices show that hold too. Fuel opens `USAGE_EVIDENCE_MISSING` (the fuel rule is accepted; the diesel index isn't checked).
 - A first real Droid run (needs `FACTORY_API_KEY`), the citation-backed "why?" explanation (a separate call that can't change amounts), and a small call that reads the fuel-surcharge parameters for the fuel variant.
 - Variants: scoped amendment, fuel surcharge (Apify diesel actor still unset — license actor too), supplier risk (CRS sandbox keys are wired; mapping of the live BLJ payload is still coarse).
 - Settlement decisions (CONTRACT v2.2) are in the Python side and the reference module; the SpacetimeDB module still needs them. Until it has the `settlement_decision` table, the assessment reads no decisions.

@@ -1,6 +1,6 @@
 """Load the BayMix seeds into the real SpacetimeDB module over HTTP.
 
-    uv run --project core python scripts/load_supplier_seed.py          # the demo's opening state
+    uv run --project core python scripts/load_supplier_seed.py          # the demo's opening state + judge sandbox
     uv run --project core python scripts/load_supplier_seed.py --all    # plus BayMix's reply and revision 2
 
 Needs a published module, actors from scripts/setup_actors.py, and their tokens in .env (the admin
@@ -20,6 +20,7 @@ import _path  # noqa: F401
 import httpx
 
 from countersign import seed_check
+from countersign.sandbox import SANDBOX_SEED
 from countersign.store import SpacetimeStore, StoreError
 from countersign.supplier_seed import SEEDS_DIR, replay
 
@@ -43,7 +44,7 @@ def main() -> int:
         print(f"Can't read the module at {store.base} ({store.database}): {e}. Is `spacetime start` running and published?")
         return 1
     seeds = {name: json.loads((SEEDS_DIR / name).read_text())
-             for name in ["baymix_opening.json"] + (["baymix_correction.json"] if args.all else [])}
+             for name in ["baymix_opening.json", SANDBOX_SEED] + (["baymix_correction.json"] if args.all else [])}
     missing = [f"{r} identity" for r, i in ids.items() if not i]
     missing += [f"{r} token" for r in sorted({c["role"] for calls in seeds.values() for c in calls}) if not store.tokens.get(r)]
     if missing:

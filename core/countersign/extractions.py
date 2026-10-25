@@ -32,7 +32,7 @@ FIXTURE_DIRS = (
 class NotYet(RuntimeError):
     """Something this document depends on isn't on file yet (its purchase, the proposal it accepts...).
     The job fails and the module retries it; when retries run out, the document goes to review."""
-EVIDENCE_LISTS = ("terms", "lines", "change_requests", "acceptances", "internal_approval_claims")
+EVIDENCE_LISTS = ("terms", "lines", "change_requests", "acceptances", "internal_approval_claims", "payee_change_requests")
 
 
 def _read_fixture(path: Path) -> dict[str, Any]:
@@ -102,6 +102,10 @@ def evidence_problems(ext: dict[str, Any], fragment_texts: dict[str, str]) -> li
     for key in EVIDENCE_LISTS:
         for i, item in enumerate(ext.get(key, [])):
             check(f"{key}[{i}]", item, _money_values(item), int(item.get("quantity_milli") or 0))
+    for i, item in enumerate(ext.get("payee_change_requests", [])):  # the new account must be the one quoted
+        last4 = str(item.get("last4", ""))
+        if not re.fullmatch(r"\d{4}", last4) or last4 not in normalize_ws(str(item.get("quote", ""))):
+            problems.append(f"payee_change_requests[{i}]: last4 {last4!r} doesn't appear in the quoted text")
     return problems
 
 
