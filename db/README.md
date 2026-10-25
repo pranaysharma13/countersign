@@ -20,14 +20,14 @@ The system of work: tables, roles, allowed state changes, separation of duties, 
 ## Status
 
 - **All 66 reducers in CONTRACT v2 exist** with the exact argument order (checked by script against the contract text).
-- v1 P0 + P1 and v2 §9 "A" and "B": done. 46 tests pass.
+- v1 P0 + P1, v2 §9 "A" and "B", and the v2.1 clarifications (§9.8): done. 61 tests pass.
 
 ## Run
 
 ```bash
 cd db
 npm install
-npm test            # 46 rule tests, no server needed
+npm test            # 61 rule tests, no server needed
 npm run typecheck
 
 # Live (needs the spacetime CLI: https://spacetimedb.com/install)
@@ -71,9 +71,12 @@ These came out of "the AI can add holds, never remove them" and "fail safe". Pyt
 - `approve_supplier_payment` denial message = a **JSON array** of `blocked_reasons` strings. `APPROVAL_STALE` doesn't block the approval that clears it.
 - Approval id is `appr_<proposal_id>`; the pay job is `job_pay_<proposal_id>`; the send job is `job_send_<outbox_id>`.
 - A `supplier_payment` proposal stores `{invoice_id, revision_id, assessment_id, deposit_allocation_cents, payee_profile_id}` in `evidence_json`.
-- New revision: commercial holds on the old one → `superseded`; `RECEIPT_NOT_VERIFIED` and `PAYEE_CHANGE_PENDING` are **carried over** (id `<old hold id>~<new revision id>`). Work item goes back to `investigating`.
-- Module-created holds: `hold_<rev>_PAYEE_CHANGE_PENDING_<profile id>`, `hold_<rev>_APPROVAL_STALE_<approval id>`.
-- `decide_change_request`: owner without an `authority` row is unlimited; anyone else needs one (limit 0 otherwise). Rate charges need `scope_json.max_quantity_milli` (or `quantity_milli`); exposure = `amount_cents + ceil(rate_cents × qty / 1000)`.
+- New revision: open holds on the old one → `superseded`; `RECEIPT_NOT_VERIFIED`, `PAYEE_CHANGE_PENDING` and `SUPPLIER_RISK` are **reopened** on the new revision (§9.8.2). Work item goes back to `investigating`.
+- Module-created holds use `hold_<revision_id>_<code in lowercase>` (one per code per revision); a closed one is reopened rather than duplicated.
+- `decide_change_request` (§9.8.1): **no `authority` row = no authority**, for the owner too; the project scope applies to approve and reject. A limit of 0 approves nothing. Exposure = `amount_cents + ceil(rate_cents × qty / 1000)`, where `qty` is `scope_json.quantity_milli`, or else the remaining PO ceiling (latest accepted `max_quantity` minus material quantity on **settled** invoices). A rate whose unit isn't the scope's `unit` (or the purchase's) can't be approved by anyone; rejecting is fine.
+- `propose_change_request` can't create an `AUTHORISED_*` request (`invalid`); a rate needs a unit; `scope_json` must be an object. The stored classification is recomputed on every decision and supplier acceptance: `DECLINED` if either side declined, `AUTHORISED_*` only when approved in-app **and** accepted by the supplier.
+- Immutable: payee profiles, documents, source fragments and invoice lines. Re-sending the same values → `duplicate`; different values → `denied`.
+- `decide_payee_profile` needs a `pre_established` contact to reject as well as approve. `PAYEE_CHANGE_PENDING` clears once no change is pending for the supplier.
 - `upsert_supplier` can't change `phone_on_file`; a `pre_established` contact can't be edited or created by promotion.
 - `record_email.from_known_contact` = exact (case-insensitive) match on a contact email. Lookalikes are false.
 - Jobs: `claim_job` sets a 5-minute lease and `attempts + 1`; an expired lease can be re-claimed. `finish_job(ok=false)` re-queues with backoff (10s, 20s…) until 3 attempts, then `failed`.
