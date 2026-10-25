@@ -15,6 +15,26 @@ export function ceilingCopy(evidenceJson: string, fallback: string): string {
   }
   return fallback;
 }
+const PLURAL_SKIP = new Set(['cy', 'yd³', 'each', 'ea', 'lot', 'ls']);
+function units(n: string, unit: string): string {
+  const u = unit === 'cy' ? 'yd³' : unit;
+  return `${n} ${n === '1' || PLURAL_SKIP.has(u) || u.endsWith('s') ? u : `${u}s`}`;
+}
+
+export function plainCalc(raw: string): string {
+  const m = raw.match(/^Allowed ([\d.,]+) (\S+) x (\$[\d,.]+) \(accepted unit price\) = (\$[\d,.]+); billed ([\d.,]+) (\S+) x (\$[\d,.]+) = (\$[\d,.]+)$/);
+  if (!m) return raw;
+  const [, aq, au, ap, at, bq, bu, bp, bt] = m;
+  if (aq === bq && au === bu && ap === bp && at === bt) {
+    return `${units(bq, bu)} × ${bp} = ${bt}, at the quoted price.`;
+  }
+  return `Billed ${units(bq, bu)} × ${bp} = ${bt}. The quote allows ${units(aq, au)} × ${ap} = ${at}.`;
+}
+
+export function plainTerms(raw: string): string {
+  return raw.replace(/Quote terms:\s*"\d+\.\s*[^.]+\.\s*([^"]+)"/, 'The quote says: “$1”');
+}
+
 export const when = (micros: number) =>
   new Date(micros / 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 export const time = (micros: number) =>

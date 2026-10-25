@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { call, newId, type CallResult, type Row, type Tables } from '@/lib/client';
 import { day, HOLD_LABEL, qty, ROLE_LABEL, safeQuote, when } from '@/lib/format';
-import { fileHref } from '@/lib/files';
 
 type Tone = 'ok' | 'hold' | 'stop' | 'idle' | 'act';
 const STATUS: Record<string, Record<string, [string, Tone]>> = {
@@ -69,72 +68,31 @@ export function Evidence({ ids, t }: { ids: string[]; t: Tables }) {
   const [open, setOpen] = useState<string | null>(null);
   const frags = ids.map(id => t.source_fragment?.find(f => f.id === id)).filter(Boolean) as Row[];
   if (!frags.length) return null;
-  const shown = frags.find(f => f.id === open);
+  const groups = new Map<string, Row[]>();
+  frags.forEach(f => {
+    const label = chipLabel(f, t);
+    groups.set(label, [...(groups.get(label) ?? []), f]);
+  });
+  const shown = open ? groups.get(open) ?? [] : [];
   return (
     <div>
       <div className="ev">
-        {frags.map(f => (
-          <button key={f.id} type="button" aria-pressed={open === f.id} onClick={() => setOpen(open === f.id ? null : f.id)}
-            title={sourceOf(f, t)}>
-            {chipLabel(f, t)}
+        {[...groups.entries()].map(([label, fs]) => (
+          <button key={label} type="button" aria-pressed={open === label} onClick={() => setOpen(open === label ? null : label)}
+            title={sourceOf(fs[0], t)}>
+            {label}
           </button>
         ))}
       </div>
-      {shown && (
+      {shown.length > 0 && (
         <div className="paper-open">
           <blockquote className="quote">
-            “{safeQuote(String(shown.text || ''))}”
-            <div className="src">{sourceOf(shown, t)}</div>
+            {shown.map(f => <div key={f.id}>“{safeQuote(String(f.text || ''))}”</div>)}
+            <div className="src">{sourceOf(shown[0], t)}</div>
           </blockquote>
-          <DocFrame doc={t.document?.find(d => d.id === shown.document_id)} page={shown.page} t={t} />
         </div>
       )}
     </div>
-  );
-}
-
-export function DocFrame({ doc, page, t }: { doc?: Row; page?: number; t?: Tables }) {
-  if (!doc) return null;
-  const href = fileHref(doc, page);
-  const isMail = doc.kind === 'email' || String(doc.filename || '').endsWith('.eml');
-  if (isMail) {
-    const body = t?.source_fragment?.find(f => f.document_id === doc.id && String(f.id).endsWith('_body'));
-    return <div className="mail">{body?.text || 'Email on file.'}</div>;
-  }
-  if (!href) return <p className="small muted">Document preview is not available.</p>;
-  return (
-    <iframe
-      className="doc-frame"
-      src={href}
-      title={String(doc.filename || 'Document')}
-    />
-  );
-}
-
-export function Papers({ docs, t }: { docs: Row[]; t: Tables }) {
-  const items = docs.filter(Boolean);
-  const [cur, setCur] = useState(items[0]?.id ?? '');
-  const doc = items.find(d => d.id === cur) ?? items[0];
-  if (!items.length) return null;
-  return (
-    <section className="sheet pad" aria-labelledby="papers">
-      <h2 id="papers">Documents</h2>
-      <div className="doc-tabs" role="tablist" aria-label="Documents on this bill">
-        {items.map(d => (
-          <button
-            key={d.id}
-            type="button"
-            role="tab"
-            aria-selected={doc?.id === d.id}
-            className={doc?.id === d.id ? 'btn' : 'btn secondary'}
-            onClick={() => setCur(d.id)}
-          >
-            {({ quote: 'Quote', po: 'Purchase order', invoice: 'Invoice', terms: 'Terms', email: 'Email' } as Record<string, string>)[d.kind] ?? d.kind}
-          </button>
-        ))}
-      </div>
-      <DocFrame doc={doc} t={t} />
-    </section>
   );
 }
 

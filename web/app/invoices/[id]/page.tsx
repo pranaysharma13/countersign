@@ -2,9 +2,9 @@
 import Link from 'next/link';
 import { use, useState } from 'react';
 import { useTables, call, type Row, type Tables, type CallResult } from '@/lib/client';
-import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, assessmentLines, billStory, nextStep, safeReason, ceilingCopy } from '@/lib/format';
-import { StatusStrip, Evidence, Loading, Outcome, sourceOf, Papers } from '@/components/parts';
-import { fileHref } from '@/lib/files';
+import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, assessmentLines, billStory, nextStep, safeReason, ceilingCopy, plainCalc, plainTerms } from '@/lib/format';
+import { StatusStrip, Evidence, Loading, Outcome, sourceOf } from '@/components/parts';
+import { Papers } from '@/components/Stationery';
 
 const TABLES = ['invoice', 'invoice_revision', 'invoice_line', 'assessment', 'hold', 'supplier', 'supplier_contact', 'purchase',
   'project', 'document', 'source_file', 'source_fragment', 'email_message', 'outbox', 'agent_step', 'audit_log', 'receipt_attestation',
@@ -72,11 +72,6 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
           <Revisions revs={revs} active={inv.active_revision_id} />
         </div>
         <div className="stack">
-          <Papers docs={[
-            t.document.find(d => d.id === rev?.document_id),
-            t.document.find(d => d.id === pur?.po_document_id),
-            t.document.find(d => d.id === pur?.quote_document_id),
-          ].filter(Boolean) as Row[]} t={t} />
           <Clarifications inv={inv} t={t} mode={mode} />
           <Thread inv={inv} sup={sup} pur={pur} t={t} />
           <details className="sheet pad activity">
@@ -86,6 +81,18 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
           </details>
         </div>
       </div>
+
+      <Papers
+        docs={[
+          t.document.find(d => d.id === rev?.document_id),
+          t.document.find(d => d.id === pur?.po_document_id),
+          t.document.find(d => d.id === pur?.quote_document_id),
+        ].filter(Boolean) as Row[]}
+        t={t}
+        inv={inv}
+        rev={rev}
+        pur={pur}
+      />
     </div>
   );
 }
@@ -95,6 +102,9 @@ function Reconciliation({ a, rev, holds }: { a: Row; rev: Row; holds: Row[] }) {
   const overAmt = over ? Number(over.amount_cents) || 0 : 0;
   const review = a.variance_cents + a.pending_cents + overAmt;
   const accepted = Math.max(0, a.authorised_cents - overAmt);
+  let conditional = 0;
+  try { conditional = Number(JSON.parse(a.details_json || '{}').conditional_payment_cents) || 0; } catch { conditional = 0; }
+  const heldForCorrection = a.proposed_payment_cents === 0 && review > 0;
   return (
     <section className="sheet pad" aria-labelledby="recon">
       <h2 id="recon">This bill</h2>
@@ -105,8 +115,18 @@ function Reconciliation({ a, rev, holds }: { a: Row; rev: Row; holds: Row[] }) {
             <tr><td>Not agreed yet {review > 0 && <span className="muted small">(we do not pay this unless someone accepts it)</span>}</td>
               <td className="num" style={{ color: review > 0 ? 'var(--hold)' : undefined }}>{review > 0 ? `− ${money(review)}` : money(0)}</td></tr>
             <tr><td><strong>Matches the order</strong></td><td className="num"><strong>{money(accepted)}</strong></td></tr>
-            <tr><td>Deposit already paid</td><td className="num">− {money(a.deposit_available_cents)}</td></tr>
-            <tr><td><strong>Ready to pay if nothing is blocking</strong></td><td className="num"><strong>{money(a.proposed_payment_cents)}</strong></td></tr>
+            {a.deposit_available_cents > 0 && (
+              <tr><td>Deposit already paid</td><td className="num">− {money(a.deposit_available_cents)}</td></tr>
+            )}
+            {heldForCorrection ? (
+              <>
+                <tr><td><strong>Pay now</strong> <span className="muted small">(we never pay part of a bill without the supplier agreeing)</span></td>
+                  <td className="num"><strong>{money(0)}</strong></td></tr>
+                <tr><td>Pay once they send a corrected invoice or agreed credit</td><td className="num">{money(conditional)}</td></tr>
+              </>
+            ) : (
+              <tr><td><strong>Ready to pay once nothing is blocking</strong></td><td className="num"><strong>{money(a.proposed_payment_cents)}</strong></td></tr>
+            )}
             <tr><td className="muted small">Balance they asked us to send</td><td className="num muted small">{money(rev.balance_requested_cents)}</td></tr>
           </tbody>
         </table>
@@ -138,9 +158,9 @@ function Ledger({ a, holds, t }: { a: Row; holds: Row[]; t: Tables }) {
                 <tr key={i} className={notAgreed ? 'under' : ''}>
                   <td className="desc">
                     <strong>{l.line}</strong>
-                    <div className="calc">{l.calculation}</div>
-                    {overAmt > 0 && <div className="calc">{ceilingCopy(over.evidence_json, over.reason)}</div>}
-                    {l.uncertainty && <div className="calc"><em>{l.uncertainty}</em></div>}
+                    {l.calculation && <div className="calc">{plainCalc(l.calculation)}</div>}
+                    {over && overAmt > 0 && <div className="calc">{ceilingCopy(over.evidence_json, over.reason)}</div>}
+                    {l.uncertainty && <div className="calc">{plainTerms(l.uncertainty)}</div>}
                     <Evidence ids={l.fragment_ids} t={t} />
                   </td>
                   <td className="num">{money(l.claimed_cents)}</td>
@@ -174,8 +194,6 @@ function Holds({ holds, inv, pur, t }: { holds: Row[]; inv: Row; pur?: Row; t: T
           const injection = h.code === 'PROMPT_INJECTION';
           const frags = ids(h.evidence_json).map(id => t.source_fragment.find(f => f.id === id)).filter(Boolean) as Row[];
           const src = frags[0] ? sourceOf(frags[0], t) : '';
-          const doc = frags[0] ? t.document.find(d => d.id === frags[0].document_id) : undefined;
-          const href = fileHref(doc, frags[0]?.page);
           return (
             <div key={h.id} className={injection ? 'finding' : 'hold-item'}>
               <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -185,12 +203,11 @@ function Holds({ holds, inv, pur, t }: { holds: Row[]; inv: Row; pur?: Row; t: T
               <p className="hold-copy">
                 {h.code === 'PO_CEILING'
                   ? ceilingCopy(h.evidence_json, h.reason || HOLD_DETAIL[h.code])
-                  : (HOLD_DETAIL[h.code] ?? h.reason)}
+                  : (HOLD_DETAIL[h.code] ?? plainTerms(h.reason))}
               </p>
               {injection ? (
                 <p className="hold-src">
                   Found on {src || 'the invoice'}. The instruction was not followed.
-                  {href ? <> · <a href={href} target="_blank" rel="noreferrer">Open invoice PDF</a></> : null}
                 </p>
               ) : h.code === 'PO_CEILING' ? (
                 <p className="hold-src">
@@ -267,8 +284,8 @@ function Clarifications({ inv, t, mode }: { inv: Row; t: Tables; mode: string | 
           <p className="small">{o.body}</p>
           {o.status === 'draft' && (
             <div className="row" style={{ marginTop: 10 }}>
-              <button className="btn" onClick={async () => setResult(await call('approve_outbox', { id: o.id }))}>Send to supplier (purchasing)</button>
-              <span className="small muted">Countersign writes the draft. A person sends it.</span>
+              <button className="btn" onClick={async () => setResult(await call('approve_outbox', { id: o.id }))}>Send to supplier</button>
+              <span className="small muted">Countersign wrote this draft. Only purchasing or the owner can send it.</span>
             </div>
           )}
         </div>
@@ -320,7 +337,7 @@ function AgentSteps({ wi, t }: { wi: string; t: Tables }) {
       <ol className="timeline">
         {steps.map(s => (
           <li key={s.id}><span className="t">{time(s.at)}</span>
-            <span className={s.kind === 'error' ? 'denied' : ''}>{s.kind === 'tool_call' ? <code>{s.title}</code> : s.title}</span></li>
+            <span className={s.kind === 'error' ? 'denied' : ''}>{s.kind === 'tool_call' ? <code>{s.title}</code> : String(s.title).replace(/\s*\(simulated outbox, waiting for a person to send it\)/, '. Waiting for someone to send it (simulated delivery).')}</span></li>
         ))}
       </ol>
     </section>
@@ -333,7 +350,13 @@ function Timeline({ inv, revs, t }: { inv: Row; revs: Row[]; t: Tables }) {
     ...t.outbox.filter(o => o.invoice_id === inv.id).map(o => o.id),
     ...t.proposal.filter(p => p.work_item_id === `wi_${inv.id}`).map(p => p.id),
     ...t.receipt_attestation.filter(a => a.invoice_id === inv.id).map(a => a.id)]);
-  const rows = t.audit_log.filter(a => related.has(a.entity_id)).sort((a, b) => b.id - a.id).slice(0, 30);
+  const byEvent = new Map<string, Row>();
+  t.audit_log.filter(a => related.has(a.entity_id)).forEach(a => {
+    const key = `${a.at}|${a.action}|${a.actor_role}|${a.outcome}`;
+    const prev = byEvent.get(key);
+    if (!prev || (!prev.reason && a.reason)) byEvent.set(key, a);
+  });
+  const rows = [...byEvent.values()].sort((a, b) => b.id - a.id).slice(0, 30);
   return (
     <section aria-labelledby="audit">
       <h2 id="audit">Record</h2>
@@ -343,7 +366,7 @@ function Timeline({ inv, revs, t }: { inv: Row; revs: Row[]; t: Tables }) {
           <li key={a.id}><span className="t">{time(a.at)}</span>
             <span className={a.outcome === 'denied' ? 'denied' : ''}>
               <strong>{ROLE_LABEL[a.actor_role] ?? a.actor_role}</strong> {ACTION_WORDS[a.action] ?? a.action.replaceAll('_', ' ')}
-              {a.outcome === 'denied' ? `, refused: ${safeReason(a.reason)}` : a.reason ? `: ${safeReason(a.reason)}` : ''}
+              {a.outcome === 'denied' ? `, refused: ${safeReason(a.reason)}` : a.reason ? `: ${plainTerms(safeReason(a.reason))}` : ''}
             </span></li>
         ))}
       </ol>
