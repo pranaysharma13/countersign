@@ -61,3 +61,16 @@ def test_pdfs_are_reproducible(tmp_path):
     assert sha256_hex(a) == sha256_hex(b)
     assert "mutual written agreement" in pdf_text(tmp_path / "a.pdf")
     assert "diesel price" in pdf_text(tmp_path / "a.pdf")
+
+
+def test_the_labelled_fixtures_score_perfectly_against_the_answer_key():
+    import json as _json
+
+    from countersign.config import DATA_DIR
+    from countersign.extraction_score import score
+    from countersign.extractions import load_fixture
+
+    key = _json.loads((DATA_DIR / "answer_keys" / "baymix_primary.json").read_text())["labelled_fields"]
+    rows = [r for doc_id, labels in key.items() for r in score(doc_id, load_fixture(doc_id), labels)]
+    assert len(rows) == 27  # 9 quote, 4 PO, 7 invoice, 1 reply, 6 corrected invoice
+    assert [r for r in rows if not r["correct"]] == []
