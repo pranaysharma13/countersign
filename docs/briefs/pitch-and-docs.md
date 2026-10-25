@@ -1,4 +1,4 @@
-# Brief for the pitch & docs teammate's AI
+# Brief for the pitch & docs teammate's AI (v2)
 
 Paste this whole file as your first message to Claude (Claude Code at the repo root, or a Claude chat with the repo files attached).
 
@@ -7,52 +7,46 @@ Paste this whole file as your first message to Claude (Claude Code at the repo r
 You're helping one human on a 3-person team at Cal Hacks 13.0. Their job: **presentation, documentation, research, sponsor relations and submission.** The other two write all the code. Hard submission deadline **Sunday 9:00 AM PT**; judging 10:30 AM – 12:30 PM at an assigned table (all three must be present the whole time).
 
 ## Read these first
-1. `SPEC.md` — the product.
-2. `docs/TRACKS.md` — every prize track we're entering and what each judge wants. **This drives everything you produce.**
-3. `docs/CHECKLIST.md` — the timeline; your human's items are marked **PD**.
-4. `docs/CONTRACT.md` — skim only, so you can explain the architecture correctly.
+1. `SPEC.md` (v2): the product and the demo scenario with exact numbers.
+2. `docs/TRACKS.md`: every prize track and what each judge wants. **This drives everything you produce.**
+3. `docs/CHECKLIST.md`: your human's items are marked **PD**.
+4. `docs/ARCHITECTURE.md`: so you explain the system correctly.
 
 ## The product
-**Countersign** is the AI payables clerk for small general contractors. It pays subcontractors on time, refuses to be scammed, and only the owner's tap moves money.
+**Countersign checks every supplier invoice against what was actually agreed (the quote, the purchase order and the email thread) and prepares a payment the controller can trust.** It keeps legitimate charges, questions the rest with evidence, and never moves money on its own.
 
-- **Problem:** small GCs pay subs $20k–80k at a time with no finance team. Scammers send fake "we changed banks" emails that look exactly like a trusted sub; once wired, the money is gone.
-- **Seats it fills (Hyphenate wants this line):** accounts-payable clerk and vendor-risk analyst.
-- **How it works:** reads each subcontract once (schedule of values, retainage, change orders, lien waiver rules, bank and phone on file) → picks up every bill → checks it against the contract, past bills, CRS (liens, judgments, identity), and the state license board (Apify) → proposes payment or a hold → the owner approves on their phone → only the gateway pays (Capital One Nessie) → everything, including denied attempts, is in the audit log.
-- **The angle:** scammers now write fake invoices aimed at AI agents. Countersign is built to be attacked. *"Even if the AI gets fooled, the money can't move,"* because the limits are enforced in the database, not in a prompt.
-- **Tech:** SpacetimeDB (roles, approvals, audit log, live updates), Factory Droid (runs the investigation on every new bill, visible step by step), Claude (reads contracts and bills, explains and defends decisions), CRS, Apify, Nessie, Next.js; Cartesia voice callback is a stretch.
-
-**Demo (opens with the moment):**
-1. A fake bank-change bill from a trusted sub is held, with evidence.
-2. The owner says "just pay it"; the system refuses, citing the contract's bank-change clause.
-3. A pile of bills: normal ones proposed for payment, five problems caught.
-4. A judge writes their own scam on the "scam us" page and watches it get caught live.
-5. The scorecard: scams caught, real bills wrongly held, dollars protected.
+- **Customer:** Marlow & Finch Builders, a small California general contractor (fictional), buying ready-mix concrete from BayMix Supply (fictional) for the Oakview Lane Fourplex.
+- **Seats it fills (Hyphenate wants this line):** materials purchasing coordinator and accounts-payable exceptions analyst; the owner/controller stays the approver.
+- **Why it matters:** fraud is rare; paying more than you agreed happens every month. Suppliers raise unit prices, add waiting time and extras nobody accepted, and busy contractors pay.
+- **The moment:** the invoice bills $172/yd instead of the agreed $165 (+$3,500) and $225 of waiting time nobody accepted, but keeps the $1,200 weekend charge that *was* properly approved. Countersign holds $3,725 **under review** (never "saved" until the supplier agrees), drafts a clarification, gets a corrected $83,700 invoice, applies the $10,000 deposit once, waits for the superintendent's receipt confirmation, and the controller approves exactly $73,700.
+- **Why it's trustworthy:** five separate statuses (commercial, receipt, payee, approval, payment); approvals bound to an exact invoice version that go stale if anything changes; the AI can't approve, pay or clear a hold, and the database refuses it if it tries.
+- **Honest limits:** it doesn't see delivery tickets or GPS, so it never claims delivery is verified. Receipt is a person's signed attestation, labeled as such.
 
 ## Your boundaries
-- You write in `pitch/` and, after 4 AM, the root `README.md`. Never edit `core/`, `db/` or `web/`.
-- Branch `docs/pitch`; merge into `main` often.
-- **Never invent facts or numbers.** Every statistic in slides or Devpost needs a source link. Every product claim must match what the code actually does; ask the coders when unsure. Interview quotes must be real and anonymized with consent.
+- Write in `pitch/` and, after 4 AM, the root `README.md`. Never edit `core/`, `db/` or `web/`. Branch `docs/pitch`.
+- **Never invent facts or numbers.** Statistics need a source link. Product claims must match what the code does. Interview quotes must be real and anonymized with consent. The scorecard uses measured numbers only.
 
-## Deliverables (all in `pitch/`)
+## Deliverables (in `pitch/`; keep private notes out of the repo, since it goes public)
 | File | What | Due |
 |---|---|---|
-| `booth-notes.md` | Answers from Hyphenate, CRS, Factory, SpacetimeDB, Apify, Anthropic, Microsoft, Armadin | 4 PM, then ongoing |
-| `interview-notes.md` | Contractor interview: how they pay subs, ever seen fake bank-change emails, lien waiver pain, quotes | 7 PM |
-| `research.md` | Sourced facts for the coders and slides: California statutory lien waiver forms, retainage norms, pay application / schedule of values format, how bank-change fraud targets contractors, loss figures | 5:30 PM |
-| `devpost.md` | Devpost text: tagline, inspiration, what it does, how we built it (each sponsor), challenges, accomplishments, what we learned, what's next; seats line; real-vs-simulated table; where Droid runs; CRS data use; where Claude could fail and our mitigations | draft by midnight |
-| `pitch-script.md` | 2-minute and 3-minute versions, demo-first, opening with the moment; one 20-second hook per sponsor judge | 9 PM, final at 4 AM |
-| `demo-script.md` | Exact clicks and lines for the live demo, with a fallback if something fails | 2 AM |
-| `qa-prep.md` | Likely judge questions and answers (see below) | 2 AM |
-| `video-shotlist.md` | Demo video plan; video recorded after the 4 AM freeze | 4 AM |
-| Slide deck | 4–6 slides max: problem + who, the moment, how it works (architecture), proof (scorecard), real vs. simulated + path to production, team | 4 AM with final numbers |
-| Devpost project image | A clean original wordmark/screenshot; no copied logos | midnight |
+| `devpost.md` | Tagline, inspiration, what it does, how we built it (each sponsor), challenges, accomplishments, what's next; seats line; real-vs-simulated table; live-vs-fixture; where Droid runs; CRS data use; where Claude could fail and our mitigations | draft by 1 AM |
+| `pitch-script.md` | 2- and 3-minute versions, opening with the moment; a 20-second hook per sponsor | 1 AM, final at 4 AM |
+| `demo-script.md` | Exact clicks and lines, with a fallback for each step | 2 AM |
+| `qa-prep.md` | Likely questions and answers | 2 AM |
+| Slides | 4–6 max: problem + who, the moment, how it works, proof (measured), real vs. simulated + path to production, team | 4 AM |
 
-**Q&A to prepare:** "What if the AI is fooled?" (limits in the database, compromised-agent demo) · "What's real vs. simulated?" · "How do you know it works?" (scorecard, answer key) · "Why not just a rule engine?" · "Who pays for this, and how much?" (per bill handled, provable from the log) · "How would this reach production?" (QuickBooks/Procore, real bank APIs, security review) · "What data do you pull and why?" (CRS) · "What happens when a legit sub changes banks?" · "Where could Claude go wrong for these users?" · "What would you build next?" (backcharges, negotiation, lien waiver collection).
+**Research (sources required), by ~11 PM:** how ready-mix quotes usually state price validity, waiting time (often per minute after a free unloading window), fuel surcharges (often tied to a diesel index) and minimum loads. Send it to the Python developer so fixtures look real.
 
-## Other things only you will remember to do
-- Create the Devpost project now; add both teammates; **submit a draft by midnight**; final by 8:30 AM with every track from `docs/TRACKS.md` selected, the video link, image and repo link.
-- Register a domain through GoDaddy Registry (MLH prize) and ask the TS developer to point it at the web app.
-- Generate a QR code for the "scam us" page once its URL exists.
-- Watch Slack and the live site for "coming soon" criteria (Anthropic, SpacetimeDB, Armadin) and update `docs/TRACKS.md` via your human.
-- Remind the team: feature freeze 4 AM, repo public and secret-free before submitting, everyone at the table by 10:30.
-- Optional: MLH Commit Fellowship form if the team wants it.
+**Q&A to prepare:**
+- "What if the AI misreads an email as an acceptance?"
+- "Why not just a three-way match in our accounting software?" Our answer: email amendments and partial-scope price changes live outside the PO.
+- "What's real vs. simulated?"
+- "How do you know it works?"
+- "Who pays, and how much?"
+- "What about delivery quantities?" (Honest limit.)
+- "How does this reach production?" (Outlook/Microsoft Graph, QuickBooks/Procore, bank APIs.)
+- "What data do you pull from CRS and why?"
+- "What's next?" (Delivery tickets, subcontractor pay apps, which we already have in code.)
+
+## Other things only you will remember
+Devpost draft by 1 AM; GoDaddy Registry domain (MLH); QR code for the judge page; watch Slack for "coming soon" criteria; remind the team of the 4 AM freeze; repo public and secret-free before submitting.
