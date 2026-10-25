@@ -1,0 +1,74 @@
+{
+  "document_id": "doc_mf_po_1073",
+  "document_kind": "po",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "po_number": {
+      "value": "MF-PO-1073",
+      "quote": "PURCHASE ORDER MF-PO-1073",
+      "fragments": [
+        "frag_mf_po_1073_p1_l3"
+      ]
+    },
+    "po_date": {
+      "value": "2026-10-10",
+      "quote": "PO date: 2026-10-10",
+      "fragments": [
+        "frag_mf_po_1073_p1_l4"
+      ]
+    },
+    "supplier_name": {
+      "value": "Valley Sand & Gravel",
+      "quote": "Supplier: Valley Sand & Gravel, 900 Quarry Cut, Livermore, CA 94551",
+      "fragments": [
+        "frag_mf_po_1073_p1_l5"
+      ]
+    },
+    "project_name": {
+      "value": "Oakview Lane Fourplex",
+      "quote": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA",
+      "fragments": [
+        "frag_mf_po_1073_p1_l6"
+      ]
+    },
+    "not_to_exceed_cents": {
+      "value": 336000,
+      "quote": "PO total, not to exceed: $3,360.00",
+      "fragments": [
+        "frag_mf_po_1073_p1_l11"
+      ]
+    },
+    "incorporates_quote": {
+      "value": "VSQ-31",
+      "quote": "Terms: Valley Sand & Gravel Quote VSQ-31 and its Terms and Conditions of Sale.",
+      "fragments": [
+        "frag_mf_po_1073_p1_l12"
+      ]
+    },
+    "supplier_acknowledged_on": {
+      "value": "2026-10-10",
+      "quote": "Valley Sand & Gravel acknowledges and accepts purchase order MF-PO-1073 on the terms of Quote VSQ-31. Acknowledged by: Cal Rivera, Sales, Valley Sand & Gravel    Date: 2026-10-10",
+      "fragments": [
+        "frag_mf_po_1073_p1_l16",
+        "frag_mf_po_1073_p1_l17"
+      ]
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "Washed concrete sand",
+      "quantity_milli": 80000,
+      "unit": "ton",
+      "unit_price_cents": 4200,
+      "amount_cents": 336000,
+      "quote": "1     Washed concrete sand                         80.000   ton   $42.00        $3,360.00",
+      "fragments": [
+        "frag_mf_po_1073_p1_l9"
+      ]
+    }
+  ]
+}

@@ -167,21 +167,27 @@ export class LocalBackend {
 
   /** The agent proposes payment once nothing but its own decision is missing. */
   private maybePropose(): boolean {
-    const inv = this.h.db.invoice.id.find(INV);
+    for (const inv of this.q('invoice')) {
+      if (this.tryPropose(inv)) return true;
+    }
+    return false;
+  }
+
+  private tryPropose(inv: any): boolean {
     if (!inv || !inv.active_revision_id || inv.payment_status !== 'not_ready') return false;
     if (inv.receipt_status !== 'manually_confirmed') return false;
     const holds = this.q('hold').filter(x => x.revision_id === inv.active_revision_id && x.status === 'open' && x.code !== 'APPROVAL_STALE');
     if (holds.length) return false;
-    const pending = this.q('proposal').some(p => p.work_item_id === WI && p.status === 'pending' && p.kind === 'supplier_payment');
+    const pending = this.q('proposal').some(p => p.work_item_id === `wi_${inv.id}` && p.status === 'pending' && p.kind === 'supplier_payment');
     if (pending) return false;
     const as = this.q('assessment').filter(a => a.revision_id === inv.active_revision_id).sort((a, b) => b.version - a.version)[0];
     const payee = this.q('payee_profile').find(p => p.supplier_id === inv.supplier_id && p.status === 'verified');
-    if (!as || !payee) return false;
+    if (!as || !payee || Number(as.proposed_payment_cents) <= 0) return false;
     const id = `pp_${inv.active_revision_id}_${as.version}`;
     if (this.h.db.proposal.id.find(id)) return false;
     const r = this.callAs('agent', 'propose_supplier_payment', id, inv.id, inv.active_revision_id, as.id, as.proposed_payment_cents,
-      D(10000), payee.id);
-    this.step('decision', `Proposed paying $${(Number(as.proposed_payment_cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })} for the controller's approval`, { proposal_id: id, outcome: r.outcome });
+      BigInt(as.deposit_available_cents ?? 0) > 0n && inv.id === INV ? D(10000) : 0n, payee.id);
+    this.step('decision', `Proposed paying $${(Number(as.proposed_payment_cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })} for the controller's approval`, { proposal_id: id, invoice_id: inv.id, outcome: r.outcome });
     return r.outcome === 'ok';
   }
 
@@ -189,14 +195,31 @@ export class LocalBackend {
   private settle(proposal_id: string) {
     const s = this.callAs('gateway', 'start_payment', proposal_id);
     if (s.outcome !== 'ok') { this.step('error', 'Gateway refused to start the payment', s); return; }
-    this.callAs('gateway', 'record_deposit_allocation', 'da_bm23104', DEP, INV, D(10000));
+    const p = this.h.db.proposal.id.find(proposal_id);
+    const ref = JSON.parse(p?.evidence_json || '{}');
+    const inv = this.h.db.invoice.id.find(ref.invoice_id);
+    const rev = this.h.db.invoice_revision.id.find(inv?.active_revision_id);
+    const alloc = Number(ref.deposit_allocation_cents || 0);
+    if (alloc > 0) {
+      const dep = this.q('deposit').find(d => d.purchase_id === inv.purchase_id && d.status === 'settled')
+        ?? this.h.db.deposit.id.find(DEP);
+      if (dep) this.callAs('gateway', 'record_deposit_allocation', `da_${inv.id}`, dep.id, inv.id, BigInt(alloc));
+    }
     this.callAs('gateway', 'record_payment', proposal_id, `nessie_sim_${proposal_id}`, 'sent', '');
-    const post = (id: string, ref: string, memo: string, lines: [string, number, number][]) =>
-      this.callAs('gateway', 'post_journal', id, '2026-10-24', memo, ref, INV,
+    const gross = Number(rev?.gross_cents ?? 0);
+    const pay = Number(p?.amount_cents ?? 0);
+    const proj = this.h.db.purchase.id.find(inv?.purchase_id)?.project_id ?? 'prj_oak';
+    const post = (id: string, refType: string, memo: string, lines: [string, number, number][]) =>
+      this.callAs('gateway', 'post_journal', id, '2026-10-24', memo, refType, inv.id,
         j(lines.map(([account, d, c]) => ({ account, debit_cents: d, credit_cents: c }))));
-    post('jr_bm23104_bill', 'invoice', 'BayMix BM-23104 revision 2 accepted, receipt attested', [['job_material_cost:prj_oak', 8370000, 0], ['accounts_payable', 0, 8370000]]);
-    post('jr_bm23104_dep', 'invoice', 'Deposit applied to BM-23104', [['accounts_payable', 1000000, 0], ['supplier_prepayment', 0, 1000000]]);
-    post('jr_bm23104_pay', 'payment', 'Settlement of BM-23104 (simulated Nessie)', [['accounts_payable', 7370000, 0], ['cash', 0, 7370000]]);
+    post(`jr_${inv.id}_bill`, 'invoice', `${inv.invoice_number} accepted, receipt attested`,
+      [[`job_material_cost:${proj}`, gross, 0], ['accounts_payable', 0, gross]]);
+    if (alloc > 0) {
+      post(`jr_${inv.id}_dep`, 'invoice', `Deposit applied to ${inv.invoice_number}`,
+        [['accounts_payable', alloc, 0], ['supplier_prepayment', 0, alloc]]);
+    }
+    post(`jr_${inv.id}_pay`, 'payment', `Settlement of ${inv.invoice_number} (simulated Nessie)`,
+      [['accounts_payable', pay, 0], ['cash', 0, pay]]);
   }
 
   // ---------------------------------------------------------------- seed: Python's baymix_opening.json (BM-23104)
@@ -207,6 +230,8 @@ export class LocalBackend {
     this.replay(loadSeed('baymix_opening.json'));
     this.step('decision', 'Held: $3,725 under review. Drafted a clarification to BayMix for purchasing to review and send.',
       { holds: ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'RECEIPT_NOT_VERIFIED'] });
+    this.replay(loadSeed('queue_companions.json'));
+    this.step('thought', 'Two more Oakview invoices on the desk: Cedar & Bolt CB-8802 matches and is ready to pay; Northline NL-441 is held for a bank-account change.');
   }
 
 }

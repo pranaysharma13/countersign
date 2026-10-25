@@ -15,7 +15,7 @@ const KINDS = [
 ] as const;
 
 export default function SneakCharge() {
-  const { data: t, mode, error } = useTables(['invoice', 'invoice_revision', 'hold', 'job', 'supplier'], 800);
+  const { data: t, error } = useTables(['invoice', 'invoice_revision', 'hold', 'job', 'supplier'], 800);
   const [kind, setKind] = useState<(typeof KINDS)[number]['id']>('price');
   const [dollars, setDollars] = useState('3500');
   const [note, setNote] = useState('');
@@ -64,7 +64,7 @@ export default function SneakCharge() {
             <label className="f">Note on the document
               <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Optional. Hidden instructions are ignored." />
             </label>
-            <p className="small muted">Expected hold: {HOLD_LABEL[chosen.hold] ?? chosen.hold}. {mode === 'local' ? 'Local demo: the stand-in worker opens it immediately.' : 'Live: the Python worker must be running to assess it.'}</p>
+            <p className="small muted">What should block this: {HOLD_LABEL[chosen.hold] ?? chosen.hold}.</p>
             <button className="btn" type="submit">Submit as a judge</button>
             <Outcome r={result} />
           </form>

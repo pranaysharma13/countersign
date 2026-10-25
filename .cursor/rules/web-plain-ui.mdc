@@ -1,0 +1,11 @@
+---
+description: Plain-language UI for Countersign web screens
+globs: web/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# Plain-language UI
+
+Follow `.cursor/skills/countersign-ui/SKILL.md`.
+
+A builder should understand every screen without AP vocabulary. Show who, how much, what's wrong, and what to do. Hide fixture/live/worker tags and audit dumps. Keep hold codes and money math unchanged; only displayed words change.

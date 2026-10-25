@@ -7,13 +7,13 @@ import { fileHref } from '@/lib/files';
 type Tone = 'ok' | 'hold' | 'stop' | 'idle' | 'act';
 const STATUS: Record<string, Record<string, [string, Tone]>> = {
   commercial: {
-    pending: ['Being checked', 'idle'], matches: ['Matches what was agreed', 'ok'],
-    differences_under_review: ['Differences under review', 'hold'], contract_review: ['Contract review', 'hold'],
+    pending: ['Checking', 'idle'], matches: ['Matches the order', 'ok'],
+    differences_under_review: ['Does not match', 'hold'], contract_review: ['Needs a look', 'hold'],
   },
-  receipt: { not_required: ['Not required', 'ok'], required: ['Not confirmed', 'hold'], manually_confirmed: ['Confirmed (manual)', 'ok'] },
-  payee: { verified: ['Verified', 'ok'], change_pending: ['Bank change unverified', 'stop'], unverified: ['Unverified', 'stop'] },
-  approval: { none: ['Not approved', 'idle'], approved: ['Approved', 'ok'], stale: ['Out of date', 'hold'], rejected: ['Rejected', 'stop'] },
-  payment: { not_ready: ['Not ready', 'idle'], ready: ['Ready to pay', 'act'], submitted: ['Settling', 'act'], settled: ['Paid', 'ok'], failed: ['Failed', 'stop'] },
+  receipt: { not_required: ['Not needed', 'ok'], required: ['Not confirmed', 'hold'], manually_confirmed: ['Confirmed', 'ok'] },
+  payee: { verified: ['Checked', 'ok'], change_pending: ['New account', 'stop'], unverified: ['Not checked', 'stop'] },
+  approval: { none: ['Waiting', 'idle'], approved: ['Approved', 'ok'], stale: ['Out of date', 'hold'], rejected: ['Rejected', 'stop'] },
+  payment: { not_ready: ['Not yet', 'idle'], ready: ['Ready', 'act'], submitted: ['Sending', 'act'], settled: ['Paid', 'ok'], failed: ['Failed', 'stop'] },
 };
 
 export function Status({ kind, value }: { kind: keyof typeof STATUS; value: string }) {
@@ -23,11 +23,11 @@ export function Status({ kind, value }: { kind: keyof typeof STATUS; value: stri
 
 export function StatusStrip({ inv }: { inv: Row }) {
   const cells: [string, keyof typeof STATUS, string][] = [
-    ['Commercial', 'commercial', inv.commercial_status], ['Receipt', 'receipt', inv.receipt_status],
-    ['Payee', 'payee', inv.payee_status], ['Approval', 'approval', inv.approval_status], ['Payment', 'payment', inv.payment_status],
+    ['Order', 'commercial', inv.commercial_status], ['Delivery', 'receipt', inv.receipt_status],
+    ['Bank', 'payee', inv.payee_status], ['Owner', 'approval', inv.approval_status], ['Paid', 'payment', inv.payment_status],
   ];
   return (
-    <div className="statuses" role="list" aria-label="Invoice statuses">
+    <div className="statuses" role="list" aria-label="Bill status">
       {cells.map(([k, kind, v]) => (
         <div key={k} role="listitem"><div className="k">{k}</div><Status kind={kind} value={v} /></div>
       ))}
@@ -36,7 +36,7 @@ export function StatusStrip({ inv }: { inv: Row }) {
 }
 
 export function HoldChips({ holds }: { holds: Row[] }) {
-  if (!holds.length) return <span className="muted small">No open holds</span>;
+  if (!holds.length) return <span className="muted small">Nothing blocking</span>;
   return <>{holds.map(h => (
     <span key={h.id} className={`chip ${['PAYEE_CHANGE_PENDING', 'PROMPT_INJECTION'].includes(h.code) ? 'stop' : ''}`} title={h.reason}>
       {HOLD_LABEL[h.code] ?? h.code}
@@ -112,11 +112,8 @@ export function ReceiptForm({ inv, rev, t }: { inv: Row; rev?: Row; t: Tables })
   const [result, setResult] = useState<CallResult | null>(null);
   return (
     <section className="sheet pad" aria-labelledby="receipt">
-      <h2 id="receipt">Receipt</h2>
-      <p className="small" style={{ marginTop: 0 }}>
-        Countersign can&apos;t see what was delivered. Receipt is a signed statement by the superintendent, labeled as manually confirmed.
-        {billed > 0 && <> Billed: <strong>{qty(billed, unit)}</strong>.</>}
-      </p>
+      <h2 id="receipt">Delivery</h2>
+      {billed > 0 && <p className="small muted" style={{ marginTop: 0 }}>They billed: {qty(billed, unit)}</p>}
       {atts.map(a => (
         <div key={a.id} className="notice ok small" style={{ marginBottom: 8 }}>
           <strong>{String(a.label).replace('_', ' ').toLowerCase()}</strong>: {qty(a.quantity_milli, a.unit)} ({a.scope}). “{a.reason}” {ROLE_LABEL[a.attested_by_role]}, {when(a.created_at)}
@@ -136,7 +133,7 @@ export function ReceiptForm({ inv, rev, t }: { inv: Row; rev?: Row; t: Tables })
           <label className="f" style={{ flex: 1, minWidth: 200 }}>How you know
             <input type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Checked against the pour log" />
           </label>
-          <button className="btn secondary" type="submit" disabled={!q || !reason.trim()} style={{ alignSelf: 'flex-end' }}>Confirm receipt (superintendent)</button>
+          <button className="btn secondary" type="submit" disabled={!q || !reason.trim()} style={{ alignSelf: 'flex-end' }}>Confirm what arrived</button>
         </form>
       )}
       <Outcome r={result} />

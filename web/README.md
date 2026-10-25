@@ -12,7 +12,7 @@ npm install
 npm run dev          # builds ../db/dist/local.mjs first, then serves http://localhost:3001
 ```
 
-With no other setup the app runs on **local demo data**: the real SpacetimeDB module running in-process (`db/local/backend.ts`), replaying Python's `data/seeds/baymix_opening.json` so the screens show the same invoice **BM-23104** / PO **MF-PO-1031** as the live module. A small stand-in worker plays the agent, the supplier and the bank (it loads `baymix_correction.json` when purchasing sends the clarification), and the UI labels all of it as simulated. This is also the offline fallback for judging.
+With no other setup the app runs on **local demo data**: the real SpacetimeDB module running in-process (`db/local/backend.ts`), replaying Python's `data/seeds/baymix_opening.json` so the screens show the same invoice **BM-23104** / PO **MF-PO-1031** as the live module, plus two more fictional Oakview invoices from `queue_companions.json` (Cedar & Bolt ready to pay, Northline Rebar held for a bank-account change). A small stand-in worker plays the agent, the supplier and the bank (it loads `baymix_correction.json` when purchasing sends the clarification), and the UI labels all of it as simulated. This is also the offline fallback for judging.
 
 To use the published module instead, create `web/.env.local`:
 
@@ -45,7 +45,7 @@ Each row carries an honest label: `Fixture extraction` or `Read live by Claude`,
 - **What we'd pay, and why:** the reconciliation from the latest assessment, running claimed, under review, accepted, deposit and payable. Differences are "under review", never "saved".
 - **Line by line:** claimed, accepted and under review per line, with the calculation. Every figure has evidence chips that open the exact immutable source fragment: a quote or PO page and line, or an email.
 - **Open holds:** each with its reason and evidence. The owner clears commercial holds with a required note. Receipt and payee holds explain the only event that clears them.
-- **Receipt:** the superintendent attests the quantity and how they know it. Shown as manually confirmed, never as proof of delivery.
+- **Receipt:** the superintendent confirms quantity on the dedicated receive page. The invoice case no longer explains delivery verification.
 - **Revisions:** a corrected invoice supersedes the old one, which stays on record.
 - **Clarification to the supplier:** the agent's draft and a button for purchasing to send it (simulated delivery).
 - **Emails:** the thread about the purchase. A sender not on file is flagged.

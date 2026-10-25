@@ -75,6 +75,7 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 | `countersign/injection.py` | Prompt-injection patterns over a document's fragments |
 | `countersign/extraction_score.py` | Labelled fields vs. the answer key (tests, `check_extraction.py`, scorecard only) |
 | `countersign/supplier_world.py`, `supplier_docs.py` | v2 fictional world, document rendering and fragments |
+| `countersign/companion_world.py`, `companion_seed.py` | Extra fictional Oakview invoices (Cedar & Bolt, Northline) so the queue looks like a desk |
 | `countersign/supplier_ledger.py` | v2 journals |
 | `countersign/supplier_agent.py` | v2 Droid agent: the nine tools, the draft validator, the session and its scripted fallback |
 | `countersign/supplier_gateway.py` | v2 gateway: fingerprint re-check, start_payment, Nessie (simulated), deposit allocation, journals |

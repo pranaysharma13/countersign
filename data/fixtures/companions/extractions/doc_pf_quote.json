@@ -1,0 +1,155 @@
+{
+  "document_id": "doc_pf_quote",
+  "document_kind": "quote",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "supplier_name": {
+      "value": "Peak Form Supply",
+      "quote": "Peak Form Supply",
+      "fragments": [
+        "frag_pf_quote_p1_l1"
+      ]
+    },
+    "quote_number": {
+      "value": "PFQ-8",
+      "quote": "QUOTATION PFQ-8",
+      "fragments": [
+        "frag_pf_quote_p1_l3"
+      ]
+    },
+    "quote_date": {
+      "value": "2026-10-05",
+      "quote": "Quote date: 2026-10-05",
+      "fragments": [
+        "frag_pf_quote_p1_l4"
+      ]
+    },
+    "project_name": {
+      "value": "Oakview Lane Fourplex",
+      "quote": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA",
+      "fragments": [
+        "frag_pf_quote_p1_l6"
+      ]
+    },
+    "product": {
+      "value": "Steel-faced form panel, 2 ft x 8 ft, delivered to the project",
+      "quote": "Product: Steel-faced form panel, 2 ft x 8 ft, delivered to the project",
+      "fragments": [
+        "frag_pf_quote_p1_l8"
+      ]
+    },
+    "unit": {
+      "value": "panel",
+      "quote": "Maximum quantity: 30 panels, delivered to the project",
+      "fragments": [
+        "frag_pf_quote_p1_l9"
+      ]
+    },
+    "buyer_accepted_on": {
+      "value": "2026-10-07",
+      "quote": "Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-07",
+      "fragments": [
+        "frag_pf_quote_p1_l18"
+      ]
+    },
+    "incorporates_terms": {
+      "value": true,
+      "quote": "This quote incorporates the Peak Form Supply Terms and Conditions of Sale on page 2.",
+      "fragments": [
+        "frag_pf_quote_p1_l16"
+      ]
+    }
+  },
+  "terms": [
+    {
+      "code": "unit_price",
+      "label": "Unit price, delivered",
+      "amount_cents": 5500,
+      "quantity_milli": 0,
+      "scope": {
+        "unit": "panel"
+      },
+      "effective_from": "2026-10-07",
+      "effective_to": "2026-10-31",
+      "quote": "Unit price: $55.00 per panel, delivered Price validity: fixed for deliveries from 2026-10-07 through 2026-10-31",
+      "fragments": [
+        "frag_pf_quote_p1_l10",
+        "frag_pf_quote_p1_l11"
+      ]
+    },
+    {
+      "code": "max_quantity",
+      "label": "Maximum quantity",
+      "amount_cents": 0,
+      "quantity_milli": 30000,
+      "scope": {
+        "unit": "panel"
+      },
+      "effective_from": "2026-10-07",
+      "effective_to": "2026-10-31",
+      "quote": "Maximum quantity: 30 panels, delivered to the project",
+      "fragments": [
+        "frag_pf_quote_p1_l9"
+      ]
+    },
+    {
+      "code": "valid_through",
+      "label": "Price validity",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "scope": {},
+      "effective_from": "2026-10-07",
+      "effective_to": "2026-10-31",
+      "quote": "Price validity: fixed for deliveries from 2026-10-07 through 2026-10-31",
+      "fragments": [
+        "frag_pf_quote_p1_l11"
+      ]
+    },
+    {
+      "code": "payment_terms",
+      "label": "Net 15",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "scope": {
+        "net_days": 15
+      },
+      "effective_from": "",
+      "effective_to": "",
+      "quote": "Payment terms: Net 15 days from invoice date",
+      "fragments": [
+        "frag_pf_quote_p1_l13"
+      ]
+    },
+    {
+      "code": "price_change_rule",
+      "label": "Price changes need mutual written agreement",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "scope": {},
+      "effective_from": "",
+      "effective_to": "",
+      "quote": "1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.",
+      "fragments": [
+        "frag_pf_quote_p2_l3",
+        "frag_pf_quote_p2_l4"
+      ]
+    },
+    {
+      "code": "extra_charge_rule",
+      "label": "Extra charges only when agreed in writing first",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "scope": {},
+      "effective_from": "",
+      "effective_to": "",
+      "quote": "2. Additional charges. Charges not listed in this quote apply only when both parties agree to them in writing before the work.",
+      "fragments": [
+        "frag_pf_quote_p2_l6",
+        "frag_pf_quote_p2_l7"
+      ]
+    }
+  ]
+}

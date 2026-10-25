@@ -172,6 +172,25 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .mail p { margin: 6px 0 0; white-space: pre-wrap; }
 .empty { padding: 28px; text-align: center; color: var(--ink-2); }
 
-.queue { min-width: 1180px; }
-.queue td:last-child { min-width: 190px; }
-.next { margin: 8px 0 0; font-size: 13px; }
+.bills { display: flex; flex-direction: column; gap: 10px; }
+.bill {
+  display: block;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  padding: 16px 18px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.bill:hover, .bill:focus-visible { border-color: var(--act); }
+.bill header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.bill .amount { font-size: 22px; font-weight: 680; letter-spacing: -0.02em; }
+.bill .story { margin: 10px 0 0; }
+.bill-holds { margin-top: 8px; }
+.next-plain { margin-top: 10px; font-size: 13.5px; color: var(--ink-2); }
+.next { margin: 8px 0 0; font-size: 15px; }
+.activity { margin-top: 0; }
+.activity summary { cursor: pointer; font-weight: 650; }
+.activity section + section { margin-top: 20px; }
+.activity h2 { margin-top: 16px; }

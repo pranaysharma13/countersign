@@ -17,7 +17,10 @@ from .config import FILES_DIR
 from .ids import sha8, sha256_hex
 from .store import get_store, one
 from .supplier_docs import file_bytes
+from .companion_world import COMPANION_DOCS
 from .supplier_world import PRIMARY_DOCS
+
+ALL_DOCS = PRIMARY_DOCS + COMPANION_DOCS
 
 app = FastAPI(title="Countersign core")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3001", "http://127.0.0.1:3001"],
@@ -27,20 +30,20 @@ store = get_store()
 
 def _seed_doc(source_file_id: str, filename: str = "") -> object | None:
     if filename:
-        found = next((d for d in PRIMARY_DOCS if d.filename == filename), None)
+        found = next((d for d in ALL_DOCS if d.filename == filename), None)
         if found:
             return found
     linked = next((d for d in store.rows("document") if d.get("source_file_id") == source_file_id), None)
     if linked:
-        return next((d for d in PRIMARY_DOCS if d.id == linked["id"]), None)
-    return next((d for d in PRIMARY_DOCS if d.id == source_file_id), None)
+        return next((d for d in ALL_DOCS if d.id == linked["id"]), None)
+    return next((d for d in ALL_DOCS if d.id == source_file_id), None)
 
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     rows = [(s["id"], s.get("filename") or s["id"]) for s in store.rows("source_file")]
     if not rows:
-        rows = [(d.id, d.filename) for d in PRIMARY_DOCS]
+        rows = [(d.id, d.filename) for d in ALL_DOCS]
     items = "".join(
         f'<li><a href="/files/{sid}">{name}</a> <span style="color:#666">{sid}</span></li>'
         for sid, name in rows

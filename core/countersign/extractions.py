@@ -23,6 +23,10 @@ from .store import Result, Store, dumps, one
 from .supplier_docs import normalize_ws
 
 FIXTURE_DIR = DATA_DIR / "fixtures" / "baymix_primary" / "extractions"
+FIXTURE_DIRS = (
+    FIXTURE_DIR,
+    DATA_DIR / "fixtures" / "companions" / "extractions",
+)
 
 
 class NotYet(RuntimeError):
@@ -31,16 +35,29 @@ class NotYet(RuntimeError):
 EVIDENCE_LISTS = ("terms", "lines", "change_requests", "acceptances", "internal_approval_claims")
 
 
-def load_fixture(document_id: str, fixture_dir: Path = FIXTURE_DIR) -> dict[str, Any]:
-    ext = json.loads((fixture_dir / f"{document_id}.json").read_text())
+def _read_fixture(path: Path) -> dict[str, Any]:
+    ext = json.loads(path.read_text())
     if ext.get("mode") != "fixture" or not str(ext.get("label", "")).startswith("FIXTURE"):
-        raise ValueError(f"{document_id}: fixture extractions must be labelled as fixtures")
+        raise ValueError(f"{path.stem}: fixture extractions must be labelled as fixtures")
     return ext
 
 
-def find_fixture(document_id: str, fixture_dir: Path = FIXTURE_DIR) -> dict[str, Any] | None:
+def load_fixture(document_id: str, fixture_dir: Path | None = None) -> dict[str, Any]:
+    if fixture_dir is not None:
+        return _read_fixture(fixture_dir / f"{document_id}.json")
+    for d in FIXTURE_DIRS:
+        path = d / f"{document_id}.json"
+        if path.exists():
+            return _read_fixture(path)
+    raise FileNotFoundError(document_id)
+
+
+def find_fixture(document_id: str, fixture_dir: Path | None = None) -> dict[str, Any] | None:
     """The labelled extraction for this document, or None if there isn't one."""
-    return load_fixture(document_id, fixture_dir) if (fixture_dir / f"{document_id}.json").exists() else None
+    try:
+        return load_fixture(document_id, fixture_dir)
+    except FileNotFoundError:
+        return None
 
 
 def values(ext: dict[str, Any]) -> dict[str, Any]:
