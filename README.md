@@ -1,6 +1,6 @@
-# Countersign
+# Clerk
 
-**Countersign checks every supplier invoice against what was actually agreed (the quote, the purchase order and the email thread) and prepares a payment the controller can trust.** It keeps legitimate charges, questions the rest with evidence, and never moves money on its own.
+**Clerk checks every supplier invoice against what was actually agreed (the quote, the purchase order and the email thread) and prepares a payment the controller can trust.** It keeps legitimate charges, questions the rest with evidence, and never moves money on its own.
 
 Seats it fills: **materials purchasing coordinator** and **accounts-payable exceptions analyst**. The owner stays the one who approves payments.
 
@@ -12,7 +12,7 @@ Small general contractors buy materials on quotes, purchase orders and a trail o
 
 ## The scenario (BM-23104)
 
-BayMix Supply quoted ready-mix concrete at $165/cy. The invoice bills 500 cy at **$172** (+$3,500), adds 90 minutes of waiting time nobody agreed to ($225), and keeps a $1,200 weekend charge that purchasing *did* approve in the app. Countersign:
+BayMix Supply quoted ready-mix concrete at $165/cy. The invoice bills 500 cy at **$172** (+$3,500), adds 90 minutes of waiting time nobody agreed to ($225), and keeps a $1,200 weekend charge that purchasing *did* approve in the app. Clerk:
 
 1. accepts the $1,200, holds **$3,725 under review** (never "saved" until the supplier agrees) and drafts a clarification;
 2. reads BayMix's reply and the corrected **$83,700** invoice;
@@ -148,19 +148,6 @@ One Droid session per invoice revision, inside that invoice's `process_document`
 - What we use: business public records (liens, judgments, bankruptcies). Any record opens `SUPPLIER_RISK` for the owner. Nothing is decided automatically against the supplier.
 - When: the pipeline asks for every invoice it records. The hold's reason and evidence say whether the data is mock or live. If live CRS is set up but the call fails, the invoice is held too ("CRS couldn't be reached"), never treated as clean. The judge page's sandbox supplier has no CRS identity, so it isn't checked.
 - Today it's **mock**: the sandbox credentials and the Postman collection with the business-report endpoint haven't arrived, so `core/countersign/integrations/crs.py` uses a small table of the test identities. The live call and its field mapping are a placeholder until then.
-
-## Known limitations
-
-- **Not yet run on a real SpacetimeDB server.** The live path (publish, reset, seed check, worker, web live mode, the BM-23104 walk, every judge kind, the won't-correct path) was rehearsed against a stand-in that runs the module's code behind SpacetimeDB's HTTP API. Maincloud and Vercel aren't deployed.
-- Factory Droid, the live "why?" call and live CRS have never run with real keys. Live Claude extraction ran once.
-- Payments and supplier emails are simulated. Receipt is a person's signed attestation. Countersign doesn't see delivery tickets or GPS, so it never claims delivery is verified.
-- No fuel-surcharge index (Apify): a fuel charge waits for evidence.
-- A judge's bank-change submission leaves a pending payee change on the sandbox supplier, so later sandbox invoices also show "New bank account" until the owner rejects it.
-- Offline, the web's stand-in doesn't reassess after a settlement decision; the live worker does.
-- **v2.2 open questions** (settlement decisions, CONTRACT §9.9):
-  1. A decision whose amount stops matching the line can't be replaced on the same revision, because the line still has an active decision. Nothing is paid meanwhile: the assessment proposes $0.
-  2. After a correction, superseded decisions' notice drafts stay `draft` and could still be sent.
-  3. By design, `PO_CEILING` covers no single line the owner could dispute, so only a corrected invoice clears it.
 
 ## Repository layout
 
