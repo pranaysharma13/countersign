@@ -1,4 +1,4 @@
-"""Small HTTP API on the demo laptop (port 8000): upload a bill PDF, preview stored files.
+"""Small HTTP API on the demo laptop (port 8000): upload a bill PDF, preview stored files, export an invoice's audit.
 
 Everything else goes through SpacetimeDB. Run: uv run --project core uvicorn countersign.api:app --port 8000
 """
@@ -8,10 +8,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
+from . import audit_export
 from . import reducers as R
 from .config import FILES_DIR
 from .ids import sha8, sha256_hex
@@ -136,3 +137,16 @@ def get_file(source_file_id: str):
     data = file_bytes(doc)
     media = "message/rfc822" if doc.email else "application/pdf"
     return Response(content=data, media_type=media, headers={"Content-Disposition": f'inline; filename="{doc.filename}"'})
+
+
+@app.get("/invoices/{invoice_id}/audit", response_model=None)
+def invoice_audit(invoice_id: str, fmt: str = Query("json", alias="format", pattern="^(json|csv)$")):
+    """Everything recorded about one invoice, oldest first, denials included. Read-only."""
+    try:
+        export = audit_export.invoice_audit(store, invoice_id)
+    except audit_export.UnknownInvoice:
+        raise HTTPException(404, "unknown invoice") from None
+    if fmt == "csv":
+        return Response(content=audit_export.to_csv(export), media_type="text/csv",
+                        headers={"Content-Disposition": f'attachment; filename="audit_{invoice_id}.csv"'})
+    return export
