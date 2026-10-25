@@ -97,6 +97,7 @@ class Assessment:
     next_owner_role: str
     fingerprint: str
     policy_version: str = POLICY_VERSION
+    inputs: dict[str, Any] = field(default_factory=dict)  # input_digest: which rows the fingerprint covers
 
     def hold_amounts(self) -> dict[str, int]:
         return {h.code: h.amount_cents for h in self.holds}
@@ -106,7 +107,7 @@ class Assessment:
                 "holds": [asdict(h) for h in self.holds], "deposit_applied_cents": self.deposit_applied_cents,
                 "conditional_payment_cents": self.conditional_payment_cents,
                 "under_review_cents": self.under_review_cents, "clarification_points": self.clarification_points,
-                "note": "Amounts under review are not savings until the supplier agrees."}
+                "note": "Amounts under review are not savings until the supplier agrees.", "inputs": self.inputs}
 
 
 # ---------------------------------------------------------------- decision records
@@ -466,19 +467,49 @@ def _identity(inv: dict[str, Any]) -> dict[str, Any]:
                                     "currency", "active_revision_id")}
 
 
-def fingerprint(b: InvoiceBundle) -> str:
-    """Hash of every input the assessment read, plus the policy version. Invoice status columns are
-    outputs of assessments, not inputs, so they're left out."""
-    payload = {
-        "policy_version": POLICY_VERSION, "invoice": _identity(b.invoice),
-        **{k: _canon(getattr(b, k)) for k in ("revision", "lines", "purchase", "terms", "change_requests", "deposits",
-                                               "allocations", "attestations", "payee_profiles")},
-        "authorities": sorted((a["role"], int(a["limit_cents"]), a["project_scope"]) for a in b.authorities),
-        "document_sha256": (b.document or {}).get("sha256", ""),
-        "others": [{"invoice": _identity(o["invoice"]), "revision": _canon(o["revision"]), "lines": _canon(o["lines"]),
-                    "document_sha256": (o.get("document") or {}).get("sha256", "")} for o in b.others],
+def _row_hash(value: Any) -> str:
+    return hashlib.sha256(dumps(_canon(value)).encode()).hexdigest()[:16]
+
+
+def input_digest(b: InvoiceBundle) -> dict[str, Any]:
+    """One short hash per input row, by section. Stored with the assessment, so a later check can say
+    which input changed, not only that the fingerprint did. Invoice status columns are outputs of
+    assessments, not inputs, so they're left out."""
+    rows = lambda rs: {str(r.get("id")): _row_hash(r) for r in rs}  # noqa: E731
+    return {
+        "policy_version": POLICY_VERSION,
+        "invoice": {b.invoice["id"]: _row_hash(_identity(b.invoice))},
+        "revision": rows([b.revision]), "lines": rows(b.lines), "purchase": rows([b.purchase] if b.purchase else []),
+        "terms": rows(b.terms), "change_requests": rows(b.change_requests), "deposits": rows(b.deposits),
+        "allocations": rows(b.allocations), "attestations": rows(b.attestations), "payee_profiles": rows(b.payee_profiles),
+        "authorities": {"all": _row_hash(sorted((a["role"], int(a["limit_cents"]), a["project_scope"]) for a in b.authorities))},
+        "document": {(b.document or {}).get("id", ""): (b.document or {}).get("sha256", "")},
+        "others": {o["invoice"]["id"]: _row_hash({"invoice": _identity(o["invoice"]), "revision": o["revision"], "lines": o["lines"],
+                                                  "document_sha256": (o.get("document") or {}).get("sha256", "")})
+                   for o in b.others},
     }
-    return "fp_" + hashlib.sha256(dumps(payload).encode()).hexdigest()[:32]
+
+
+def fingerprint(b: InvoiceBundle) -> str:
+    """Hash of every input the assessment read, plus the policy version."""
+    return "fp_" + hashlib.sha256(dumps(input_digest(b)).encode()).hexdigest()[:32]
+
+
+def changed_inputs(before: dict[str, Any], now: dict[str, Any]) -> list[str]:
+    """What differs between two input digests, e.g. "attestations att_2 added"."""
+    out = []
+    if before.get("policy_version") != now.get("policy_version"):
+        out.append(f"policy version {before.get('policy_version')} -> {now.get('policy_version')}")
+    for section in sorted((set(before) | set(now)) - {"policy_version"}):
+        b, n = before.get(section) or {}, now.get(section) or {}
+        for key in sorted(set(b) | set(n)):
+            if key not in b:
+                out.append(f"{section} {key} added")
+            elif key not in n:
+                out.append(f"{section} {key} removed")
+            elif b[key] != n[key]:
+                out.append(f"{section} {key} changed")
+    return out
 
 
 def _clarification_points(lines: list[LineResult], holds: list[HoldSpec]) -> list[str]:
@@ -544,7 +575,7 @@ def assess(b: InvoiceBundle) -> Assessment:
         conditional_payment_cents=max(authorised - applied, 0), proposed_payment_cents=proposed,
         commercial_status=status, holds=holds, checks=checks, lines=lines,
         clarification_points=_clarification_points(lines, holds), summary=summary, next_action=action,
-        next_owner_role=owner, fingerprint=fingerprint(b))
+        next_owner_role=owner, fingerprint=fingerprint(b), inputs=input_digest(b))
 
 
 def ready_to_post_bill(a: Assessment) -> bool:

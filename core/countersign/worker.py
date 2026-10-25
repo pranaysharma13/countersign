@@ -17,6 +17,7 @@ from typing import Any, Callable
 
 from . import agent
 from . import reducers as R
+from . import supplier_gateway
 from . import supplier_pipeline as v2
 from .attacks import ATTACK_TYPES, make_attack, make_legit_case
 from .ids import short_uuid
@@ -132,6 +133,7 @@ HANDLERS: dict[str, Callable[[Store, dict[str, Any]], Any]] = {
     "process_document": lambda s, p: v2.process_document(s, p["document_id"]),
     "reassess_invoice": lambda s, p: v2.reassess(s, p["invoice_id"], force=True),
     "send_outbox": lambda s, p: v2.send_outbox(s, p["outbox_id"]),
+    "pay_supplier": lambda s, p: supplier_gateway.pay_supplier(s, p["proposal_id"]),
 }
 
 MAX_ATTEMPTS = 3  # the module's limit (CONTRACT §9.5 retries)

@@ -25,7 +25,7 @@ from .injection import scan_document
 from .money import fmt
 from .store import Store, one
 
-__all__ = ["NotYet", "process_document", "reassess", "reassess_stale", "send_outbox", "give_up_document"]
+__all__ = ["NotYet", "process_document", "reassess", "reassess_stale", "send_outbox", "give_up_document", "propose_payment"]
 
 
 def ai_mode() -> str:
@@ -206,8 +206,10 @@ def _invoice(store: Store, ext: dict[str, Any], injected: list[str]) -> dict[str
                     {"quotes": injected[:5]})
         _step(store, invoice_id, "decision", "Found instructions aimed at an automated system in the invoice; ignored them "
               "and opened PROMPT_INJECTION", {"quotes": injected[:5]})
+    from .supplier_agent import investigate  # one Droid session per revision (or the scripted path)
+
     return {"status": "recorded", "invoice_id": invoice_id, "revision_id": revision_id,
-            **reassess(store, invoice_id, reading=ext["document_id"])}
+            **investigate(store, invoice_id, reading=ext["document_id"])}
 
 
 def process_document(store: Store, document_id: str) -> dict[str, Any]:
@@ -266,18 +268,46 @@ def _maybe_draft(store: Store, b: InvoiceBundle, a: Assessment, reading: str) ->
     return outbox
 
 
-def reassess(store: Store, invoice_id: str, force: bool = False, reading: str = "") -> dict[str, Any]:
+def propose_payment(store: Store, b: InvoiceBundle, a: Assessment, assessment_id: str) -> str | None:
+    """Propose exactly what the assessment proposes, to the supplier's verified account, with the deposit it
+    applies. One proposal per assessment (the module cancels older pending ones and denies any other
+    amount). The owner approves it in the app; eligibility is the module's."""
+    if a.proposed_payment_cents <= 0:
+        return None
+    payee = next((p for p in b.payee_profiles if p["status"] == "verified"), None)
+    if payee is None:
+        return None
+    proposal_id = f"prop_{assessment_id.removeprefix('asm_')}"
+    if one(store, "proposal", id=proposal_id):
+        return None
+    res = R.propose_supplier_payment(store, proposal_id, b.invoice["id"], a.revision_id, assessment_id, a.proposed_payment_cents,
+                                     a.deposit_applied_cents, payee["id"])
+    if not res.ok:
+        _step(store, b.invoice["id"], "error", f"Couldn't propose the payment: {res.outcome} {res.message}")
+        return None
+    _step(store, b.invoice["id"], "decision", f"Proposed paying {fmt(a.proposed_payment_cents)} to the verified account ending "
+          f"{payee['last4']} ({fmt(a.deposit_applied_cents)} deposit applied); waiting for the owner's approval",
+          {"proposal_id": proposal_id, "assessment_id": assessment_id})
+    return proposal_id
+
+
+def reassess(store: Store, invoice_id: str, force: bool = False, reading: str = "", act: bool = True) -> dict[str, Any]:
     """Assess the active revision; record it only if an input changed (or `force`). `reading` is the
-    document whose job is calling, so it doesn't count as still being read."""
+    document whose job is calling, so it doesn't count as still being read. With `act`, code also drafts
+    the clarification and proposes the payment; without it (a Droid session follows) only the numbers
+    and holds are recorded."""
     b = bundle_from_store(store, invoice_id)
     a = assess(b)
     latest = max(store.rows("assessment", revision_id=a.revision_id), key=lambda r: r["version"], default=None)
     if latest is not None and latest["fingerprint"] == a.fingerprint and not force:
-        return {"status": "unchanged", "assessment_id": latest["id"], "outbox_id": _maybe_draft(store, b, a, reading)}
+        return {"status": "unchanged", "assessment_id": latest["id"],
+                "outbox_id": _maybe_draft(store, b, a, reading) if act else None}
     assessment_id = record(store, a)
     _step(store, invoice_id, "decision", a.summary, {"assessment_id": assessment_id, "holds": a.hold_amounts(),
                                                       "next_action": a.next_action})
-    return {"status": "assessed", **_summary(a, assessment_id, _maybe_draft(store, b, a, reading))}
+    proposal = propose_payment(store, b, a, assessment_id) if act else None
+    outbox = _maybe_draft(store, b, a, reading) if act else None
+    return {"status": "assessed", "proposal_id": proposal, **_summary(a, assessment_id, outbox)}
 
 
 def reassess_stale(store: Store) -> list[str]:

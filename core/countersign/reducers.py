@@ -347,3 +347,24 @@ def approve_outbox(s: Store, role: str, id: str) -> Result:
 
 def mark_outbox(s: Store, id: str, status: str, delivery_ref: str = "", role: str = "sync") -> Result:
     return s.call(role, "mark_outbox", id, status, delivery_ref)
+
+
+# 9.4 Payment
+def propose_supplier_payment(
+    s: Store, id: str, invoice_id: str, revision_id: str, assessment_id: str, amount_cents: int,
+    deposit_allocation_cents: int, payee_profile_id: str, role: str = "agent",
+) -> Result:
+    return s.call(role, "propose_supplier_payment", id, invoice_id, revision_id, assessment_id, amount_cents,
+                  deposit_allocation_cents, payee_profile_id)
+
+
+def approve_supplier_payment(s: Store, role: str, proposal_id: str, expected_fingerprint: str, note: str = "") -> Result:
+    return s.call(role, "approve_supplier_payment", proposal_id, expected_fingerprint, note)
+
+
+def reject_supplier_payment(s: Store, role: str, proposal_id: str, note: str = "") -> Result:
+    return s.call(role, "reject_supplier_payment", proposal_id, note)
+
+
+def record_deposit_allocation(s: Store, id: str, deposit_id: str, invoice_id: str, amount_cents: int, role: str = "gateway") -> Result:
+    return s.call(role, "record_deposit_allocation", id, deposit_id, invoice_id, amount_cents)

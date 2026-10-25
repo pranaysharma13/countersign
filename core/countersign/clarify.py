@@ -58,29 +58,39 @@ def _point(b: InvoiceBundle, r: LineResult) -> str:
     return f"{r.description} ({fmt(r.pending_cents)}): {r.uncertainty}"
 
 
+def disputed(a: Assessment) -> list[LineResult]:
+    return [r for r in a.lines if r.variance_cents or r.pending_cents]
+
+
+def lines_dont(n: int) -> str:
+    return f"{n} line{'s' if n != 1 else ''} {'do' if n != 1 else 'does'}n't match what we agreed"
+
+
+def subject(b: InvoiceBundle, a: Assessment) -> str:
+    """Code sets the subject, whoever writes the body."""
+    return f"Invoice {b.invoice['invoice_number']}: {lines_dont(len(disputed(a)))}"
+
+
 def draft(b: InvoiceBundle, a: Assessment, contact: dict[str, Any]) -> tuple[str, str] | None:
     """(subject, body), or None when there's nothing to ask, or when a line still waits for our own
     in-app decision (the supplier then gets one complete email once we've decided)."""
     if any(r.awaiting_decision_by for r in a.lines):
         return None
-    disputed = [r for r in a.lines if r.variance_cents or r.pending_cents]
-    if not disputed:
+    rows = disputed(a)
+    if not rows:
         return None
     inv = b.invoice
-    n = len(disputed)
-    lines_dont = f"{n} line{'s' if n != 1 else ''} {'do' if n != 1 else 'does'}n't match what we agreed"
-    subject = f"Invoice {inv['invoice_number']}: {lines_dont}"
     kept = [r for r in a.lines if r.kind != "material" and r.status == "accepted"]
     body = [f"Hello {contact['name']},", "",
             f"Thanks for invoice {inv['invoice_number']} dated {inv['invoice_date']} ({fmt(a.claimed_cents)}). We checked it "
-            f"against the quote, purchase order and emails on file, and {lines_dont}:", ""]
-    body += [f"{i}. {_point(b, r)}" for i, r in enumerate(disputed, start=1)]
+            f"against the quote, purchase order and emails on file, and {lines_dont(len(rows))}:", ""]
+    body += [f"{i}. {_point(b, r)}" for i, r in enumerate(rows, start=1)]
     if kept:
         body += ["", "These lines are correct: " + "; ".join(f"{r.description} ({fmt(r.accepted_cents)})" for r in kept) + "."]
     body += ["", f"Please send a corrected invoice or an agreed credit memo for the {fmt(a.under_review_cents)} in question. "
                  "We'll keep your original invoice on file and process the corrected one as soon as it arrives.",
              "", "Thanks,", SIGNATURE]
-    return subject, "\n".join(body) + "\n"
+    return subject(b, a), "\n".join(body) + "\n"
 
 
 def record_draft(store: Store, b: InvoiceBundle, a: Assessment) -> str | None:

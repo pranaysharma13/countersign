@@ -19,7 +19,7 @@ from .fake_store import FakeStore
 from .ids import sha256_hex
 from .store import Result, Store, StoreError
 from .supplier_docs import file_bytes, fragment_id, fragments
-from .supplier_world import BAYMIX, CONTACTS, PAYEE_V1, PEOPLE, PRIMARY_DOCS, PROJECT, SourceDoc
+from .supplier_world import BAYMIX, COMPANY, CONTACTS, PAYEE_V1, PEOPLE, PRIMARY_DOCS, PROJECT, SourceDoc
 
 
 def _ok(res: Result, what: str) -> None:
@@ -36,6 +36,8 @@ def seed_setup(store: Store, identities: dict[str, str] | None = None) -> None:
         _ok(R.register_actor(store, ids.get(role, role), role, name), f"actor {role}")
     for p in PEOPLE:
         _ok(R.set_authority(store, ids.get(p.role, p.role), p.role, p.limit_cents, p.project_scope), f"authority {p.role}")
+    _ok(R.upsert_company(store, "sync", COMPANY.id, COMPANY.name, COMPANY.owner_name, COMPANY.state,
+                         COMPANY.bank_account_ref, COMPANY.bank_last4), "company")  # the payer account
     _ok(R.upsert_project(store, "sync", PROJECT.id, PROJECT.name, PROJECT.address), "project")
     _ok(R.upsert_supplier(store, "sync", BAYMIX.id, BAYMIX.name, BAYMIX.email_domain, BAYMIX.phone_on_file,
                           BAYMIX.crs_ref, BAYMIX.status), "supplier")
@@ -140,6 +142,7 @@ def export_seeds() -> dict[str, list[dict[str, Any]]]:
     baymix_opening (up to the drafted clarification) and baymix_correction (reply + revision 2)."""
     from .clarify import record_draft
     from .commercial import assess, bundle_from_store, record
+    from .supplier_pipeline import propose_payment
     from .extractions import load_fixture, record_email_extraction, record_invoice_extraction, record_purchase
     from .supplier_ledger import deposit_settled, post
     from .supplier_world import (DEPOSIT, INVOICE_ID, INVOICE_R1, INVOICE_R2, PO, PURCHASE_ID, QUOTE, REPLY_1, WAITING_1,
@@ -169,7 +172,9 @@ def export_seeds() -> dict[str, list[dict[str, Any]]]:
     record_email_extraction(rec, load_fixture(REPLY_1.id), PURCHASE_ID)
     seed_document(rec, INVOICE_R2)
     record_invoice_extraction(rec, load_fixture(INVOICE_R2.id), PURCHASE_ID)
-    record(rec, assess(bundle_from_store(rec, INVOICE_ID)))
+    b2 = bundle_from_store(rec, INVOICE_ID)
+    a2 = assess(b2)
+    propose_payment(rec, b2, a2, record(rec, a2))  # $73,700, approvable once receipt is attested
     return {"baymix_opening.json": opening, "baymix_correction.json": rec.take()}
 
 

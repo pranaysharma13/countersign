@@ -84,6 +84,21 @@ class RealNessie:
 _client: MockNessie | RealNessie | None = None
 
 
+def pay_once(bank: "MockNessie | RealNessie", payer_ref: str, payee_ref: str, amount_cents: int, key: str) -> tuple[dict[str, Any], bool]:
+    """Pay exactly once per idempotency key: an existing transfer is reused, and after a timeout the bank
+    is asked whether it took the transfer before giving up. Returns (transfer, recovered)."""
+    transfer = bank.find_transfer(payer_ref, key)
+    if transfer is not None:
+        return transfer, True
+    try:
+        return bank.transfer(payer_ref, payee_ref, amount_cents, key), False
+    except TimeoutError:
+        transfer = bank.find_transfer(payer_ref, key)  # did the bank take it before timing out?
+        if transfer is None:
+            raise
+        return transfer, True
+
+
 def client() -> MockNessie | RealNessie:
     global _client
     if _client is None:
