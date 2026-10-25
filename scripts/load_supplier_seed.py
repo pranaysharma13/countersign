@@ -6,7 +6,8 @@
 Needs a published module, actors from scripts/setup_actors.py, and their tokens in .env (the admin
 token too: the seed registers actors and sets authority limits). `<identity:role>` placeholders
 are replaced with SPACETIMEDB_<ROLE>_IDENTITY from .env, or the identity in the module's actor
-table. Calls run in order with fresh request ids; a duplicate is fine, anything else stops the load.
+table. Calls run in order with fresh request ids; a duplicate is fine, anything else stops the load. A seed the
+module already matches (e.g. after scripts/reset_demo_v2.py) is skipped, so running this twice is safe.
 
 Right after loading (start the worker only after this), it checks that the module agrees with the
 Python reference (countersign/seed_check.py) and prints every mismatch. --check-only skips loading.
@@ -50,7 +51,12 @@ def main() -> int:
     if missing:
         print(f"Missing: {', '.join(missing)}. Run scripts/setup_actors.py and paste its output into .env.")
         return 1
+    so_far: list[list[dict]] = []
     for name, calls in ({} if args.check_only else seeds).items():
+        so_far.append(calls)
+        if not seed_check.compare(store, seed_check.reference(so_far)):  # e.g. reset_demo_v2.py already loaded it
+            print(f"{name}: already loaded, skipped")
+            continue
         for n, call in enumerate(calls, start=1):
             res = replay(store, [call], ids)[0]
             if not res.ok:
