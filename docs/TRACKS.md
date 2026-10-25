@@ -14,12 +14,12 @@ What each judge looks for, and the evidence we must show them. Criteria are quot
 
 **From their workshop deck:** build a "system of work" on top of systems of record; one gateway checks every write; limits enforced in code, not prompts; memory beyond the context window; learns policies, turns corrections into precedent, answers "why?" months later. Weak: one-shot extractor, clean data, all-powerful key, "the prompt tells it not to".
 
-**Our evidence:** seats line · contract-aware checks on messy construction bills · roles enforced in SpacetimeDB · denied attempts in the audit log · compromised-agent switch · "just pay it" hold · scorecard with answer key · "why?" chat citing the log · real-vs-simulated table.
+**Our evidence (v2):** seats line (materials purchasing coordinator + AP exceptions analyst) · invoice checked against quote + PO + email thread, with amendments scoped to their deliveries · five separate statuses and independent holds · purchasing authority limits and separation of duties enforced in SpacetimeDB · approvals bound to an exact invoice version that go stale on change · clarification loop with the supplier and a corrected invoice · denied attempts in the audit log · answer key with exact values ($87,425 → $73,700) · "under review", never fake "savings" · real-vs-simulated table.
 
 ## CRS — Financial Intelligence Challenge
 **Prizes:** Best Overall ($1,000) · Best Financial AI Agent ($500) · Best Identity/Fraud Innovation (interviews) · Most Unexpected Use (interviews).
 **Criteria:** CRS central (not a bolt-on) · runs live against the sandbox · useful · creative. Also responsible about data. **Use the provided test identities only.**
-**Our evidence:** liens/judgments and business checks on every sub; identity verification required before any bank change; live sandbox calls in the demo; a short "what CRS data we use and why" note.
+**Our evidence (v2):** before any deposit or prepayment, CRS business credit and public records (liens, judgments, bankruptcy) on the supplier open `SUPPLIER_RISK` if needed; identity verification backs payee (bank) changes; live sandbox calls in the demo; a short "what CRS data we use and why" note.
 
 ## Factory — Best Use of the Factory Droid SDK
 **Prize:** $2,000 + credits.
@@ -33,22 +33,22 @@ What each judge looks for, and the evidence we must show them. Criteria are quot
 ## Microsoft — Built for the Real World (+ Customer Impact Award)
 **Prize:** Surface laptop each, tech talk, mentorship.
 **Criteria:** customer understanding · measurable usefulness · path from prototype to production · responsible design · end-to-end functionality.
-**Our evidence:** contractor interview quotes · scorecard numbers and dollars protected · production slide (QuickBooks/Procore, real bank APIs, deployment) · human approval on every payment · full flow working live.
+**Our evidence (v2):** contractor interview quotes · measured scorecard (extraction accuracy, exception precision/recall) and dollars under review · production slide (Outlook/Microsoft Graph email intake, QuickBooks/Procore, real bank APIs) · human approval on every payment · full flow working live.
 
 ## Anthropic
 **Prize:** coming soon. **Criteria:** a named community (not "students") · a real problem you lived or heard firsthand · it works (one thing done well) · thoughtful use of Claude, knowing where it could go wrong for users.
-**Our evidence:** "small California general contractors paying subs" · interview with a real contractor · Claude reads contracts and bills and defends decisions · a "where Claude could fail" list (wrongly held legit bill, misread PDF, prompt injection) and what we did about each.
+**Our evidence (v2):** "purchasing and AP at small California general contractors" · interview with a real contractor · Claude reads quotes and email threads and tells proposed from accepted, citing exact fragments · a "where Claude could fail" list (treating a proposal as an acceptance, misreading a price, prompt injection, rejecting a legitimate charge) and what we did about each.
 
 ## Capital One — Best Use of Nessie
 **Prize:** $300 per person. **Criteria:** completeness, creativity, complexity.
-**Our evidence:** company and sub accounts, balance checks for the payment run, payee account ownership, transfers through the gateway.
+**Our evidence (v2):** the supplier deposit, settlement of the corrected balance exactly once, payee account checks, transfers through the gateway.
 
 ## Apify — Best use of Apify (+ Best Actor)
 **Prizes:** $2,000 / $1,000 / $800 / $400 / $400, plus $400 Best Actor for building an Actor at this event.
-**Our evidence:** contractor license-board lookup in every investigation; publish our own license-lookup Actor for the Best Actor prize.
+**Our evidence (v2):** an Actor that scrapes the public weekly diesel price index so the fuel-surcharge check recomputes what the contract allows; contractor license-board lookup for subs. Publish our own Actor for the Best Actor prize.
 
 ## Armadin — Best Security Hack
-**Criteria:** coming soon. **Our evidence:** the "scam us" page, prompt-injection defense, limits in code, compromised-agent switch.
+**Criteria:** coming soon. **Our evidence (v2):** the "sneak a charge past it" page, prompt-injection defense, payee-change hold that only a pre-established contact can clear, limits in code, compromised-agent switch.
 
 ## MLH — Best Domain Name from GoDaddy Registry
 Register a domain through GoDaddy Registry and point it at the web app.

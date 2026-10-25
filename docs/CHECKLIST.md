@@ -1,64 +1,47 @@
-# Master checklist
+# Master checklist (v2: supplier invoices)
 
 Owners: **PY** = Python developer (+ their AI) · **TS** = TypeScript developer · **PD** = pitch & docs teammate · **ALL** = everyone.
 Tick items off in this file (small commits) or in team chat.
 
-## Now → 3:30 PM
-- [ ] **ALL** Every teammate is checked in and on Slack; PD creates the Devpost project and adds both teammates.
-- [ ] **PY** Anthropic API key, Factory account + `droid` CLI + `FACTORY_API_KEY`, Nessie key, Apify token.
-- [ ] **PY** CRS sandbox signup at calhacks.crscreditapi.com (credentials + Postman collection arrive by email).
-- [ ] **TS** SpacetimeDB CLI installed, `spacetime login`, claim SpacetimeDB credits; Node 22+.
-- [ ] **PD** Hyphenate mixer (Mixer Area, Gate 6, until 4 PM): pitch the moment, ask what AP clerks actually get wrong, ask what they've already seen a lot of.
-- [ ] **PD** Booth round (notes to `pitch/booth-notes.md`):
-  - CRS: which test identities/businesses have liens, judgments or fraud flags; is identity verification (OTP/KBA) in the sandbox; what "responsible" means to them.
-  - Factory: credits; can the Python SDK turn off Droid's built-in file/shell tools?
-  - SpacetimeDB: credits, prize criteria.
-  - Anthropic, Microsoft, Armadin: criteria not yet published.
-  - Apify: does a license-board Actor count; Best Actor rules.
-- [ ] **PD** Find a real contractor to talk to for 10 minutes before 6 PM (family, friends, Slack, local GCs).
+## Now
+- [ ] **ALL** Read `SPEC.md` (v2) and `docs/CONTRACT.md` §9. Nobody pastes `docs/BUILDBUY_PROMPT.md` into Claude Code as a standalone prompt.
+- [ ] **TS** Push whatever exists to `ts/app` now, even unfinished, so integration can start.
+- [ ] **PY** Keys: Anthropic, Factory (`droid` CLI), CRS sandbox, Nessie, Apify. Run `scripts/check_droid.py`.
+- [ ] **PD** Devpost project created, teammates added. Contractor interview: how do you check supplier invoices against quotes and email changes? Ever paid a price increase you never agreed to?
+- [ ] **PD** Booths: CRS (which test businesses show liens/judgments/bankruptcy; is business credit in the sandbox), Apify (diesel price index Actor for Best Actor), Hyphenate (run the new one-liner past them).
 
-## By ~3:45 PM — SpacetimeDB check (go / no-go)
-- [ ] **TS** Local module with one table and one reducer, published.
-- [ ] **PY** Calls that reducer from Python over HTTP with a positional JSON array, reads it back with SQL.
-- [ ] **TS** Next.js page shows the row live.
-- [ ] If any of these fail by 3:45: switch to the SQLite fallback (decide together).
+## By ~8:30 PM
+- [ ] **TS + PY** CONTRACT v2 agreed in team chat.
+- [ ] **PY** Step A: fixture documents (quote, PO, emails, invoice, corrected invoice), answer key, commercial checks, exact-value tests.
+- [ ] **TS** SpacetimeDB go/no-go (if not done): Python calls a reducer over HTTP, web shows the row live.
 
-## By 5:30 PM
-- [ ] **TS** All P0 tables and reducers from `docs/CONTRACT.md`, published locally; pushed to `main`.
-- [ ] **PY** `scripts/setup_actors.py`, seed data loaded through reducers.
-- [ ] **PD** Research pack to PY (sources required): California statutory lien waiver forms, typical retainage and pay-application format (schedule of values), how fake bank-change scams hit contractors, real loss figures.
+## By ~11 PM
+- [ ] **TS** §9 "A" reducers published locally, with Vitest tests for: separation of duties, purchasing limit, immutable fragments, deposit applied once, stale approvals, eligibility re-check at `start_payment`, agent can't resolve holds.
+- [ ] **PY** Step B: intake, worker (retries, leases), holds, receipt and deposit logic against the real module.
+- [ ] **ALL** Primary scenario end to end with fixtures: $87,425 claimed → holds → clarification → corrected $83,700 → receipt attested → approval → $73,700 settled, AP $0.
 
-## By 7:00 PM — one bill end to end
-- [ ] **PY** Upload → extraction → core checks → proposal.
-- [ ] **TS** Work item list, live investigation view, phone approval screen.
-- [ ] **PY** Gateway pays an approved proposal (Nessie mock or real) and records it.
-- [ ] **PD** Interview notes in `pitch/interview-notes.md`; pitch outline v1.
+## By ~1 AM
+- [ ] **PY** Step C: live Claude extraction (strict schema) + email classification with fragment validation; automatic reassessment on new documents.
+- [ ] **TS** Step D: four views on live data (work queue, purchase record, invoice case, approval review); source viewer opens the real PDF page or email.
+- [ ] **TS** Publish to Maincloud; web on Vercel.
+- [ ] **PD** **Devpost draft submitted.** Research pack: how ready-mix pricing, waiting time and fuel surcharges are usually written (sources required).
 
-## By midnight
-- [ ] **PY** Droid runs the investigation; real CRS, Nessie and Apify; scam generator; `scam_submit` jobs; compromised-agent demo; "why?" chat.
-- [ ] **TS** "Scam us" page + live counter, payment-run view, audit log view, contracts view, chat; module P1 reducers; publish to Maincloud; web on Vercel.
-- [ ] **PD** **Devpost draft submitted** (title, tagline, description, tracks, teammates, image, repo link).
-- [ ] **PD** QR code for the "scam us" page once the Vercel URL exists.
-- [ ] **PD** GoDaddy Registry domain registered and pointed at the web app.
-
-## By 4:00 AM — feature freeze
-- [ ] **PY** Scorecard run (~200 scams + ~50 real bills) finished, numbers locked.
-- [ ] **PY** Should-haves as time allows: Gmail intake (30-min limit), policies from corrections, bank-change verification.
-- [ ] **TS** Scorecard page, books view, demo control panel (compromised-agent button, reset).
-- [ ] **PD** Slides updated with final scorecard numbers.
+## By 4:00 AM: feature freeze
+- [ ] **PY** Step E (version-bound approval, settlement, ledger, audit export) + variants: scoped amendment, bank change, fuel surcharge (Apify), supplier risk (CRS), prompt injection, "sneak a charge" judge page.
+- [ ] **PY** Scorecard measured and locked (extraction accuracy, exception precision/recall, authorized changes accepted, latency, human decisions).
+- [ ] **TS** Judge page, stale-approval warnings, disabled buttons that say why.
+- [ ] **PD** Slides with measured numbers only.
 - [ ] **ALL** Nothing new after 4 AM, only fixes.
 
 ## 4:00 → 8:00 AM
-- [ ] **ALL** Demo reset script works; full run-through on the demo laptop.
-- [ ] **PD + ALL** 5+ timed pitch rehearsals (2-minute and 3-minute versions) and Q&A drill.
-- [ ] **PD** Record the demo video (opens with the moment); upload; link on Devpost.
-- [ ] **PD** README final: setup, architecture, **where Droid runs**, CRS data use, real vs. simulated, Cartesia section (if used), team.
-- [ ] **PY** Apify Actor published (if built), link in README.
+- [ ] **ALL** Demo reset works; full run-through on the demo laptop.
+- [ ] **PD + ALL** 5+ timed rehearsals (2- and 3-minute versions), Q&A drill.
+- [ ] **PD** Demo video (opens with the moment), README: setup, architecture, **where Droid runs**, CRS data use, real vs. simulated, live vs. fixture.
+- [ ] **PY** Apify Actor published (if built).
 
-## By 8:30 AM — final submission (deadline 9:00 AM, hard)
-- [ ] **PY** Repo made public; scan for secrets (`git log -p | grep -i key` and check `.env` never committed).
-- [ ] **PD** Devpost final: every track selected, video, image, repo link, all teammates added.
+## By 8:30 AM: final submission (deadline 9:00 AM, hard)
+- [ ] **PY** Repo public; scan full git history for secrets.
+- [ ] **PD** Devpost final: every track selected, video, image, repo link, all teammates.
 
 ## Judging (10:30 AM – 12:30 PM)
-- [ ] **ALL** At the assigned table the whole time (all three, or we aren't judged).
-- [ ] **ALL** Laptop charged, demo reset, backup video ready offline, QR code visible, phones logged in as owner.
+- [ ] **ALL** All three at the table the whole time; laptop charged; demo reset; offline backup video; QR code for the judge page.

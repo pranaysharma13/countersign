@@ -1,138 +1,160 @@
-# Countersign — Spec
+# Countersign — Spec (v2: supplier invoices)
 
 The single source of truth for the team. If code and this file disagree, fix one of them.
+Detailed requirements: [docs/BUILDBUY_PROMPT.md](docs/BUILDBUY_PROMPT.md) (our teammate's full spec). Where it conflicts with this file or [docs/CONTRACT.md](docs/CONTRACT.md) (mainly the stack), **this file wins**. Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## 1. One-liner
 
-Countersign is the payables clerk for small general contractors. It pays subs on time, refuses to be scammed, and only the owner's tap moves money.
+**Countersign checks every supplier invoice against what was actually agreed (the quote, the purchase order and the email thread) and prepares a payment the controller can trust.** It keeps legitimate charges, questions the rest with evidence, and never moves money on its own.
 
-**Seats it fills (for Hyphenate):** accounts-payable clerk and vendor-risk analyst.
+**Seats it fills (for Hyphenate):** materials purchasing coordinator and accounts-payable exceptions analyst. The owner/controller stays the financial approver.
 
-## 2. The company (demo world)
+**Why this problem:** fraud is rare; paying more than you agreed happens every month. Suppliers raise unit prices, add waiting time, fuel surcharges and extras nobody accepted, and a busy contractor pays the invoice. Countersign saves money on routine invoices, not just in a once-a-year scam.
 
-A fictional small general contractor in California, run by its owner, with an outside bookkeeper.
+## 2. The customer and the demo world (all fictional)
 
-- About 8 subcontractors (framing, electrical, plumbing, drywall, roofing, concrete, HVAC, painting).
-- Each sub has a subcontract: schedule of values, retainage %, change-order rules, lien waiver requirements, bank account and phone on file.
-- About 6 months of bill and payment history.
-- Messy on purpose: partial billing, retainage, change orders, conditional vs. unconditional lien waivers, a few late bills.
+- **Marlow & Finch Builders**, a small California general contractor (owner: Dana Marlow; outside bookkeeper: Sam Okafor). Same company as v1.
+- Buys **ready-mix concrete** from **BayMix Supply** for the **Oakview Lane Fourplex**. The GC buys the concrete; its sub Granite Line Concrete places it (common practice).
+- The **superintendent** confirms receipt in the app. That's a signed attestation, not machine proof.
+- The v1 flow (subcontractor pay applications, fake bank-change bill) stays in the code as a second capability. **The demo leads with supplier invoices.**
 
-## 3. People and roles
+## 3. Inputs (exactly five)
+
+1. Supplier quotes and incorporated terms (PDF).
+2. Purchase orders (PDF, documented CSV or structured entry).
+3. Email threads about extra charges, price changes and acceptance (pasted text or .eml).
+4. Supplier invoices, arriving days or weeks later.
+5. Decisions made in the app by authorized people (purchasing approver, receiver, controller).
+
+Supporting data: users and roles with authority limits, projects, supplier directory and known contacts, payee profiles (dummy, masked), deposit history.
+
+**Out of scope:** delivery tickets, GPS, unloading times, receiving feeds, quality reports. Countersign **cannot** prove what was delivered and never pretends to. If receipt is required and nobody has attested it, payment stays blocked.
+
+## 4. People and roles
 
 | Role | Who | Can do |
 |---|---|---|
-| `owner` | The GC's owner | Approve or reject payments, approve bank changes, override holds |
-| `bookkeeper` | Outside bookkeeper | Approve policies and contract terms the agent learned |
-| `agent` | Countersign AI | Read records, run checks, propose payments, ask questions, propose policies |
-| `gateway` | Payment service | The only role that can send money, and only for approved proposals |
-| `sync` | Inbox and bank sync jobs | Create bills and bank records from sources |
-| `admin` | One-time setup script | Register the other roles. Never used by the agent. |
+| `owner` | Owner / controller | Approve payments (bound to an exact invoice version), verify payee changes, resolve commercial holds with a note |
+| `purchasing` | Purchasing approver | Approve change requests **within an authority limit** ($2,000 in the demo); never their own request |
+| `receiver` | Superintendent | Attest receipt (quantity, scope, reason), labeled MANUALLY_CONFIRMED |
+| `bookkeeper` | Outside bookkeeper | Read everything; approve policies |
+| `agent` | Countersign AI | Read, extract, link, assess, open holds, draft clarifications, propose payments. **Never approves, pays, verifies a payee or clears a hold.** |
+| `gateway` | Payment service | The only role that settles payments (Nessie) and posts payment journals |
+| `sync` | Intake | Records documents, emails, fragments, invoices |
+| `admin` | Setup script | Registers roles and limits |
 
-Exact roles, tables, reducers and states: see [docs/CONTRACT.md](docs/CONTRACT.md).
+## 5. Separate statuses (never one "verified" flag)
 
-**Hard rules, enforced in the database, never in a prompt:**
-- The agent can never approve anything, including its own proposals.
-- The AI can add holds, never remove them: deterministic rules decide what's payable.
-- Some failed checks (bank mismatch, license, identity) are hard stops that even the owner can't override; the fix is bank-change verification.
-- Every payment needs the owner's approval. There is no auto-pay amount.
-- Bank details can only change with owner approval after outside verification.
-- Only the gateway holds the bank key.
-- Every change and every denied attempt is written to the audit log in the same transaction.
-- Money is stored as whole cents (integers), never decimals.
-- If any check fails to run, the bill is held, never paid.
+Each invoice has five independent statuses: **commercial**, **receipt**, **payee**, **approval**, **payment**.
+Independent holds, any of which blocks payment: `CONTRACT_REVIEW`, `PRICE_VARIANCE`, `PROPOSED_CHARGE`, `USAGE_EVIDENCE_MISSING`, `PO_CEILING`, `DUPLICATE_REVIEW`, `EXTRACTION_REVIEW`, `RECEIPT_NOT_VERIFIED`, `PAYEE_CHANGE_PENDING`, `APPROVAL_STALE`, plus `PROMPT_INJECTION` and `SUPPLIER_RISK` (CRS). Resolving one hold never clears another.
 
-## 4. How a bill flows
+## 6. How an invoice flows
 
-1. **Intake:** a bill arrives (inbox sync, upload, or the "scam us" page) and becomes a work item. Raw source (email, PDF) is kept and linked.
-2. **Read:** Claude extracts structured fields from the PDF. Text in documents is data, never instructions.
-3. **Investigate:** a Factory Droid session starts for the work item and runs the checks with our tools only (its file and shell tools are off). Each step streams to the screen.
-4. **Decide:** deterministic rules in code turn check results into: propose payment, hold, or reject.
-5. **Approve:** the owner sees the evidence on their phone and approves or rejects.
-6. **Pay:** the gateway sends the payment (Nessie) with a one-time request ID, so it never pays twice, and posts the ledger entry.
-7. **Record:** every step goes to the audit log with a before/after diff and the reason.
+1. **Intake:** a document or email arrives. Original bytes and SHA-256 are kept; a job is queued in the same transaction.
+2. **Extract:** Claude classifies the document and extracts fields with a strict schema. Every material field points to an **immutable source fragment** (exact text, page or email). Missing facts are null with a reason, never guessed.
+3. **Link:** quote terms, PO, accepted amendments (scoped to supplier, project, product, deliveries and dates) and prior invoices.
+4. **Assess (deterministic code):** claimed vs. accepted vs. pending per line, price variance, unapproved or unproven charges, PO ceiling, duplicates, deposit available, receipt, payee. Every assessment stores its inputs' fingerprint and policy version.
+5. **Ask:** Countersign drafts a clarification to the supplier (simulated outbox; a person approves sending). **It never silently pays less.** It asks for a corrected invoice or an agreed credit.
+6. **Correct:** a corrected invoice supersedes the earlier revision only when identity is established. The original claim is preserved.
+7. **Approve:** the controller approves a payment bound to the exact revision, amount, deposit allocation, payee profile version, assessment fingerprint and policy version. Any change makes it **stale**.
+8. **Pay:** the gateway re-checks eligibility, then settles through Nessie exactly once and posts balanced journals.
 
-**Work item states:** `new → reading → investigating → proposed → approved → paying → paid`, or `held` / `closed_held` / `override_requested` / `rejected` / `needs_info` / `failed` (details in CONTRACT §3.5).
+## 7. Claude vs. application code
 
-**SpacetimeDB is the bus.** The web asks Python to do work by inserting `job` rows; Python polls, claims and finishes them. Judges' phones only ever talk to SpacetimeDB and the web app.
-
-## 5. Checks (what it catches)
-
-| Check | Source |
+| Claude handles interpretation | Application code handles financial controls |
 |---|---|
-| Bank details differ from the contract on file | Contract + Nessie account owner |
-| Sub is fake or unlicensed | State license board (Apify) |
-| Liens, judgments, identity problems | CRS sandbox |
-| Duplicate bill | Bill history |
-| Billing above the contract's schedule of values | Contract |
-| Unapproved change order | Contract + change-order log |
-| Missing lien waiver | Contract rules + attachments |
-| Fake "owner" email ordering payment | Verified owner channel |
-| Bank details quietly edited | Audit log |
-| Line items don't add up to the total | The bill itself |
-| One bill split to dodge review | Bill history |
+| Reading quotes and supplier conditions | Arithmetic and rounding |
+| Understanding email discussions | Purchasing limits |
+| Identifying possible amendments | Approval permissions |
+| Connecting differently worded invoice and PO items | Duplicate detection |
+| Drafting clarification questions | Deposit allocation |
+| Explaining findings with evidence | Payment eligibility, accounting entries, preventing repeated payments |
 
-## 6. Learning and memory
+Claude's conversation history is never the system's memory; the database is. Anthropic's native citations can't be combined with strict JSON outputs in one request, so **extraction uses strict schemas with our own fragment IDs**, and citations are used only in the separate "why?" explanation, which can never change amounts or approvals.
 
-- **Onboarding:** the agent reads each contract and 6 months of history and proposes rules ("Framing sub: bills monthly, 10% retainage, account ending 4471"). The bookkeeper approves each one.
-- **Corrections:** when the owner overrides a hold, the agent proposes a general rule for the bookkeeper to approve.
-- **"Why?" chat:** anyone can ask why a bill was held. The answer comes from the audit log, citing entries.
+## 8. The demo scenario (exact numbers, all fictional)
 
-## 7. Proof
+| Date | Event |
+|---|---|
+| Oct 1 | Accepted quote + acknowledged PO: up to **500 cubic yards at $165/yd**, fixed through Oct 31. Price changes require mutual written agreement. Authorized material: **$82,500**. |
+| Oct 3 | **$10,000 deposit** recorded as settled (CRS supplier check passed first). |
+| Oct 8 | Supplier proposes a **$1,200 weekend-delivery charge**. The purchasing approver ($2,000 limit, not the requester) approves it in the app; supplier acceptance recorded. Legitimate. |
+| Later | Email: "waiting charges may apply." No acceptance, no usage evidence. |
+| Oct 23 | Invoice: 500 yd at **$172** ($86,000) + $1,200 weekend + 90 min waiting at $2.50 (**$225**). Gross **$87,425**, deposit shown $10,000, balance requested **$77,425**. |
 
-- A scam generator creates ~200 scam bills plus ~50 legitimate ones, each with the correct answer.
-- Scorecard: scams caught, real bills wrongly held, dollars protected.
-- "Scam us" page: judges write their own scam bill and watch it get caught live.
-- "Compromised agent" switch: a naive agent tries to pay a scam; the database refuses and logs it.
+**What Countersign finds:**
 
-## 8. Demo (opens with the moment)
+| Finding | Correct treatment |
+|---|---|
+| $3,500 price difference | Investigate against accepted terms and amendments (`PRICE_VARIANCE`) |
+| $1,200 weekend charge | Accept: properly authorized |
+| $225 waiting charge | Keep pending; never invent usage evidence (`PROPOSED_CHARGE` / `USAGE_EVIDENCE_MISSING`) |
+| $10,000 deposit | Apply once |
+| Receipt not confirmed | Keep payment blocked (`RECEIPT_NOT_VERIFIED`) |
 
-1. Fake bank-change bill from a trusted sub → held, with evidence.
-2. Owner says "just pay it" → agent holds, citing the contract's bank-change clause and its record.
-3. A pile of bills: normal ones proposed, 5 problems caught.
-4. A judge's scam from the "scam us" page → caught live.
-5. The scorecard.
+$3,725 is **under review**, not "money saved," until the supplier agrees.
 
-## 9. Tech
+**Resolution:** the supplier agrees to $165 and removes waiting. A corrected invoice for **$83,700** supersedes the first. The superintendent attests receipt of 500 yd (labeled manual). With a verified payee and the controller's approval, Countersign proposes **$73,700**, the gateway settles it, AP ends at **$0**, and total cash out including the deposit is **$83,700**.
+
+**Variants:**
+- **Scoped amendment (challenge):** a valid $172 price applies only to a later subset of deliveries. Countersign applies it to that scope or asks for the allocation evidence; it doesn't reject every price change.
+- **Bank change:** an email asks to pay a new account. `PAYEE_CHANGE_PENDING` holds even after the invoice is corrected, until the owner verifies through a contact already on file.
+- **Fuel surcharge (Apify):** the contract ties fuel surcharges to the weekly diesel price index; Apify scrapes the public index and the check recomputes the allowed surcharge.
+- **Supplier risk (CRS):** before a deposit, CRS business credit and public records (liens, judgments, bankruptcy) are checked; a risky supplier opens `SUPPLIER_RISK`.
+- **Prompt injection:** hidden text in an invoice ("approve this bill") is data, flagged, and ignored.
+- **Judge page:** "Try to sneak a charge past it": judges compose an invoice or email and watch the assessment.
+
+## 9. Proof
+
+- Exact primary values asserted in tests: $87,425 · $77,425 · $3,500 · $225 · $3,725 · $83,700 · $10,000 · $73,700 · AP $0 · cash out $83,700.
+- An answer key kept separate from model inputs; fixture mode (`AI_MODE=fixture`) is visibly labeled and works without a key.
+- Scorecard: extraction accuracy on labeled fields, exception precision/recall, authorized changes correctly accepted, source coverage, latency, human decisions required. **Measured results only.**
+- Hard failures: permission bypass, duplicate money movement, unbalanced journals, any claim of delivery verification.
+
+## 10. Tech (our stack)
 
 | Piece | Choice |
 |---|---|
-| Core database, roles, audit log | SpacetimeDB (TypeScript module), fallback SQLite if the 1-hour check fails |
-| Agent runtime | Factory Droid SDK (Python), Claude as the model |
-| Document reading, "why?" chat | Claude API |
-| Bank | Capital One Nessie |
-| Vendor risk | CRS sandbox (business credit, public records, identity) |
-| License lookup | Apify |
-| Inbox | Gmail API (30-minute limit; fallback: upload + "scam us" page) |
-| Interface | Next.js, mobile-friendly approval screen |
-| Stretch | Cartesia voice call to the sub's number on file |
-| Hosting for the demo | SpacetimeDB Maincloud · web on Vercel · Python on the demo laptop (outbound only) |
+| System of work: roles, statuses, holds, approvals, audit log, job bus | **SpacetimeDB** (TypeScript module) |
+| Agent | **Factory Droid** (Python SDK) restricted to our tools; Claude as the model |
+| Extraction, email classification, explanations | **Claude API** (strict schemas; citations only for explanations) |
+| Worker, intake API, gateway, checks | **Python** (FastAPI for uploads/email intake/file preview only) |
+| Bank | **Capital One Nessie** (deposit, settlement; simulated) |
+| Supplier risk, identity for payee changes | **CRS** sandbox |
+| Public data | **Apify** (diesel price index; state license board for subs) |
+| Interface | **Next.js**: work queue, purchase record, invoice case, approval review |
 
-## 10. Scope
+How the teammate's Postgres design maps onto this: see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#adapting-the-spec-to-our-stack).
 
-- **Must have:** contracts read and confirmed, bill intake (upload + scam page), 6 core checks (bank change, duplicate, overbilling, unapproved change order, missing lien waiver, license), CRS liens/judgments, weekly payment run vs. Nessie balance, owner approval on phone, gateway, audit log, "just pay it" hold, scorecard.
-- **Should have:** Gmail intake, learning from corrections, split bills, quiet bank edits, fake owner email, "why?" chat.
-- **Stretch:** Cartesia call, edited-PDF detection, backcharges, negotiation.
+## 11. Build order (from the spec)
 
-## 11. Team
+- **A.** Domain model, money rules, fixture data, answer key, commercial checks, unit tests.
+- **B.** Intake, job worker, document store, role-bound decisions, independent holds, receipt and deposit logic.
+- **C.** Live Claude extraction and email classification, validated evidence, automatic reassessment.
+- **D.** Web app on real data: four views, source viewer, clarification and corrected-invoice flow.
+- **E.** Version-bound approval, settlement, ledger, audit export, failure and security tests.
+
+Each step leaves a complete, demoable product.
+
+## 12. Team
 
 | Who | Owns | Branch | Brief |
 |---|---|---|---|
-| Python developer (PY) | `core/`, `data/`, `scripts/`: agent, Droid, checks, gateway, integrations, seed data, scam generator, scorecard | `py/core` | [docs/briefs/python.md](docs/briefs/python.md) |
-| TypeScript developer (TS) | `db/` SpacetimeDB module, `web/` Next.js app | `ts/app` | [docs/briefs/typescript.md](docs/briefs/typescript.md) |
-| Pitch & docs (PD) | `pitch/`, final `README.md`, Devpost, video, research, booths, interviews | `docs/pitch` | [docs/briefs/pitch-and-docs.md](docs/briefs/pitch-and-docs.md) |
+| Python developer (PY) | `core/`, `data/`, `scripts/`: extraction, assessment, holds, agent, worker, gateway, fixtures, answer key, tests | `py/core` | [docs/briefs/python.md](docs/briefs/python.md) |
+| TypeScript developer (TS) | `db/` module (CONTRACT §9 v2 tables and reducers), `web/` four views | `ts/app` | [docs/briefs/typescript.md](docs/briefs/typescript.md) |
+| Pitch & docs (PD) | `pitch/`, final `README.md`, Devpost, video, demo script | `docs/pitch` | [docs/briefs/pitch-and-docs.md](docs/briefs/pitch-and-docs.md) |
 
 Shared files (`SPEC.md`, `CLAUDE.md`, `docs/*`, `.env.example`, `.gitignore`) change only when both coders agree.
 
-## 12. Schedule (Saturday → Sunday)
+## 13. Schedule (Saturday → Sunday)
 
 Full checklist with owners: [docs/CHECKLIST.md](docs/CHECKLIST.md).
 
 | By | Milestone |
 |---|---|
-| 3:45 PM | SpacetimeDB go/no-go check and Droid tools-off check done |
-| 5:30 PM | Module P0 reducers live; seed data loaded |
-| 7:00 PM | One bill works end to end |
-| Midnight | Demo moment works, real integrations, deployed, Devpost draft |
-| 4:00 AM | Feature freeze, scorecard locked |
+| ~8:30 PM | CONTRACT v2 agreed; TS starts v2 tables; PY step A done with tests |
+| ~11:00 PM | Module v2 published locally; PY steps B–C against it; primary scenario passes end to end with fixtures |
+| ~1:00 AM | Web views D on live data; live Claude extraction; Devpost draft |
+| 4:00 AM | Step E done, variants in; **feature freeze**, scorecard numbers locked |
 | 8:30 AM | Final submission (hard deadline 9:00) |
 | 10:30 AM | All three at the judging table |
