@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from countersign import api
 from countersign import reducers as R
 from countersign.fake_store import FakeStore
+from countersign.companion_world import VS_INVOICE
 from countersign.supplier_world import PRIMARY_DOCS
 
 
@@ -62,3 +63,10 @@ def test_seed_fallback_when_storage_is_empty(client):
 
 def test_unknown_id_is_404(client):
     assert client[2].get("/files/src_nope").status_code == 404
+
+
+def test_companion_seed_pdf_by_document_id(client):
+    r = client[2].get(f"/files/{VS_INVOICE.id}")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/pdf"
+    assert r.content.startswith(b"%PDF")

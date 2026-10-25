@@ -29,21 +29,34 @@ store = get_store()
 
 
 def _seed_doc(source_file_id: str, filename: str = "") -> object | None:
+    """Seed PDFs resolve without a live store row. Store lookup is a fallback only."""
     if filename:
         found = next((d for d in ALL_DOCS if d.filename == filename), None)
         if found:
             return found
-    linked = next((d for d in store.rows("document") if d.get("source_file_id") == source_file_id), None)
-    if linked:
-        return next((d for d in ALL_DOCS if d.id == linked["id"]), None)
-    return next((d for d in ALL_DOCS if d.id == source_file_id), None)
+    found = next((d for d in ALL_DOCS if d.id == source_file_id), None)
+    if found:
+        return found
+    try:
+        linked = next((d for d in store.rows("document") if d.get("source_file_id") == source_file_id), None)
+    except Exception:
+        linked = None
+    if not linked:
+        return None
+    return next((d for d in ALL_DOCS if d.id == linked["id"] or d.filename == linked.get("filename")), None)
 
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
-    rows = [(s["id"], s.get("filename") or s["id"]) for s in store.rows("source_file")]
-    if not rows:
-        rows = [(d.id, d.filename) for d in ALL_DOCS]
+    try:
+        rows = [(s["id"], s.get("filename") or s["id"]) for s in store.rows("source_file")]
+    except Exception:
+        rows = []
+    seen = {name for _, name in rows}
+    for d in ALL_DOCS:
+        if d.filename not in seen:
+            rows.append((d.id, d.filename))
+            seen.add(d.filename)
     items = "".join(
         f'<li><a href="/files/{sid}">{name}</a> <span style="color:#666">{sid}</span></li>'
         for sid, name in rows
@@ -108,7 +121,11 @@ def _stored_path(storage: str) -> Path | None:
 
 @app.get("/files/{source_file_id}", response_model=None)
 def get_file(source_file_id: str):
-    src = one(store, "source_file", id=source_file_id)
+    src = None
+    try:
+        src = one(store, "source_file", id=source_file_id)
+    except Exception:
+        src = None
     path = _stored_path((src or {}).get("storage_path") or "")
     if path is not None:
         return FileResponse(path, media_type=_MEDIA[path.suffix.lower()])

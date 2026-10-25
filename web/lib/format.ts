@@ -3,12 +3,40 @@ const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
 export const money = (cents: number | null | undefined) => (cents == null ? '—' : usd.format(cents / 100));
 export const qty = (milli: number, unit: string) =>
   `${(milli / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 })} ${unit === 'cy' ? 'yd³' : unit}`;
+
+export function ceilingCopy(evidenceJson: string, fallback: string): string {
+  let ev: Record<string, unknown> = {};
+  try { ev = JSON.parse(evidenceJson || '{}'); } catch { ev = {}; }
+  const billed = Number(ev.this_invoice_milli) || 0;
+  const cap = Number(ev.ceiling_milli) || 0;
+  const unit = String(ev.unit || '');
+  if (billed > 0 && cap > 0 && unit) {
+    return `The purchase order allows ${qty(cap, unit)}. This invoice bills ${qty(billed, unit)}.`;
+  }
+  return fallback;
+}
 export const when = (micros: number) =>
   new Date(micros / 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 export const time = (micros: number) =>
   new Date(micros / 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 export const day = (iso: string) =>
   iso ? new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+
+export function daysUntil(iso: string, now = new Date()): number | null {
+  if (!iso) return null;
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((d.getTime() - today.getTime()) / 86_400_000);
+}
+
+export function dueWord(iso: string): { label: string; tone: 'ok' | 'hold' | 'stop' | 'idle' } {
+  const n = daysUntil(iso);
+  if (n == null) return { label: 'No due date', tone: 'idle' };
+  if (n < 0) return { label: `${-n} day${n === -1 ? '' : 's'} late`, tone: 'stop' };
+  if (n === 0) return { label: 'Due today', tone: 'stop' };
+  if (n <= 14) return { label: `Due in ${n} day${n === 1 ? '' : 's'}`, tone: 'hold' };
+  return { label: `Due ${day(iso)}`, tone: 'idle' };
+}
 export const ids = (json: string): string[] => {
   try {
     const v = JSON.parse(json || '[]');
@@ -56,11 +84,11 @@ export const HOLD_LABEL: Record<string, string> = {
   RECEIPT_NOT_VERIFIED: 'Delivery not confirmed',
   PAYEE_CHANGE_PENDING: 'New bank account',
   APPROVAL_STALE: 'Earlier approval is out of date',
-  PROMPT_INJECTION: 'Tried to trick the checker',
+  PROMPT_INJECTION: 'Hidden instruction on the invoice',
   SUPPLIER_RISK: 'Supplier flag',
 };
 export const HOLD_DETAIL: Record<string, string> = {
-  PROMPT_INJECTION: 'They hid a line that said to approve the bill without looking. We treated it as words on a page and ignored it.',
+  PROMPT_INJECTION: 'This PDF included a line written for an automated system, not for a person. Countersign treated it as printed text and did not follow it. The line items still stand on their own.',
   PAYEE_CHANGE_PENDING: 'They asked us to pay a different bank account than the one already on file.',
   PO_CEILING: 'The purchase order has a cap. This bill goes over it.',
   PROPOSED_CHARGE: 'This extra was mentioned. Nobody agreed to it in the app.',
@@ -68,6 +96,30 @@ export const HOLD_DETAIL: Record<string, string> = {
   PRICE_VARIANCE: 'The unit price is higher than the quote or the purchase order.',
   RECEIPT_NOT_VERIFIED: 'Nobody on site has confirmed this arrived.',
 };
+/** Document text is data. Never show a hidden instruction as if the product said it. */
+export function isHiddenInstruction(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/^\s*SYSTEM\s*:/i.test(t)) return true;
+  if (/ignore (all )?(prior|previous|above) (instructions|rules)/i.test(t)) return true;
+  if (/approve this (invoice|bill) immediately/i.test(t)) return true;
+  return false;
+}
+
+export function safeQuote(text: string): string {
+  return isHiddenInstruction(text)
+    ? 'Hidden instruction on the document. Treated as printed text and ignored.'
+    : text;
+}
+
+export function safeReason(text: string): string {
+  if (!text) return text;
+  if (isHiddenInstruction(text) || /SYSTEM\s*:/i.test(text)) {
+    return 'Hidden instruction on the invoice, treated as data and ignored.';
+  }
+  return text;
+}
+
 export const ROLE_LABEL: Record<string, string> = {
   owner: 'Owner', purchasing: 'Buyer', receiver: 'Site', bookkeeper: 'Books', agent: 'Countersign',
   gateway: 'Bank transfer', sync: 'Inbox', supplier: 'Supplier', admin: 'Setup', '': '—',
@@ -85,7 +137,7 @@ export interface BillLike {
 export function billStory(inv: BillLike, holds: { code: string }[]): string {
   if (inv.payment_status === 'settled') return 'Already paid.';
   const codes = new Set(holds.map(h => h.code));
-  if (codes.has('PROMPT_INJECTION')) return 'This invoice hid instructions for the checker. We ignored them.';
+  if (codes.has('PROMPT_INJECTION')) return 'This invoice included a hidden instruction. We ignored it. The line items still match the order.';
   if (codes.has('PAYEE_CHANGE_PENDING')) return 'They asked us to send money to a new bank account.';
   if (codes.has('PO_CEILING')) return 'They billed more than the purchase order allows.';
   if (codes.has('PROPOSED_CHARGE')) return 'They added an extra charge that was never agreed.';
@@ -99,7 +151,7 @@ export function billStory(inv: BillLike, holds: { code: string }[]): string {
 export function nextStep(inv: BillLike, holds: { code: string }[]): { role: string; action: string } {
   if (inv.payment_status === 'settled') return { role: '', action: 'Nothing left to do.' };
   const codes = new Set(holds.map(h => h.code));
-  if (codes.has('PROMPT_INJECTION')) return { role: 'owner', action: 'Read what they hid, then decide whether to pay.' };
+  if (codes.has('PROMPT_INJECTION')) return { role: 'owner', action: 'Record that the hidden instruction was ignored, then review the line items.' };
   if (codes.has('SUPPLIER_RISK')) return { role: 'owner', action: 'Read the supplier flag before anyone pays.' };
   if (codes.has('PAYEE_CHANGE_PENDING')) return { role: 'owner', action: 'Call someone already on file. Confirm the new account.' };
   if (codes.has('PO_CEILING') || codes.has('PROPOSED_CHARGE') || codes.has('PRICE_VARIANCE')) {

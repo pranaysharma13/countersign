@@ -3,13 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { refreshAll } from '@/lib/client';
-
-const PERSONAS = [
-  { id: 'owner', label: 'Dana Marlow, owner' },
-  { id: 'purchasing', label: 'Jordan Pike, buyer' },
-  { id: 'receiver', label: 'Luis Ortega, site' },
-  { id: 'bookkeeper', label: 'Sam Okafor, bookkeeper' },
-];
+import { PERSONAS, personaLabel, personaOf, initials } from '@/lib/personas';
 
 interface Session { persona: string; unlocked: boolean; mode: 'live' | 'local'; pinRequired: boolean }
 
@@ -45,36 +39,43 @@ export function Shell({ children }: { children: React.ReactNode }) {
     refreshAll();
   }
 
+  if (path === '/') return <>{children}</>;
+
+  const me = personaOf(s?.persona ?? 'owner');
   const nav = [
-    { href: '/', label: 'Bills', on: path === '/' },
-    { href: '/sneak', label: 'Try a sneak charge', on: path.startsWith('/sneak') },
+    { href: '/bills', label: 'Bills', on: path === '/bills' || path.startsWith('/invoices') || path.startsWith('/purchases') },
+    { href: '/inbox', label: 'Inbox', on: path.startsWith('/inbox') },
+    { href: '/sneak', label: 'Sneak', on: path.startsWith('/sneak') },
   ];
 
   return (
-    <div className="shell">
-      <aside className="side">
-        <Link href="/" className="brand">Countersign<small>Check supplier bills</small></Link>
+    <div className="app">
+      <header className="top">
+        <Link href="/" className="mark">Countersign</Link>
         <nav className="nav" aria-label="Main">
           {nav.map(n => <Link key={n.href} href={n.href} aria-current={n.on ? 'page' : undefined}>{n.label}</Link>)}
         </nav>
-        <div className="who">
-          <label className="f">
-            I am
-            <select value={s?.persona ?? 'owner'} onChange={e => post({ persona: e.target.value })}>
-              {PERSONAS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
-          </label>
-          {s?.pinRequired && !s.unlocked && (
-            <form onSubmit={e => { e.preventDefault(); post({ pin }); }} className="row">
-              <input type="text" inputMode="numeric" placeholder="Demo PIN" value={pin} onChange={e => setPin(e.target.value)} aria-label="Demo PIN" />
-              <button className="btn secondary" type="submit">Unlock</button>
-            </form>
-          )}
-          {s?.persona === 'owner' && s.mode === 'local' && <button className="btn secondary" onClick={reset}>Start over</button>}
-          {err && <div className="notice stop" role="alert">{err}</div>}
+        <div className="top-end">
+          <Link className="btn" href="/inbox">Open inbox</Link>
+          {me && <div className="avatar" title={me.name}>{initials(me.name)}</div>}
+          <select className="who-pick" value={s?.persona ?? 'owner'} onChange={e => post({ persona: e.target.value })} aria-label="I am">
+            {PERSONAS.map(p => <option key={p.id} value={p.id}>{personaLabel(p.id)}</option>)}
+          </select>
         </div>
-      </aside>
-      <main>{children}</main>
+      </header>
+      <main>
+        {s?.pinRequired && !s.unlocked && (
+          <form onSubmit={e => { e.preventDefault(); post({ pin }); }} className="row" style={{ marginBottom: 16 }}>
+            <input type="text" inputMode="numeric" placeholder="Demo PIN" value={pin} onChange={e => setPin(e.target.value)} aria-label="Demo PIN" />
+            <button className="btn secondary" type="submit">Unlock</button>
+          </form>
+        )}
+        {s?.persona === 'owner' && s.mode === 'local' && (
+          <button className="ghost" onClick={reset}>Start over</button>
+        )}
+        {err && <div className="notice stop" role="alert">{err}</div>}
+        {children}
+      </main>
     </div>
   );
 }

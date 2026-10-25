@@ -12,7 +12,7 @@ export default function Receive({ params }: { params: Promise<{ id: string }> })
   const { data: t, error } = useTables(TABLES);
   if (!t) return <Loading error={error} />;
   const inv = t.invoice.find(i => i.id === id);
-  if (!inv) return <div className="empty">No bill {id}. Check the <Link href="/">bills list</Link>.</div>;
+  if (!inv) return <div className="empty">No bill {id}. Check the <Link href="/bills">bills list</Link>.</div>;
   const rev = t.invoice_revision.find(r => r.id === inv.active_revision_id);
   const sup = t.supplier.find(s => s.id === inv.supplier_id);
   const material = t.invoice_line.filter(l => l.revision_id === rev?.id && l.kind === 'material');
