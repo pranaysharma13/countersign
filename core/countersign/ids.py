@@ -24,3 +24,8 @@ def sha8(*parts: str | bytes) -> str:
 
 def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def hold_id(revision_id: str, code: str) -> str:
+    """One hold per code per invoice revision (CONTRACT §9.8): opening it twice is a no-op."""
+    return f"hold_{revision_id}_{code.lower()}"
