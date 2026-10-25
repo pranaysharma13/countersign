@@ -99,7 +99,7 @@ def _on_file(store: Store, supplier_id: str | None = None) -> list[str]:
     purchases = {p["id"] for p in store.rows("purchase") if supplier_id is None or p["supplier_id"] == supplier_id}
     lines = []
     for cr in sorted(store.rows("change_request"), key=lambda c: c["id"]):
-        if cr["purchase_id"] in purchases:
+        if cr["purchase_id"] in purchases and cr["kind"] != "settlement":  # an owner's settlement is never linkable
             price = (f"flat {fmt(int(cr['amount_cents']))}" if int(cr["amount_cents"])
                      else f"{fmt(int(cr['rate_cents']))}/{cr['rate_unit']}" if int(cr["rate_cents"]) else "no amount stated")
             lines.append(f"{cr['id'].removeprefix('cr_')}: {cr['description']} | {price} | supplier "

@@ -1,6 +1,8 @@
 """The gateway for supplier payments (the pay_supplier job, gateway role). Simulated: Nessie sandbox or mock.
 
-1. Before paying, recompute the assessment fingerprint from the current rows. If it isn't the one the
+1. Never pay the agreed part of a disputed invoice before the supplier has been told: every active
+   "pay agreed, dispute the rest" notice must be sent (CONTRACT §9.9).
+   Before paying, recompute the assessment fingerprint from the current rows. If it isn't the one the
    owner approved, don't pay: say which inputs changed (the sweep reassesses and the module makes the
    approval stale), or, if none did, report a fingerprint mismatch with the module.
 2. start_payment (the module re-checks every bound value), then one Nessie transfer per idempotency key.
@@ -17,7 +19,13 @@ from typing import Any
 
 from . import reducers as R
 from . import supplier_ledger as L
-from .commercial import bundle_from_store, changed_inputs, fingerprint, input_digest
+from .commercial import (
+    active_decisions,
+    bundle_from_store,
+    changed_inputs,
+    fingerprint,
+    input_digest,
+)
 from .integrations import nessie
 from .money import fmt
 from .store import Store, one
@@ -58,6 +66,11 @@ def _inputs_unchanged(store: Store, invoice_id: str, approval: dict[str, Any]) -
     changes = changed_inputs(before, input_digest(b)) if before is not None else []
     return {"approved_fingerprint": approval["assessment_fingerprint"], "current_fingerprint": now,
             "inputs_changed": bool(changes), "changes": changes, "mismatch": not changes}
+
+
+def unsent_notices(store: Store, invoice_id: str) -> list[str]:
+    return [d["outbox_id"] for d in active_decisions(store, invoice_id=invoice_id) if d["decision"] == "pay_agreed_dispute_rest"
+            and (one(store, "outbox", id=d["outbox_id"]) or {}).get("status") != "sent"]
 
 
 def _deposit_for(store: Store, purchase_id: str, invoice_id: str, amount: int) -> tuple[str, bool] | None:
@@ -118,6 +131,11 @@ def pay_supplier(store: Store, proposal_id: str) -> dict[str, Any]:
             approval = one(store, "payment_approval", id=f"appr_{proposal_id}")
             if approval is None or approval["status"] != "active":
                 return {"status": "blocked", "reason": "no active approval for this payment"}
+            unsent = unsent_notices(store, invoice["id"])
+            if unsent:
+                _timeline(store, invoice["id"], "error", "Didn't pay: the notice to the supplier about the disputed amount "
+                          "hasn't been sent", {"outbox_ids": unsent})
+                return {"status": "blocked", "reason": "blocked: notice to supplier not sent", "outbox_ids": unsent}
             changed = _inputs_unchanged(store, invoice["id"], approval)
             if changed is not None:
                 if changed["mismatch"]:

@@ -59,7 +59,8 @@ def _point(b: InvoiceBundle, r: LineResult) -> str:
 
 
 def disputed(a: Assessment) -> list[LineResult]:
-    return [r for r in a.lines if r.variance_cents or r.pending_cents]
+    """Lines to raise with the supplier; a line the owner already decided has its own notice (§9.9)."""
+    return [r for r in a.lines if (r.variance_cents or r.pending_cents) and not r.decision]
 
 
 def lines_dont(n: int) -> str:
