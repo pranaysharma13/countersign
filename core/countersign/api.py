@@ -90,14 +90,25 @@ async def upload(file: UploadFile = File(...), from_address: str = Form(""), sub
     return {"work_item_id": wi_id, "source_file_id": src_id}
 
 
+_MEDIA = {".pdf": "application/pdf", ".eml": "message/rfc822"}
+
+
+def _stored_path(storage: str) -> Path | None:
+    """A stored file we may serve: a PDF or .eml inside FILES_DIR. Anything else is never read."""
+    if not storage:
+        return None
+    path = Path(storage).resolve()
+    if not path.is_relative_to(FILES_DIR.resolve()) or path.suffix.lower() not in _MEDIA or not path.is_file():
+        return None
+    return path
+
+
 @app.get("/files/{source_file_id}", response_model=None)
 def get_file(source_file_id: str):
     src = one(store, "source_file", id=source_file_id)
-    storage = (src or {}).get("storage_path") or ""
-    if storage:
-        path = Path(storage).resolve()
-        if path.exists() and path.is_file():
-            return FileResponse(path, media_type="application/pdf")
+    path = _stored_path((src or {}).get("storage_path") or "")
+    if path is not None:
+        return FileResponse(path, media_type=_MEDIA[path.suffix.lower()])
     doc = _seed_doc(source_file_id, (src or {}).get("filename") or "")
     if doc is None:
         raise HTTPException(404, "unknown file" if src is None else "file not available")
