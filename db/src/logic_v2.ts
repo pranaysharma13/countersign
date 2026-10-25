@@ -16,7 +16,8 @@ const TERM_CODES = ['unit_price', 'max_quantity', 'valid_through', 'deposit', 'p
   'extra_charge_rule', 'fuel_surcharge_rule'];
 const TERM_STATUS = ['accepted', 'proposed', 'declined', 'superseded'];
 const CR_KINDS = ['extra_charge', 'price_change', 'quantity_change'];
-const CR_CLASSIFICATIONS = ['AUTHORISED_FIXED', 'AUTHORISED_RATE_USAGE_MISSING', 'PROPOSED', 'DECLINED', 'AMBIGUOUS', 'UNRELATED'];
+const AUTHORISED = ['AUTHORISED_FIXED', 'AUTHORISED_RATE_USAGE_MISSING'];
+const CR_CLASSIFICATIONS = [...AUTHORISED, 'PROPOSED', 'DECLINED', 'AMBIGUOUS', 'UNRELATED'];
 const SUPPLIER_ACCEPTANCE = ['none', 'proposed', 'accepted', 'declined'];
 const LINE_KINDS = ['material', 'extra', 'waiting', 'fuel', 'tax', 'freight', 'other'];
 const COMMERCIAL_STATUS = ['pending', 'matches', 'differences_under_review', 'contract_review'];
@@ -26,8 +27,8 @@ export const HOLD_CODES = ['CONTRACT_REVIEW', 'PRICE_VARIANCE', 'PROPOSED_CHARGE
 // §9.3: the owner may resolve only these with resolve_hold. The rest clear only through their own event.
 export const OWNER_RESOLVABLE_HOLDS = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING',
   'DUPLICATE_REVIEW', 'EXTRACTION_REVIEW', 'CONTRACT_REVIEW', 'PROMPT_INJECTION', 'SUPPLIER_RISK'];
-// Holds carried onto a corrected revision: a correction from the supplier doesn't prove receipt or verify a payee.
-const CARRY_OVER_HOLDS = ['RECEIPT_NOT_VERIFIED', 'PAYEE_CHANGE_PENDING'];
+// §9.8.2: holds carried onto a corrected revision. A correction doesn't prove receipt, verify a payee or clear a risk flag.
+const CARRY_OVER_HOLDS = ['RECEIPT_NOT_VERIFIED', 'PAYEE_CHANGE_PENDING', 'SUPPLIER_RISK'];
 
 const nonNeg = (v: bigint, f: string) => (v < 0n ? `${f} can't be negative` : null);
 const firstErr = (...e: (string | null)[]) => e.find(x => x) ?? null;
@@ -63,6 +64,19 @@ function openHoldRow(c: Call, id: string, revision_id: string, code: string, amo
   };
   c.ctx.db.hold.insert(row);
   audit(c, 'hold', id, null, row, reason);
+  return true;
+}
+
+/** §9.8.2: a hold the module opens itself, one per code per revision (`hold_<revision_id>_<code>`). Reopens it if closed. */
+function moduleHold(c: Call, revision_id: string, code: string, amount_cents: bigint, reason: string, evidence_json = '[]') {
+  const id = `hold_${revision_id}_${code.toLowerCase()}`;
+  const existing = c.ctx.db.hold.id.find(id);
+  if (!existing) return openHoldRow(c, id, revision_id, code, amount_cents, reason, evidence_json);
+  if (existing.status === 'open') return true;
+  const row = { ...existing, status: 'open', amount_cents, reason, evidence_json, opened_by_role: c.role,
+    resolved_by_role: '', resolution_note: '', resolved_at_iso: '' };
+  c.ctx.db.hold.id.update(row);
+  audit(c, 'hold', id, { status: existing.status }, { status: 'open' }, reason);
   return true;
 }
 
@@ -109,7 +123,7 @@ function makeStale(c: Call, approval_id: string, reason: string) {
     touchInvoice(c, inv.id, { approval_status: 'stale', payment_status: 'not_ready', next_owner_role: 'owner',
       next_action: 'Re-approve: the approved payment is out of date' }, reason);
     const rev = inv.active_revision_id || ap.revision_id;
-    openHoldRow(c, `hold_${rev}_APPROVAL_STALE_${ap.id}`, rev, 'APPROVAL_STALE', ap.amount_cents, `Approval is stale: ${reason}`);
+    moduleHold(c, rev, 'APPROVAL_STALE', ap.amount_cents, `Approval is stale: ${reason}`, json({ approval_ids: [ap.id] }));
   }
   const p = c.ctx.db.proposal.id.find(ap.proposal_id);
   if (p && p.status === 'approved') {
@@ -183,7 +197,13 @@ export function add_payee_profile(ctx: Ctx, sender: Identity, request_id: string
       id === `${supplier_id}:v${version}` ? null : `id must be '${supplier_id}:v${version}'`);
     if (err) return invalid(err);
     if (!ctx.db.supplier.id.find(supplier_id)) return invalid(`supplier ${supplier_id} not found`);
-    if (ctx.db.payee_profile.id.find(id)) return { outcome: 'duplicate', message: 'payee profile exists' };
+    const existing = ctx.db.payee_profile.id.find(id);
+    if (existing) {
+      const same = existing.supplier_id === supplier_id && existing.version === version && existing.account_ref === account_ref
+        && existing.last4 === last4 && existing.bank_name === bank_name && existing.requested_via === requested_via;
+      if (same) return { outcome: 'duplicate', message: 'payee profile exists' };
+      return deny(c, 'payee profiles are immutable; add a new version', 'payee_profile', id);
+    }
 
     const seedVerified = c.role === 'admin' && requested_via === 'seed';
     if (seedVerified && currentVerifiedProfile(ctx, supplier_id)) {
@@ -202,8 +222,8 @@ export function add_payee_profile(ctx: Ctx, sender: Identity, request_id: string
         touchInvoice(c, inv.id, { payee_status: 'change_pending', next_owner_role: 'owner',
           next_action: 'Verify the payee change through a contact already on file' }, 'payee change requested');
         if (inv.active_revision_id) {
-          openHoldRow(c, `hold_${inv.active_revision_id}_PAYEE_CHANGE_PENDING_${id}`, inv.active_revision_id,
-            'PAYEE_CHANGE_PENDING', 0n, `New bank account ending ${last4} requested via ${requested_via}; not verified`);
+          moduleHold(c, inv.active_revision_id, 'PAYEE_CHANGE_PENDING', 0n,
+            `New bank account ending ${last4} requested via ${requested_via}; not verified`, json({ payee_profile_id: id }));
         }
       }
     }
@@ -339,7 +359,11 @@ export function propose_change_request(ctx: Ctx, sender: Identity, request_id: s
   return handle(ctx, sender, 'propose_change_request', request_id, ['agent', 'sync', 'purchasing'], c => {
     const err = firstErr(oneOf(kind, CR_KINDS, 'kind'), oneOf(classification, CR_CLASSIFICATIONS, 'classification'),
       oneOf(supplier_acceptance, SUPPLIER_ACCEPTANCE, 'supplier_acceptance'),
-      nonNeg(amount_cents, 'amount_cents'), nonNeg(rate_cents, 'rate_cents'), missingFragments(ctx, source_fragment_ids_json));
+      nonNeg(amount_cents, 'amount_cents'), nonNeg(rate_cents, 'rate_cents'), missingFragments(ctx, source_fragment_ids_json),
+      AUTHORISED.includes(classification)
+        ? "a new change request can't be authorised; only the in-app decision and supplier acceptance make it so" : null,
+      rate_cents > 0n && !rate_unit ? 'a rate needs a unit' : null,
+      parseScope(scope_json) ? null : 'scope_json must be a JSON object');
     if (err) return invalid(err);
     if (!ctx.db.purchase.id.find(purchase_id)) return invalid(`purchase ${purchase_id} not found`);
     if (ctx.db.change_request.id.find(id)) return { outcome: 'duplicate', message: 'change request exists' };
@@ -366,22 +390,66 @@ export function record_supplier_acceptance(ctx: Ctx, sender: Identity, request_i
       return invalid('an acceptance needs the source fragment that shows it');
     }
     const after = { ...cr, supplier_acceptance, supplier_acceptance_fragment_ids_json: fragment_ids_json };
+    after.classification = classify(after);
     ctx.db.change_request.id.update(after);
-    audit(c, 'change_request', cr.id, { supplier_acceptance: cr.supplier_acceptance }, { supplier_acceptance, fragment_ids_json });
+    audit(c, 'change_request', cr.id, { supplier_acceptance: cr.supplier_acceptance, classification: cr.classification },
+      { supplier_acceptance, fragment_ids_json, classification: after.classification });
     return ok();
   });
 }
 
-/** Cost of a change request against an approver's limit: a fixed amount, or rate × scoped quantity (rounded up). */
-function changeRequestExposure(cr: { amount_cents: bigint; rate_cents: bigint; scope_json: string }): bigint | null {
-  if (cr.rate_cents === 0n) return cr.amount_cents;
-  let q: unknown;
-  try { const s = JSON.parse(cr.scope_json || '{}'); q = s.max_quantity_milli ?? s.quantity_milli; } catch { return null; }
-  if (typeof q !== 'number' && typeof q !== 'string') return null;
-  let qty: bigint;
-  try { qty = BigInt(q); } catch { return null; }
-  if (qty < 0n) return null;
-  return cr.amount_cents + (cr.rate_cents * qty + 999n) / 1000n;
+function parseScope(scope_json: string): Record<string, unknown> | null {
+  try { const v = JSON.parse(scope_json || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : null; } catch { return null; }
+}
+
+type ChangeRequest = NonNullable<ReturnType<Ctx['db']['change_request']['id']['find']>>;
+type Purchase = NonNullable<ReturnType<Ctx['db']['purchase']['id']['find']>>;
+
+/** The stored classification follows the decision records; only they can make a change authorised. */
+function classify(cr: ChangeRequest): string {
+  if (cr.internal_status === 'rejected' || cr.supplier_acceptance === 'declined') return 'DECLINED';
+  if (cr.internal_status === 'approved' && cr.supplier_acceptance === 'accepted') {
+    return cr.kind === 'extra_charge' && cr.rate_cents > 0n ? 'AUTHORISED_RATE_USAGE_MISSING' : 'AUTHORISED_FIXED';
+  }
+  return AUTHORISED.includes(cr.classification) ? 'PROPOSED' : cr.classification;
+}
+
+/** §9.8.1 worst case: the latest accepted max_quantity minus the material quantity already paid for. Null = no ceiling. */
+function remainingCeiling(ctx: Ctx, purchase: Purchase): bigint | null {
+  let ceiling: { version: number; quantity_milli: bigint } | null = null;
+  for (const t of [...ctx.db.term.iter()]) {
+    if (t.purchase_id !== purchase.id || t.code !== 'max_quantity' || t.status !== 'accepted') continue;
+    if (!ceiling || t.version > ceiling.version) ceiling = t;
+  }
+  if (!ceiling) return null;
+  // Only settled invoices use quantity up: an unscoped price change could still reach one that's billed but unpaid.
+  let paid = 0n;
+  for (const inv of [...ctx.db.invoice.iter()]) {
+    if (inv.purchase_id !== purchase.id || inv.payment_status !== 'settled' || !inv.active_revision_id) continue;
+    for (const l of [...ctx.db.invoice_line.revision_id.filter(inv.active_revision_id)]) {
+      if (l.kind === 'material' && l.unit === purchase.unit) paid += l.quantity_milli;
+    }
+  }
+  const left = ceiling.quantity_milli - paid;
+  return left > 0n ? left : 0n;
+}
+
+/** Money an approval commits (§9.8.1): a fixed amount plus rate × quantity, rounded up. Null = can't be sized. */
+function changeRequestExposure(ctx: Ctx, cr: ChangeRequest, purchase: Purchase): { cents: bigint | null; why: string } {
+  if (cr.rate_cents === 0n) return { cents: cr.amount_cents, why: '' };
+  const scope = parseScope(cr.scope_json) ?? {};
+  const unit = typeof scope.unit === 'string' && scope.unit ? scope.unit : purchase.unit;
+  if (unit !== cr.rate_unit) return { cents: null, why: `the rate is per ${cr.rate_unit} but the quantity is in ${unit}` };
+  let qty: bigint | null = null;
+  const q = scope.quantity_milli;
+  if (q === undefined || q === null) {
+    qty = remainingCeiling(ctx, purchase); // worst case: the rest of the PO
+    if (qty === null) return { cents: null, why: 'no scoped quantity and no accepted max_quantity term' };
+  } else {
+    try { qty = typeof q === 'number' || typeof q === 'string' ? BigInt(q) : null; } catch { qty = null; }
+    if (qty === null || qty < 0n) return { cents: null, why: 'scope_json.quantity_milli is not a whole number of thousandths' };
+  }
+  return { cents: cr.amount_cents + (cr.rate_cents * qty + 999n) / 1000n, why: '' };
 }
 
 export function decide_change_request(ctx: Ctx, sender: Identity, request_id: string, id: string, approve: boolean, note: string): Result {
@@ -390,26 +458,28 @@ export function decide_change_request(ctx: Ctx, sender: Identity, request_id: st
     if (!cr) return invalid(`change request ${id} not found`);
     if (cr.internal_status !== 'pending') return invalid(`change request ${id} is already ${cr.internal_status}`);
     if (cr.requested_by_identity === c.sender_hex) return deny(c, "you can't decide a change you requested", 'change_request', id);
+    const purchase = ctx.db.purchase.id.find(cr.purchase_id);
+    if (!purchase) return invalid(`purchase ${cr.purchase_id} not found`);
+    // Fail safe: no authority row means no purchasing authority, for the owner too.
+    const auth = ctx.db.authority.identity.find(sender);
+    if (!auth || (auth.project_scope !== '*' && auth.project_scope !== purchase.project_id)) {
+      return deny(c, `no purchasing authority on ${purchase.project_id}`, 'change_request', id);
+    }
     if (approve) {
-      const auth = ctx.db.authority.identity.find(sender);
-      // The owner/controller is unlimited unless an authority row says otherwise; everyone else needs one.
-      const limit = auth ? auth.limit_cents : c.role === 'owner' ? null : 0n;
-      const scope = auth ? auth.project_scope : '*';
-      const purchase = ctx.db.purchase.id.find(cr.purchase_id);
-      if (scope !== '*' && purchase && purchase.project_id !== scope) {
-        return deny(c, `outside your project scope (${scope})`, 'change_request', id);
+      const exposure = changeRequestExposure(ctx, cr, purchase);
+      if (exposure.cents === null) {
+        return deny(c, `can't size this change (${exposure.why}); scope it to a quantity first`, 'change_request', id);
       }
-      const exposure = changeRequestExposure(cr);
-      if (exposure === null) {
-        return deny(c, 'a rate charge needs a scoped quantity (scope_json.max_quantity_milli) before it can be approved', 'change_request', id);
-      }
-      if (limit !== null && exposure > limit) {
-        return deny(c, `above your approval limit: ${exposure} cents > ${limit} cents`, 'change_request', id);
+      if (auth.limit_cents === 0n || exposure.cents > auth.limit_cents) {
+        return deny(c, `above your approval limit: ${exposure.cents} cents > ${auth.limit_cents} cents`, 'change_request', id);
       }
     }
-    const internal_status = approve ? 'approved' : 'rejected';
-    ctx.db.change_request.id.update({ ...cr, internal_status, decided_by_identity: c.sender_hex, decided_by_role: c.role, decision_note: note });
-    audit(c, 'change_request', id, { internal_status: cr.internal_status }, { internal_status }, note);
+    const after = { ...cr, internal_status: approve ? 'approved' : 'rejected', decided_by_identity: c.sender_hex,
+      decided_by_role: c.role, decision_note: note };
+    after.classification = classify(after);
+    ctx.db.change_request.id.update(after);
+    audit(c, 'change_request', id, { internal_status: cr.internal_status, classification: cr.classification },
+      { internal_status: after.internal_status, classification: after.classification }, note);
     return ok();
   });
 }
@@ -470,9 +540,9 @@ export function record_invoice_revision(ctx: Ctx, sender: Identity, request_id: 
       audit(c, 'invoice_revision', old.id, { status: old.status }, { status: 'superseded' }, `superseded by ${id}`);
       for (const h of openHolds(ctx, old.id)) {
         closeHold(c, h.id, 'superseded', `superseded by revision ${id}`);
-        // A correction doesn't prove receipt or verify a bank account: carry those holds forward.
+        // A correction doesn't prove receipt, verify a bank account or clear a risk flag: carry those holds forward.
         if (CARRY_OVER_HOLDS.includes(h.code)) {
-          openHoldRow(c, `${h.id}~${id}`, id, h.code, h.amount_cents, h.reason, h.evidence_json);
+          moduleHold(c, id, h.code, h.amount_cents, h.reason, h.evidence_json);
         }
       }
       for (const ap of activeApprovalsForInvoice(ctx, invoice_id)) makeStale(c, ap.id, 'revision superseded');
@@ -480,8 +550,8 @@ export function record_invoice_revision(ctx: Ctx, sender: Identity, request_id: 
     // A payee change still pending applies to every new revision too.
     for (const p of [...ctx.db.payee_profile.supplier_id.filter(inv.supplier_id)]) {
       if (p.status === 'pending') {
-        openHoldRow(c, `hold_${id}_PAYEE_CHANGE_PENDING_${p.id}`, id, 'PAYEE_CHANGE_PENDING', 0n,
-          `New bank account ending ${p.last4} requested via ${p.requested_via}; not verified`);
+        moduleHold(c, id, 'PAYEE_CHANGE_PENDING', 0n,
+          `New bank account ending ${p.last4} requested via ${p.requested_via}; not verified`, json({ payee_profile_id: p.id }));
       }
     }
     touchInvoice(c, invoice_id, { active_revision_id: id, commercial_status: 'pending', next_owner_role: 'agent',
@@ -501,6 +571,14 @@ export function record_invoice_line(ctx: Ctx, sender: Identity, request_id: stri
     const err = firstErr(oneOf(kind, LINE_KINDS, 'kind'), nonNeg(quantity_milli, 'quantity_milli'),
       nonNeg(unit_price_cents, 'unit_price_cents'), missingFragments(ctx, source_fragment_ids_json));
     if (err) return invalid(err);
+    const row = { id, revision_id, kind, description, quantity_milli, unit, unit_price_cents, amount_cents,
+      linked_term_id, linked_change_request_id, source_fragment_ids_json };
+    const before = ctx.db.invoice_line.id.find(id);
+    if (before) {
+      const same = (Object.keys(row) as (keyof typeof row)[]).every(k => before[k] === row[k]);
+      if (same) return { outcome: 'duplicate', message: 'line exists' };
+      return deny(c, 'invoice lines are immutable; record a corrected revision', 'invoice_line', id);
+    }
     const rev = ctx.db.invoice_revision.id.find(revision_id);
     if (!rev) return invalid(`revision ${revision_id} not found`);
     if (rev.status !== 'active') return invalid(`revision ${revision_id} is superseded`);
@@ -510,10 +588,6 @@ export function record_invoice_line(ctx: Ctx, sender: Identity, request_id: stri
         return invalid(`line math doesn't hold: ${quantity_milli} × ${unit_price_cents} / 1000 ≠ ${amount_cents}`);
       }
     }
-    const before = ctx.db.invoice_line.id.find(id);
-    if (before) return { outcome: 'duplicate', message: 'line exists' };
-    const row = { id, revision_id, kind, description, quantity_milli, unit, unit_price_cents, amount_cents,
-      linked_term_id, linked_change_request_id, source_fragment_ids_json };
     ctx.db.invoice_line.insert(row);
     audit(c, 'invoice_line', id, null, row);
     return ok();
@@ -623,12 +697,13 @@ export function decide_payee_profile(ctx: Ctx, sender: Identity, request_id: str
     const p = ctx.db.payee_profile.id.find(id);
     if (!p) return invalid(`payee profile ${id} not found`);
     if (p.status !== 'pending') return invalid(`payee profile ${id} is ${p.status}`);
+    // Approving or rejecting (§9.8.3), the call goes to a contact that was on file before the request.
+    const contact = ctx.db.supplier_contact.id.find(verified_via_contact_id);
+    if (!contact || contact.supplier_id !== p.supplier_id || !contact.pre_established) {
+      return deny(c, 'verify through a contact that was on file before this request (pre-established), never one from the request',
+        'payee_profile', id);
+    }
     if (approve) {
-      const contact = ctx.db.supplier_contact.id.find(verified_via_contact_id);
-      if (!contact || contact.supplier_id !== p.supplier_id || !contact.pre_established) {
-        return deny(c, 'verify through a contact that was on file before this request (pre-established), never one from the request',
-          'payee_profile', id);
-      }
       const old = currentVerifiedProfile(ctx, p.supplier_id);
       if (old) {
         ctx.db.payee_profile.id.update({ ...old, status: 'superseded' });
@@ -640,19 +715,22 @@ export function decide_payee_profile(ctx: Ctx, sender: Identity, request_id: str
       ctx.db.payee_profile.id.update({ ...p, status: 'verified', verified_by_role: c.role, verified_via_contact_id });
       audit(c, 'payee_profile', id, { status: 'pending' }, { status: 'verified', verified_via_contact_id }, note);
     } else {
-      ctx.db.payee_profile.id.update({ ...p, status: 'rejected', verified_by_role: c.role });
-      audit(c, 'payee_profile', id, { status: 'pending' }, { status: 'rejected' }, note);
+      ctx.db.payee_profile.id.update({ ...p, status: 'rejected', verified_via_contact_id });
+      audit(c, 'payee_profile', id, { status: 'pending' }, { status: 'rejected', verified_via_contact_id }, note);
     }
-    // Either way this request is settled: clear its holds; the invoice payee status follows what's left.
+    // Once no change is pending for this supplier, PAYEE_CHANGE_PENDING clears; the invoice payee status follows what's left.
     const stillPending = [...ctx.db.payee_profile.supplier_id.filter(p.supplier_id)].some(x => x.status === 'pending');
+    if (stillPending) return ok();
     const hasVerified = !!currentVerifiedProfile(ctx, p.supplier_id);
+    const resolution = note || (approve ? `payee change verified via ${contact.name}` : `payee change rejected after calling ${contact.name}`);
     for (const inv of [...ctx.db.invoice.supplier_id.filter(p.supplier_id)]) {
-      for (const rev of [...ctx.db.invoice_revision.invoice_id.filter(inv.id)]) {
-        for (const h of openHolds(ctx, rev.id)) {
-          if (h.code === 'PAYEE_CHANGE_PENDING' && h.id.includes(id)) closeHold(c, h.id, 'resolved', approve ? 'payee verified' : 'payee change rejected');
+      if (inv.payment_status === 'settled') continue;
+      if (inv.active_revision_id) {
+        for (const h of openHolds(ctx, inv.active_revision_id)) {
+          if (h.code === 'PAYEE_CHANGE_PENDING') closeHold(c, h.id, 'resolved', resolution);
         }
       }
-      if (!stillPending) touchInvoice(c, inv.id, { payee_status: hasVerified ? 'verified' : 'unverified' });
+      touchInvoice(c, inv.id, { payee_status: hasVerified ? 'verified' : 'unverified' });
     }
     return ok();
   });

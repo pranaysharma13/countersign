@@ -29,6 +29,7 @@ function seed() {
   for (const [i, role] of [[OWNER, 'owner'], [AGENT, 'agent'], [GATEWAY, 'gateway'], [SYNC, 'sync'], [PURCH, 'purchasing'], [RECV, 'receiver'], [PURCH2, 'purchasing']] as const) {
     expectOk(run(ctx => L.register_actor(ctx, ADMIN, rid(), i.toHexString(), role, role)));
   }
+  expectOk(run(ctx => V.set_authority(ctx, ADMIN, rid(), OWNER.toHexString(), 'owner', D(250000), '*')));
   expectOk(run(ctx => V.set_authority(ctx, ADMIN, rid(), PURCH.toHexString(), 'purchasing', D(2000), '*')));
   expectOk(run(ctx => V.set_authority(ctx, ADMIN, rid(), PURCH2.toHexString(), 'purchasing', D(2000), 'prj_other')));
   expectOk(run(ctx => V.upsert_supplier(ctx, SYNC, rid(), 'sup_baymix', 'BayMix Supply', 'baymix.example', '+15555550100', 'crs_b1', 'active')));
@@ -216,11 +217,76 @@ describe('change requests and purchasing limits', () => {
     expectOk(cr('cr_s', SYNC, D(100)));
     expect(run(ctx => V.decide_change_request(ctx, PURCH2, rid(), 'cr_s', true, '')).outcome).toBe('denied');
   });
-  test('a rate charge with no scoped quantity cannot be approved; with one it is checked against the limit', () => {
-    expectOk(cr('cr_rate', SYNC, 0n, 250n));
-    expect(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_rate', true, '')).outcome).toBe('denied');
-    expectOk(cr('cr_rate2', SYNC, 0n, 250n, '{"max_quantity_milli": 90000}'));
-    expectOk(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_rate2', true, '')));
+  test('a scoped rate charge is checked against the limit: rate × quantity, rounded up', () => {
+    expectOk(cr('cr_rate', SYNC, 0n, 250n, '{"unit": "min", "quantity_milli": 90000}'));
+    expectOk(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_rate', true, '')));
+    expectOk(cr('cr_rate_big', SYNC, 0n, 250n, '{"unit": "min", "quantity_milli": 900000}'));
+    expect(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_rate_big', true, '')).outcome).toBe('denied');
+  });
+
+  // §9.8.1: without a scoped quantity the exposure is rate × what's left of the PO ceiling.
+  const priceChange = (id: string, rate: bigint, unit = 'cy') =>
+    run(ctx => V.propose_change_request(ctx, SYNC, rid(), id, 'pur_1', 'price_change', '+$/cy', 0n, rate, unit, '{}', '', '', '', 'PROPOSED', 'proposed', '[]'));
+  const maxQuantity = () => expectOk(run(ctx => V.record_term(ctx, SYNC, rid(), 'term_qty', 'pur_1', 'max_quantity', 'Max', 0n, YD(500), '', '{}', '', '', 'accepted', '["frag_price"]', 1)));
+
+  test('an unscoped rate change with no max_quantity term cannot be sized, so approval is denied', () => {
+    expectOk(priceChange('cr_p', 700n));
+    const r = run(ctx => V.decide_change_request(ctx, OWNER, rid(), 'cr_p', true, ''));
+    expect(r.outcome).toBe('denied');
+    expect(r.message).toContain('max_quantity');
+  });
+  test('an unscoped rate change is sized against the remaining PO ceiling (only settled quantity counts)', () => {
+    maxQuantity();
+    expectOk(priceChange('cr_p', 700n)); // $7/cy × 500 cy = $3,500 > $2,000
+    expect(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_p', true, '')).outcome).toBe('denied');
+    firstInvoice(); // 500 cy billed but unpaid: it could still be repriced, so the ceiling stays at 500
+    expect(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_p', true, '')).outcome).toBe('denied');
+    run(ctx => ctx.db.invoice.id.update({ ...ctx.db.invoice.id.find('inv_1')!, payment_status: 'settled' }));
+    expectOk(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_p', true, ''))); // 0 cy left → $0 exposure
+  });
+  test('the owner can approve an unscoped rate change within their own limit', () => {
+    maxQuantity();
+    expectOk(priceChange('cr_p', 700n));
+    expectOk(run(ctx => V.decide_change_request(ctx, OWNER, rid(), 'cr_p', true, '')));
+  });
+  test("a rate in a different unit from the PO can't be approved by anyone, but can be rejected", () => {
+    maxQuantity();
+    expectOk(priceChange('cr_wait', 250n, 'min'));
+    const r = run(ctx => V.decide_change_request(ctx, OWNER, rid(), 'cr_wait', true, ''));
+    expect(r.outcome).toBe('denied');
+    expect(r.message).toContain('per min');
+    expectOk(run(ctx => V.decide_change_request(ctx, OWNER, rid(), 'cr_wait', false, 'not agreed')));
+    expect(find('change_request', 'cr_wait').classification).toBe('DECLINED');
+  });
+  test('no authority row means no approval authority, even for the owner', () => {
+    h = createModuleTestHarness(spacetimedb, mod); n = 0;
+    run(ctx => L.claim_admin(ctx, ADMIN, rid()));
+    for (const [i, role] of [[OWNER, 'owner'], [SYNC, 'sync']] as const) run(ctx => L.register_actor(ctx, ADMIN, rid(), i.toHexString(), role, role));
+    run(ctx => V.upsert_supplier(ctx, SYNC, rid(), 'sup_baymix', 'BayMix Supply', 'baymix.example', '+15555550100', 'crs_b1', 'active'));
+    run(ctx => V.upsert_purchase(ctx, SYNC, rid(), 'pur_1', 'sup_baymix', 'prj_oakview', 'Ready-mix', 'cy', 'PO', '', '', 'open'));
+    expectOk(cr('cr_x', SYNC, D(1)));
+    const r = run(ctx => V.decide_change_request(ctx, OWNER, rid(), 'cr_x', true, ''));
+    expect(r.outcome).toBe('denied');
+    expect(r.message).toContain('no purchasing authority');
+  });
+  test('a zero limit approves nothing', () => {
+    expectOk(run(ctx => V.set_authority(ctx, ADMIN, rid(), PURCH.toHexString(), 'purchasing', 0n, '*')));
+    expectOk(cr('cr_zero', SYNC, 0n));
+    expect(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_zero', true, '')).outcome).toBe('denied');
+  });
+
+  test("a new change request can't be created as authorised; the classification follows the decision and acceptance", () => {
+    const mk = (id: string, cls: string) =>
+      run(ctx => V.propose_change_request(ctx, SYNC, rid(), id, 'pur_1', 'extra_charge', 'Weekend', D(1200), 0n, '', '{}', '', '', '', cls, 'proposed', '["frag_price"]'));
+    expect(mk('cr_a', 'AUTHORISED_FIXED').outcome).toBe('invalid');
+    expectOk(mk('cr_a', 'PROPOSED'));
+    expectOk(run(ctx => V.decide_change_request(ctx, PURCH, rid(), 'cr_a', true, 'ok')));
+    expect(find('change_request', 'cr_a').classification).toBe('PROPOSED'); // approved in-app, not yet accepted by the supplier
+    expectOk(run(ctx => V.record_supplier_acceptance(ctx, SYNC, rid(), 'cr_a', 'accepted', '["frag_price"]')));
+    expect(find('change_request', 'cr_a').classification).toBe('AUTHORISED_FIXED');
+  });
+  test('a rate needs a unit', () => {
+    expect(run(ctx => V.propose_change_request(ctx, SYNC, rid(), 'cr_u', 'pur_1', 'extra_charge', 'x', 0n, 250n, '', '{}', '', '', '', 'PROPOSED', 'none', '[]')).outcome).toBe('invalid');
   });
 });
 
@@ -228,6 +294,20 @@ describe('records', () => {
   test('source fragments are immutable', () => {
     expect(run(ctx => V.add_fragment(ctx, SYNC, rid(), 'frag_price', 'doc_quote', 1, '', 4, 4, 'Up to 500 cubic yards at $165.00 per yard')).outcome).toBe('duplicate');
     expect(run(ctx => V.add_fragment(ctx, AGENT, rid(), 'frag_price', 'doc_quote', 1, '', 4, 4, 'Up to 500 cubic yards at $172.00 per yard')).outcome).toBe('denied');
+  });
+  test('payee profiles are immutable', () => {
+    expect(run(ctx => V.add_payee_profile(ctx, ADMIN, rid(), 'sup_baymix:v1', 'sup_baymix', 1, 'acct_baymix', '4471', 'Bank', 'seed')).outcome).toBe('duplicate');
+    expect(run(ctx => V.add_payee_profile(ctx, AGENT, rid(), 'sup_baymix:v1', 'sup_baymix', 1, 'acct_evil', '9999', 'Bank', 'email')).outcome).toBe('denied');
+    expect(find('payee_profile', 'sup_baymix:v1').account_ref).toBe('acct_baymix');
+  });
+  test("a document's bytes can't change", () => {
+    expect(run(ctx => V.record_document(ctx, SYNC, rid(), 'doc_quote', 'quote', 'src_q', 'shaq', 'quote.pdf', 1)).outcome).toBe('duplicate');
+    expect(run(ctx => V.record_document(ctx, SYNC, rid(), 'doc_quote', 'quote', 'src_q', 'other', 'quote.pdf', 1)).outcome).toBe('denied');
+  });
+  test('invoice lines are immutable, even once their revision is superseded', () => {
+    firstInvoice();
+    expect(run(ctx => V.record_invoice_line(ctx, AGENT, rid(), 'l1', 'rev_1', 'material', 'Ready-mix', YD(500), 'cy', D(172), D(86000), 'term_price', '', '[]')).outcome).toBe('duplicate');
+    expect(run(ctx => V.record_invoice_line(ctx, AGENT, rid(), 'l1', 'rev_1', 'material', 'Ready-mix', YD(500), 'cy', D(165), D(82500), 'term_price', '', '[]')).outcome).toBe('denied');
   });
   test('terms must cite fragments that exist', () => {
     expect(run(ctx => V.record_term(ctx, SYNC, rid(), 't2', 'pur_1', 'unit_price', 'x', D(172), 0n, '', '{}', '', '', 'accepted', '["frag_made_up"]', 1)).outcome).toBe('invalid');
@@ -272,6 +352,32 @@ describe('bank change variant', () => {
     expect(find('payee_profile', 'sup_baymix:v1').status).toBe('superseded');
     expect(find('invoice', 'inv_1').payee_status).toBe('verified');
     expect(openHoldCodes('rev_2')).not.toContain('PAYEE_CHANGE_PENDING');
+  });
+
+  test('module holds use hold_<revision>_<code>; SUPPLIER_RISK is carried over too', () => {
+    firstInvoice();
+    expectOk(run(ctx => V.add_payee_profile(ctx, AGENT, rid(), 'sup_baymix:v2', 'sup_baymix', 2, 'acct_new', '9921', 'Other Bank', 'email')));
+    expect(find('hold', 'hold_rev_1_payee_change_pending').status).toBe('open');
+    expectOk(run(ctx => V.open_hold(ctx, AGENT, rid(), 'h_risk', 'rev_1', 'SUPPLIER_RISK', 0n, 'CRS flag', '[]')));
+    expect(run(ctx => V.open_hold(ctx, AGENT, rid(), 'h_risk', 'rev_1', 'SUPPLIER_RISK', 0n, 'CRS flag', '[]')).outcome).toBe('duplicate');
+    run(ctx => V.record_document(ctx, SYNC, rid(), 'doc2', 'invoice', 's', 'x', 'f', 1));
+    expectOk(run(ctx => V.record_invoice_revision(ctx, SYNC, rid(), 'rev_2', 'inv_1', 2, 'doc2', D(83700), D(10000), D(73700), 'rev_1')));
+    expect(openHoldCodes('rev_2')).toEqual(['PAYEE_CHANGE_PENDING', 'RECEIPT_NOT_VERIFIED', 'SUPPLIER_RISK']);
+    for (const code of ['payee_change_pending', 'receipt_not_verified', 'supplier_risk']) {
+      expect(find('hold', `hold_rev_2_${code}`).status).toBe('open');
+    }
+  });
+
+  test('rejecting a payee change also goes through a pre-established contact, then clears the hold', () => {
+    firstInvoice();
+    expectOk(run(ctx => V.add_payee_profile(ctx, AGENT, rid(), 'sup_baymix:v2', 'sup_baymix', 2, 'acct_new', '9921', 'Other Bank', 'email')));
+    expectOk(run(ctx => V.upsert_supplier_contact(ctx, SYNC, rid(), 'con_new', 'sup_baymix', 'New AR', 'new@baymix.example', '+1555', 'AR', false)));
+    expect(run(ctx => V.decide_payee_profile(ctx, OWNER, rid(), 'sup_baymix:v2', false, 'con_new', '')).outcome).toBe('denied');
+    expectOk(run(ctx => V.decide_payee_profile(ctx, OWNER, rid(), 'sup_baymix:v2', false, 'con_ar', 'Lee says they never changed banks')));
+    expect(find('payee_profile', 'sup_baymix:v2').status).toBe('rejected');
+    expect(find('payee_profile', 'sup_baymix:v1').status).toBe('verified');
+    expect(find('invoice', 'inv_1').payee_status).toBe('verified');
+    expect(find('hold', 'hold_rev_1_payee_change_pending').status).toBe('resolved');
   });
 });
 
