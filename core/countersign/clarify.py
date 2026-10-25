@@ -47,6 +47,9 @@ def _point(b: InvoiceBundle, r: LineResult) -> str:
                 f"agreed change on file. Difference: {fmt(r.variance_cents)}.")
     if r.variance_cents:
         return f"{r.description}: billed {fmt(r.claimed_cents)}, agreed {fmt(r.accepted_cents)}. Difference: {fmt(r.variance_cents)}."
+    if r.kind == "material" and r.hold_code == "USAGE_EVIDENCE_MISSING":  # a price agreed for only part of the deliveries
+        return (f"{r.description} ({fmt(r.pending_cents)} depends on it): {r.uncertainty} Please send the delivery tickets "
+                "for the deliveries inside that scope, or a corrected invoice that bills them on their own line.")
     if r.hold_code == "USAGE_EVIDENCE_MISSING":
         return (f"{r.description} ({fmt(r.pending_cents)}): the rate is agreed, but we have no record of the "
                 f"{fmt_qty(int(row['quantity_milli']), unit)} billed. Please send the record that supports it.")

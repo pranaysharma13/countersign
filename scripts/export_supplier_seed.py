@@ -12,12 +12,14 @@ import _path  # noqa: F401
 
 from countersign.companion_seed import COMPANION_SEED, export_companion_seed, write_companion_fixtures
 from countersign.sandbox import SANDBOX_SEED, export_sandbox_seed
+from countersign.variant_fixtures import write_variant_fixtures
 from countersign.supplier_seed import SEEDS_DIR, export_seeds, seed_bytes
 
 
 def main() -> None:
     SEEDS_DIR.mkdir(parents=True, exist_ok=True)
     write_companion_fixtures()
+    write_variant_fixtures()
     for name, calls in export_seeds().items():
         (SEEDS_DIR / name).write_bytes(seed_bytes(calls))
         reducers = sorted({c["reducer"] for c in calls})

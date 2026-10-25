@@ -20,9 +20,9 @@ from .store import get_store, one
 from .supplier_docs import file_bytes
 from .companion_world import COMPANION_DOCS
 from .sandbox import SANDBOX_DOCS
-from .supplier_world import PRIMARY_DOCS
+from .supplier_world import PRIMARY_DOCS, VARIANT_DOCS
 
-ALL_DOCS = PRIMARY_DOCS + COMPANION_DOCS + SANDBOX_DOCS
+ALL_DOCS = PRIMARY_DOCS + COMPANION_DOCS + SANDBOX_DOCS + VARIANT_DOCS
 
 app = FastAPI(title="Countersign core")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3001", "http://127.0.0.1:3001"],
