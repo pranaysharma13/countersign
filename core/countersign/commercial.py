@@ -26,7 +26,7 @@ COMMERCIAL_HOLDS = {"PRICE_VARIANCE", "PROPOSED_CHARGE", "USAGE_EVIDENCE_MISSING
 HOLD_ORDER = ["CONTRACT_REVIEW", "EXTRACTION_REVIEW", "DUPLICATE_REVIEW", "PRICE_VARIANCE", "PROPOSED_CHARGE",
               "USAGE_EVIDENCE_MISSING", "PO_CEILING", "PROMPT_INJECTION", "SUPPLIER_RISK", "RECEIPT_NOT_VERIFIED",
               "PAYEE_CHANGE_PENDING", "APPROVAL_STALE"]
-VOLATILE = {"created_at", "updated_at", "at"}
+VOLATILE = {"created_at", "updated_at", "at"}  # plus identities: who acted is enforced by the module, not an amount input
 
 
 @dataclass(frozen=True)
@@ -454,7 +454,8 @@ def _merge(holds: list[HoldSpec]) -> list[HoldSpec]:
 
 def _canon(row: Any) -> Any:
     if isinstance(row, dict):
-        return {k: _canon(v) for k, v in sorted(row.items()) if k not in VOLATILE}
+        return {k: _canon(v) for k, v in sorted(row.items())
+                if k not in VOLATILE and k != "identity" and not k.endswith("_identity")}
     if isinstance(row, list):
         return [_canon(v) for v in row]
     return row

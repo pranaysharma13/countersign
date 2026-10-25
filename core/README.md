@@ -70,10 +70,10 @@ v2 (supplier invoices):
 ```bash
 uv run --project core python scripts/setup_actors.py         # once per fresh module (now includes purchasing and receiver)
 uv run --project core python scripts/load_supplier_seed.py   # the demo's opening state; --all adds the reply and revision 2
-uv run --project core python scripts/run_worker.py           # leave running: processes documents, reassesses, sends (simulated)
+uv run --project core python scripts/run_worker.py           # only after the check passes: processes documents, reassesses, sends (simulated)
 ```
 
-`load_supplier_seed.py` hasn't been run against a live module from this branch yet; the same replay is tested against the module reference.
+Right after loading, `load_supplier_seed.py` compares the module with the Python reference (`countersign/seed_check.py`). It replays the same seed locally and compares the rows the seed created, column by column, skipping columns that legitimately differ: timestamps, identities, request ids, auto-increment ids and `audit_log`. It also checks, per invoice, that the fingerprint Python computes from the module's rows equals the module's latest assessment; otherwise the worker would record an extra version. Any difference prints as a `MISMATCH` line (exit code 2); `--check-only` runs the comparison without loading. Not yet run against a live module from this branch.
 
 v1 (subcontractor bills):
 
