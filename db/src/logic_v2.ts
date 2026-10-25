@@ -3,7 +3,7 @@
 import { Identity } from 'spacetimedb';
 import type { Ctx } from './schema';
 import { handle, ok, invalid, deny, audit, oneOf, iso, json, type Call, type Result } from './request';
-import { setItemState, insertJob } from './logic';
+import { setItemState, insertJob } from './helpers';
 import { AGENT_SOURCE_STATES } from './constants';
 
 // ---------- enums (§9.2) ----------
