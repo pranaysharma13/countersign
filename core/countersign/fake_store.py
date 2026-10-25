@@ -32,6 +32,15 @@ CHANGE_KINDS = {"extra_charge", "price_change", "quantity_change"}
 AUTHORISED = {"AUTHORISED_FIXED", "AUTHORISED_RATE_USAGE_MISSING"}
 CLASSIFICATIONS = AUTHORISED | {"PROPOSED", "DECLINED", "AMBIGUOUS", "UNRELATED"}
 SUPPLIER_ACCEPTANCE = {"none", "proposed", "accepted", "declined"}
+LINE_KINDS = {"material", "extra", "waiting", "fuel", "tax", "freight", "other"}
+COMMERCIAL_STATUSES = {"pending", "matches", "differences_under_review", "contract_review"}
+OWNER_RESOLVABLE_HOLDS = {"PRICE_VARIANCE", "PROPOSED_CHARGE", "USAGE_EVIDENCE_MISSING", "PO_CEILING", "DUPLICATE_REVIEW",
+                          "EXTRACTION_REVIEW", "CONTRACT_REVIEW", "PROMPT_INJECTION", "SUPPLIER_RISK"}
+HOLD_CODES = OWNER_RESOLVABLE_HOLDS | {"RECEIPT_NOT_VERIFIED", "PAYEE_CHANGE_PENDING", "APPROVAL_STALE"}
+CARRIED_HOLDS = {"RECEIPT_NOT_VERIFIED", "PAYEE_CHANGE_PENDING", "SUPPLIER_RISK"}  # a correction can't clear these (§9.8)
+HOLD_PATHS = {"RECEIPT_NOT_VERIFIED": "the superintendent attests receipt",
+              "PAYEE_CHANGE_PENDING": "the owner verifies the payee change through a contact on file",
+              "APPROVAL_STALE": "the owner approves the payment again"}
 
 
 def _classify(cr: dict[str, Any]) -> str:
@@ -128,6 +137,14 @@ ALLOWED: dict[str, set[str] | None] = {
     "propose_change_request": {"agent", "sync", "purchasing"},
     "record_supplier_acceptance": {"agent", "sync"},
     "decide_change_request": {"purchasing", "owner"},
+    "record_invoice": {"sync", "agent"},
+    "record_invoice_revision": {"sync", "agent"},
+    "record_invoice_line": {"sync", "agent"},
+    "record_assessment": {"agent"},
+    "open_hold": {"agent", "sync"},
+    "resolve_hold": {"owner"},
+    "attest_receipt": {"receiver"},
+    "decide_payee_profile": {"owner"},
 }
 
 AUTO_INC = {"audit_log", "agent_step", "ledger_line"}
@@ -251,6 +268,37 @@ class FakeStore:
             evidence_json=evidence if isinstance(evidence, str) else dumps(evidence), opened_by_role=role,
             resolved_by_role="", resolution_note="", created_at=_now(), resolved_at_iso=""))
 
+    def _resolve_holds(self, rid: str, role: str, action: str, revision_id: str, code: str, note: str) -> None:
+        for h in list(self._t("hold").values()):
+            if h["revision_id"] == revision_id and h["code"] == code and h["status"] == "open":
+                self._update(rid, role, action, "hold", h["id"], {
+                    "status": "resolved", "resolved_by_role": role, "resolution_note": note,
+                    "resolved_at_iso": time.strftime("%Y-%m-%dT%H:%M:%S")}, note)
+
+    def _stale_approvals(self, rid: str, role: str, action: str, invoice_id: str, reason: str,
+                         keep: Callable[[dict[str, Any]], bool] = lambda a: False) -> None:
+        for a in list(self._t("payment_approval").values()):
+            if a["invoice_id"] == invoice_id and a["status"] == "active" and not keep(a):
+                self._update(rid, role, action, "payment_approval", a["id"], {"status": "stale", "stale_reason": reason}, reason)
+                self._update(rid, role, action, "invoice", invoice_id, {"approval_status": "stale", "payment_status": "not_ready",
+                                                                         "updated_at": _now()})
+
+    def _payee_status(self, supplier_id: str) -> str:
+        if self.rows("payee_profile", supplier_id=supplier_id, status="pending"):
+            return "change_pending"
+        return "verified" if self.rows("payee_profile", supplier_id=supplier_id, status="verified") else "unverified"
+
+    def _receipt_covered(self, invoice: dict[str, Any]) -> bool:
+        needed: dict[str, int] = {}
+        for l in self._t("invoice_line").values():
+            if l["revision_id"] == invoice["active_revision_id"] and l["kind"] == "material":
+                needed[l["unit"]] = needed.get(l["unit"], 0) + int(l["quantity_milli"])
+        attested: dict[str, int] = {}
+        for a in self._t("receipt_attestation").values():
+            if a["invoice_id"] == invoice["id"]:
+                attested[a["unit"]] = attested.get(a["unit"], 0) + int(a["quantity_milli"])
+        return bool(needed) and all(attested.get(u, 0) >= q for u, q in needed.items())
+
     def _open_invoices(self, supplier_id: str) -> list[dict[str, Any]]:
         return [i for i in self._t("invoice").values() if i["supplier_id"] == supplier_id and i["payment_status"] != "settled"]
 
@@ -264,9 +312,10 @@ class FakeStore:
         if not terms:
             return None
         ceiling = int(max(terms, key=lambda t: t["version"])["quantity_milli"])
-        billed = sum(self._active_material_milli(inv, purchase["unit"]) for inv in self._t("invoice").values()
-                     if inv["purchase_id"] == purchase["id"])
-        return max(ceiling - billed, 0)
+        # Only paid-for quantity is used up: an unscoped price change could still reach an unpaid invoice.
+        paid = sum(self._active_material_milli(inv, purchase["unit"]) for inv in self._t("invoice").values()
+                   if inv["purchase_id"] == purchase["id"] and inv["payment_status"] == "settled")
+        return max(ceiling - paid, 0)
 
     def _exposure(self, cr: dict[str, Any], purchase: dict[str, Any]) -> tuple[int | None, str]:
         """Money an approval commits (CONTRACT §9.8.1). None = can't be sized, so it can't be approved."""
@@ -834,3 +883,203 @@ class FakeStore:
                                    "decided_by_role": role, "decision_note": note}
         changes["classification"] = _classify({**cr, **changes})
         self._update(rid, role, "decide_change_request", "change_request", id, changes, note)
+
+    # ------------------------------------------------------------------ 9.4 invoices and assessment
+    @staticmethod
+    def _next_owner(inv: dict[str, Any], commercial_status: str) -> str:
+        if commercial_status == "pending":
+            return "agent"
+        if commercial_status in {"differences_under_review", "contract_review"}:
+            return "purchasing"
+        return "receiver" if inv["receipt_status"] == "required" else "owner"
+
+    def _r_record_invoice(self, rid, role, id, supplier_id, purchase_id, invoice_number, invoice_date, due_date, currency):
+        self._need(self._get("supplier", supplier_id) is not None, "unknown supplier")
+        p = self._get("purchase", purchase_id) if purchase_id else None
+        self._need(not purchase_id or (p is not None and p["supplier_id"] == supplier_id), "unknown purchase for this supplier")
+        self._need(bool(invoice_number), "invoice number is required")
+        self._need(len(currency) == 3, "currency is a 3-letter code")
+        if self._get("invoice", id):
+            return ("duplicate", "invoice exists")
+        self._upsert(rid, role, "record_invoice", "invoice", dict(
+            id=id, supplier_id=supplier_id, purchase_id=purchase_id, invoice_number=invoice_number,
+            invoice_date=invoice_date, due_date=due_date, currency=currency.upper(), active_revision_id="",
+            commercial_status="pending", receipt_status="required", payee_status=self._payee_status(supplier_id),
+            approval_status="none", payment_status="not_ready", next_owner_role="agent",
+            next_action="Assess against the purchase terms", updated_at=_now()))
+        if not self._get("work_item", f"wi_{id}"):
+            self._upsert(rid, role, "record_invoice", "work_item", dict(
+                id=f"wi_{id}", kind="supplier_invoice", entity_id=id, origin="upload", state="new",
+                summary=f"Invoice {invoice_number}", risk_level="low", created_at=_now(), updated_at=_now()))
+        return None
+
+    def _r_record_invoice_revision(self, rid, role, id, invoice_id, revision, document_id, gross_cents, deposit_shown_cents,
+                                   balance_requested_cents, supersedes_revision_id):
+        if self._get("invoice_revision", id):
+            return ("duplicate", "revision exists")
+        inv = self._get("invoice", invoice_id)
+        self._need(inv is not None, "unknown invoice")
+        self._need(self._get("document", document_id) is not None, "unknown document")
+        self._need(all(isinstance(v, int) for v in (revision, gross_cents, deposit_shown_cents, balance_requested_cents)),
+                   "money is integer cents")
+        if supersedes_revision_id:
+            self._need(supersedes_revision_id == inv["active_revision_id"], "a correction must supersede the invoice's active revision")
+            self._need(revision > self._get("invoice_revision", supersedes_revision_id)["revision"],
+                       "a correction needs a higher revision number")
+        else:
+            self._need(not inv["active_revision_id"], "the invoice already has an active revision; a new one must supersede it")
+        self._upsert(rid, role, "record_invoice_revision", "invoice_revision", dict(
+            id=id, invoice_id=invoice_id, revision=revision, document_id=document_id, gross_cents=gross_cents,
+            deposit_shown_cents=deposit_shown_cents, balance_requested_cents=balance_requested_cents,
+            supersedes_revision_id=supersedes_revision_id, status="active", created_at=_now()))
+        if supersedes_revision_id:
+            note = f"superseded by revision {revision} ({id})"
+            self._update(rid, role, "record_invoice_revision", "invoice_revision", supersedes_revision_id, {"status": "superseded"}, note)
+            for h in list(self._t("hold").values()):
+                if h["revision_id"] == supersedes_revision_id and h["status"] == "open":
+                    self._update(rid, role, "record_invoice_revision", "hold", h["id"], {"status": "superseded", "resolution_note": note}, note)
+                    if h["code"] in CARRIED_HOLDS:
+                        self._module_hold(rid, role, "record_invoice_revision", id, h["code"], h["amount_cents"], h["reason"],
+                                          h["evidence_json"])
+            self._stale_approvals(rid, role, "record_invoice_revision", invoice_id, "revision superseded")
+        self._update(rid, role, "record_invoice_revision", "invoice", invoice_id, {
+            "active_revision_id": id, "commercial_status": "pending", "payment_status": "not_ready", "next_owner_role": "agent",
+            "next_action": "Assess this revision against the purchase terms", "updated_at": _now()})
+        return None
+
+    def _r_record_invoice_line(self, rid, role, id, revision_id, kind, description, quantity_milli, unit, unit_price_cents,
+                               amount_cents, linked_term_id, linked_change_request_id, source_fragment_ids_json):
+        fields = dict(revision_id=revision_id, kind=kind, description=description, quantity_milli=quantity_milli, unit=unit,
+                      unit_price_cents=unit_price_cents, amount_cents=amount_cents, linked_term_id=linked_term_id,
+                      linked_change_request_id=linked_change_request_id, source_fragment_ids_json=source_fragment_ids_json)
+        existing = self._get("invoice_line", id)
+        if existing is not None:
+            if all(existing[k] == v for k, v in fields.items()):
+                return ("duplicate", "line exists")
+            raise Denied("invoice lines are immutable; record a corrected revision", "invoice_line", id)
+        rev = self._get("invoice_revision", revision_id)
+        self._need(rev is not None and rev["status"] == "active", "lines can only be added to an active revision")
+        self._need(kind in LINE_KINDS, f"bad line kind {kind}")
+        self._need(all(isinstance(v, int) for v in (quantity_milli, unit_price_cents, amount_cents)),
+                   "money is integer cents and quantities integer thousandths")
+        if quantity_milli and unit_price_cents:
+            self._need(quantity_milli * unit_price_cents == amount_cents * 1000,
+                       f"{quantity_milli} x {unit_price_cents} / 1000 is not {amount_cents} (exact integer math)")
+        self._need(not quantity_milli or bool(unit), "a quantity needs a unit")
+        self._need(not linked_term_id or self._get("term", linked_term_id) is not None, "unknown term")
+        self._need(not linked_change_request_id or self._get("change_request", linked_change_request_id) is not None,
+                   "unknown change request")
+        self._need_fragments(source_fragment_ids_json, required=True)
+        self._upsert(rid, role, "record_invoice_line", "invoice_line", dict(id=id, **fields))
+        inv = self._get("invoice", rev["invoice_id"])
+        if kind == "material" and inv["receipt_status"] == "manually_confirmed" and not self._receipt_covered(inv):
+            self._update(rid, role, "record_invoice_line", "invoice", inv["id"], {"receipt_status": "required", "updated_at": _now()},
+                         "billed quantity is above the attested receipt")
+        return None
+
+    def _r_record_assessment(self, rid, role, id, revision_id, version, fingerprint, policy_version, claimed_cents,
+                             authorised_cents, pending_cents, variance_cents, deposit_available_cents,
+                             proposed_payment_cents, commercial_status, summary, details_json, next_action):
+        if self._get("assessment", id):
+            return ("duplicate", "assessment exists")
+        rev = self._get("invoice_revision", revision_id)
+        self._need(rev is not None and rev["status"] == "active", "only the active revision can be assessed")
+        self._need(commercial_status in COMMERCIAL_STATUSES, "bad commercial_status")
+        self._need(all(isinstance(v, int) for v in (claimed_cents, authorised_cents, pending_cents, variance_cents,
+                                                    deposit_available_cents, proposed_payment_cents)), "money is integer cents")
+        self._need(proposed_payment_cents >= 0, "proposed payment can't be negative")
+        self._need(bool(fingerprint) and bool(policy_version), "fingerprint and policy_version are required")
+        try:
+            json.loads(details_json or "null")
+        except json.JSONDecodeError as e:
+            raise Invalid(f"details_json: {e}") from e
+        self._upsert(rid, role, "record_assessment", "assessment", dict(
+            id=id, revision_id=revision_id, version=version, fingerprint=fingerprint, policy_version=policy_version,
+            claimed_cents=claimed_cents, authorised_cents=authorised_cents, pending_cents=pending_cents,
+            variance_cents=variance_cents, deposit_available_cents=deposit_available_cents,
+            proposed_payment_cents=proposed_payment_cents, commercial_status=commercial_status, summary=summary,
+            details_json=details_json, next_action=next_action, created_at=_now()))
+        inv = self._get("invoice", rev["invoice_id"])
+        self._update(rid, role, "record_assessment", "invoice", inv["id"], {
+            "commercial_status": commercial_status, "next_action": next_action,
+            "next_owner_role": self._next_owner(inv, commercial_status), "updated_at": _now()})
+        changed = [a["id"] for a in self._t("payment_approval").values()
+                   if a["invoice_id"] == inv["id"] and a["status"] == "active" and a["assessment_fingerprint"] != fingerprint]
+        if changed:
+            self._stale_approvals(rid, role, "record_assessment", inv["id"], "assessment changed",
+                                  keep=lambda a: a["assessment_fingerprint"] == fingerprint)
+            self._module_hold(rid, role, "record_assessment", revision_id, "APPROVAL_STALE", 0,
+                              "The assessment changed after the payment was approved; approve it again.", {"approval_ids": changed})
+        return None
+
+    def _r_open_hold(self, rid, role, id, revision_id, code, amount_cents, reason, evidence_json):
+        if self._get("hold", id):
+            return ("duplicate", "hold exists")
+        rev = self._get("invoice_revision", revision_id)
+        self._need(rev is not None and rev["status"] == "active", "holds go on the active revision")
+        self._need(code in HOLD_CODES, f"bad hold code {code}")
+        self._need(isinstance(amount_cents, int) and amount_cents >= 0, "amount must be non-negative integer cents")
+        self._need(bool(reason.strip()), "a hold needs a reason")
+        self._upsert(rid, role, "open_hold", "hold", dict(
+            id=id, revision_id=revision_id, code=code, status="open", amount_cents=amount_cents, reason=reason,
+            evidence_json=evidence_json, opened_by_role=role, resolved_by_role="", resolution_note="", created_at=_now(),
+            resolved_at_iso=""))
+        return None
+
+    def _r_resolve_hold(self, rid, role, id, note):
+        h = self._get("hold", id)
+        self._need(h is not None, "unknown hold")
+        self._need(h["status"] == "open", f"hold is {h['status']}")
+        if h["code"] not in OWNER_RESOLVABLE_HOLDS:
+            raise Denied(f"{h['code']} can't be resolved by hand; it clears when {HOLD_PATHS[h['code']]}", "hold", id)
+        self._need(bool(note.strip()), "a note is required to resolve a hold")
+        self._update(rid, role, "resolve_hold", "hold", id, {"status": "resolved", "resolved_by_role": role, "resolution_note": note,
+                                                             "resolved_at_iso": time.strftime("%Y-%m-%dT%H:%M:%S")}, note)
+
+    # ------------------------------------------------------------------ 9.4 people in the loop
+    def _r_attest_receipt(self, rid, role, id, invoice_id, scope, quantity_milli, unit, reason):
+        if self._get("receipt_attestation", id):
+            return ("duplicate", "attestation exists")
+        inv = self._get("invoice", invoice_id)
+        self._need(inv is not None, "unknown invoice")
+        self._need(isinstance(quantity_milli, int) and quantity_milli > 0, "quantity must be positive integer thousandths")
+        self._need(bool(unit), "unit is required")
+        self._need(bool(reason.strip()), "say how you know it was received")
+        self._upsert(rid, role, "attest_receipt", "receipt_attestation", dict(
+            id=id, invoice_id=invoice_id, scope=scope, quantity_milli=quantity_milli, unit=unit, reason=reason,
+            label="MANUALLY_CONFIRMED", attested_by_identity=role, attested_by_role=role, created_at=_now()))
+        if inv["active_revision_id"] and self._receipt_covered(inv):
+            self._resolve_holds(rid, role, "attest_receipt", inv["active_revision_id"], "RECEIPT_NOT_VERIFIED",
+                                f"Receipt attested by the {role} (MANUALLY_CONFIRMED, not machine-verified)")
+            confirmed = {**inv, "receipt_status": "manually_confirmed"}
+            self._update(rid, role, "attest_receipt", "invoice", invoice_id, {
+                "receipt_status": "manually_confirmed", "next_owner_role": self._next_owner(confirmed, inv["commercial_status"]),
+                "updated_at": _now()})
+        return None
+
+    def _r_decide_payee_profile(self, rid, role, id, approve, verified_via_contact_id, note):
+        prof = self._get("payee_profile", id)
+        self._need(prof is not None, "unknown payee profile")
+        self._need(prof["status"] == "pending", f"payee profile is {prof['status']}")
+        contact = self._get("supplier_contact", verified_via_contact_id)
+        if contact is None or contact["supplier_id"] != prof["supplier_id"] or not contact["pre_established"]:
+            raise Denied("verify through a contact that was on file before this request, never one from the request itself",
+                         "payee_profile", id)
+        sup = prof["supplier_id"]
+        if approve:
+            for old in self.rows("payee_profile", supplier_id=sup, status="verified"):
+                self._update(rid, role, "decide_payee_profile", "payee_profile", old["id"], {"status": "superseded"}, f"replaced by {id}")
+        self._update(rid, role, "decide_payee_profile", "payee_profile", id, {
+            "status": "verified" if approve else "rejected", "verified_by_role": role if approve else "",
+            "verified_via_contact_id": verified_via_contact_id}, note)
+        still_pending = bool(self.rows("payee_profile", supplier_id=sup, status="pending"))
+        resolution = note or (f"Payee change verified via {contact['name']}" if approve
+                              else f"Payee change rejected after calling {contact['name']}; the verified account stands")
+        for inv in self._open_invoices(sup):
+            if approve:  # approvals bound to the old account can't pay the new one
+                self._stale_approvals(rid, role, "decide_payee_profile", inv["id"], f"payee changed to {id}",
+                                      keep=lambda a: a["payee_profile_id"] == id)
+            if not still_pending and inv["active_revision_id"]:
+                self._resolve_holds(rid, role, "decide_payee_profile", inv["active_revision_id"], "PAYEE_CHANGE_PENDING", resolution)
+            self._update(rid, role, "decide_payee_profile", "invoice", inv["id"], {"payee_status": self._payee_status(sup),
+                                                                                    "updated_at": _now()})
