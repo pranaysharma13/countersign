@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { use, useState } from 'react';
+import { use } from 'react';
 import { useTables, type Row, type Tables } from '@/lib/client';
 import { money, day, ids, qty, ROLE_LABEL } from '@/lib/format';
-import { Evidence, Loading, sourceOf } from '@/components/parts';
-import { fileHref } from '@/lib/files';
+import { Evidence, Loading } from '@/components/parts';
+import { Papers } from '@/components/Stationery';
 
 const TABLES = ['purchase', 'supplier', 'supplier_contact', 'project', 'term', 'change_request', 'deposit', 'deposit_allocation',
   'document', 'source_file', 'source_fragment', 'email_message', 'authority', 'actor', 'invoice'];
@@ -88,7 +88,14 @@ export default function PurchaseRecord({ params }: { params: Promise<{ id: strin
                 {c.pre_established && <><br /><span className="muted">On file before any dispute: usable to verify bank changes</span></>}</p>
             ))}
           </section>
-          <Sources pur={pur} t={t} />
+          <Papers
+            docs={[
+              t.document.find(d => d.id === pur.po_document_id),
+              t.document.find(d => d.id === pur.quote_document_id),
+            ].filter(Boolean) as Row[]}
+            t={t}
+            pur={pur}
+          />
         </div>
       </div>
     </div>
@@ -114,26 +121,3 @@ function ChangeRow({ c, t }: { c: Row; t: Tables }) {
   );
 }
 
-/** Source viewer: every document and its quoted fragments, exactly as stored (immutable). */
-function Sources({ pur, t }: { pur: Row; t: Tables }) {
-  const docIds = [pur.quote_document_id, pur.po_document_id, ...t.email_message.map(e => e.document_id)].filter(Boolean);
-  const docs = docIds.map(d => t.document.find(x => x.id === d)).filter(Boolean) as Row[];
-  const [open, setOpen] = useState<string | null>(docs[0]?.id ?? null);
-  return (
-    <section className="sheet pad" aria-labelledby="src">
-      <h2 id="src">Source documents</h2>
-      {docs.map(d => (
-        <div key={d.id} style={{ borderTop: '1px solid var(--rule-2)', padding: '8px 0' }}>
-          <button className="btn secondary" style={{ padding: '2px 8px', fontSize: 13 }} aria-expanded={open === d.id} onClick={() => setOpen(open === d.id ? null : d.id)}>
-            {d.filename}
-          </button>
-          <span className="small muted"> {d.kind}</span>
-          {fileHref(d) && <> · <a href={fileHref(d)!} target="_blank" rel="noreferrer">Open file</a></>}
-          {open === d.id && t.source_fragment.filter(f => f.document_id === d.id).map(f => (
-            <blockquote key={f.id} className="quote">“{f.text}”<div className="src">{sourceOf(f, t)}</div></blockquote>
-          ))}
-        </div>
-      ))}
-    </section>
-  );
-}
