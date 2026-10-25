@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { call, newId, useTables, type CallResult, type Row } from '@/lib/client';
 import { money, HOLD_LABEL } from '@/lib/format';
 import { HoldChips, Loading, Outcome } from '@/components/parts';
@@ -24,8 +24,11 @@ export default function SneakCharge() {
   const [note, setNote] = useState('');
   const [result, setResult] = useState<CallResult | null>(null);
   const [mine, setMine] = useState<string | null>(null);
+  const [mode, setMode] = useState<'live' | 'local' | null>(null);
+  useEffect(() => { fetch('/api/session').then(r => r.json()).then(s => setMode(s.mode)).catch(() => {}); }, []);
 
   if (!t) return <Loading error={error} />;
+  const offline = mode === 'local';
   const jobs = [...t.job.filter(j => j.kind === 'sneak_charge')].sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
   const chosen = KINDS.find(k => k.id === kind)!;
   // The sandbox invoice a submission became (its number is in the job result), and the holds the checks opened.
@@ -77,7 +80,13 @@ export default function SneakCharge() {
               <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Optional. Hidden instructions are ignored." />
             </label>
             <p className="small muted">Usually opens: {HOLD_LABEL[chosen.hold] ?? chosen.hold}. The checks decide.</p>
-            <button className="btn" type="submit">Submit as a judge</button>
+            {offline && (
+              <div className="notice stop" role="status">
+                This copy runs on local demo data, so there is no checker to read a submission. Set DATA_SOURCE=live in
+                web/.env.local and start the Python worker.
+              </div>
+            )}
+            <button className="btn" type="submit" disabled={offline}>Submit as a judge</button>
             <Outcome r={result} />
           </form>
         </section>
