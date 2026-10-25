@@ -14,11 +14,11 @@ function blockedReasons(t: Tables, p: Row, inv: Row): string[] {
   const out: string[] = [];
   if (inv.active_revision_id !== ref.revision_id) out.push('The invoice has a newer revision.');
   for (const h of t.hold.filter(h => h.revision_id === ref.revision_id && h.status === 'open' && h.code !== 'APPROVAL_STALE')) {
-    out.push(`Open hold: ${HOLD_LABEL[h.code] ?? h.code}.`);
+    out.push(`Still blocking: ${HOLD_LABEL[h.code] ?? h.code}.`);
   }
-  if (!['manually_confirmed', 'not_required'].includes(inv.receipt_status)) out.push('Receipt not confirmed by the superintendent.');
+  if (!['manually_confirmed', 'not_required'].includes(inv.receipt_status)) out.push('Delivery not confirmed on site.');
   const verified = t.payee_profile.find(x => x.supplier_id === inv.supplier_id && x.status === 'verified');
-  if (!verified || verified.id !== ref.payee_profile_id) out.push("Payee isn't the supplier's current verified account.");
+  if (!verified || verified.id !== ref.payee_profile_id) out.push("The bank account is not the one we already checked.");
   const latest = t.assessment.filter(a => a.revision_id === ref.revision_id).sort((a, b) => b.version - a.version)[0];
   if (!latest || latest.id !== ref.assessment_id) out.push('The assessment changed after this was proposed.');
   return out;
@@ -52,9 +52,9 @@ export default function ApprovalReview({ params }: { params: Promise<{ id: strin
     <div className="stack">
       <div className="head">
         <div>
-          <div className="small muted"><Link href={`/invoices/${id}`}>{sup?.name} · {inv.invoice_number}</Link> / Approval review</div>
-          <h1>Approve payment</h1>
-          <p className="lede">The approval is bound to this exact revision, amount, deposit, payee and assessment. If any of them changes, it goes out of date and must be approved again.</p>
+          <div className="small muted"><Link href={`/invoices/${id}`}>{sup?.name} · {inv.invoice_number}</Link> / Pay or reject</div>
+          <h1>Pay this bill?</h1>
+          <p className="lede">This yes is only for this amount, this bank, and this version of the bill. If any of those change, you have to say yes again.</p>
         </div>
       </div>
 
@@ -67,11 +67,11 @@ export default function ApprovalReview({ params }: { params: Promise<{ id: strin
       <div className="split">
         <div className="stack">
           <section className="sheet pad" aria-labelledby="pay">
-            <h2 id="pay">Payment</h2>
+            <h2 id="pay">The transfer</h2>
             {!p ? (
               <p className="muted" style={{ margin: 0 }}>
-                Countersign hasn't proposed a payment yet. It proposes one when the commercial checks pass; open holds are on the{' '}
-                <Link href={`/invoices/${id}`}>invoice case</Link>.
+                Nothing is ready to pay yet. See what is blocking on the{' '}
+                <Link href={`/invoices/${id}`}>bill</Link>.
               </p>
             ) : (
               <table>
@@ -79,8 +79,8 @@ export default function ApprovalReview({ params }: { params: Promise<{ id: strin
                   <tr><td>Pay</td><td className="num" style={{ fontSize: 22, fontWeight: 700 }}>{money(p.amount_cents)}</td></tr>
                   <tr><td>Revision</td><td className="num">{rev?.revision} of {inv.invoice_number} (gross {money(rev?.gross_cents)})</td></tr>
                   <tr><td>Deposit applied</td><td className="num">{money(Number(ref.deposit_allocation_cents ?? 0))}</td></tr>
-                  <tr><td>To</td><td className="num">{payee ? `${payee.bank_name} ····${payee.last4}` : '—'}</td></tr>
-                  <tr><td>Proposed by</td><td className="num">{ROLE_LABEL[p.proposed_by_role]}, {when(p.created_at)}</td></tr>
+                  <tr><td>To this account</td><td className="num">{payee ? `${payee.bank_name} ····${payee.last4}` : '—'}</td></tr>
+                  <tr><td>Suggested by</td><td className="num">{ROLE_LABEL[p.proposed_by_role]}, {when(p.created_at)}</td></tr>
                   <tr><td>Status</td><td className="num">{({ pending: 'Waiting for your approval', approved: 'Approved, queued for payment', executing: 'Settling', executed: 'Paid', rejected: 'Rejected', cancelled: 'Cancelled', failed: 'Failed' } as Record<string, string>)[p.status] ?? p.status}</td></tr>
                 </tbody>
               </table>
@@ -91,7 +91,7 @@ export default function ApprovalReview({ params }: { params: Promise<{ id: strin
               <div className="stack" style={{ marginTop: 16 }}>
                 {reasons.length > 0 && (
                   <div className="notice hold" role="status">
-                    <strong>Approval isn't available yet:</strong>
+                    <strong>You cannot pay yet:</strong>
                     <ul>{reasons.map(r => <li key={r}>{r}</li>)}</ul>
                   </div>
                 )}
@@ -106,13 +106,13 @@ export default function ApprovalReview({ params }: { params: Promise<{ id: strin
                   <button className="btn danger" onClick={async () => setResult(await call('reject_supplier_payment', { proposal_id: p.id, note: note || 'Rejected by owner' }))}>
                     Reject
                   </button>
-                  <Link className="btn secondary" href={`/invoices/${id}`}>Back to the evidence</Link>
+                  <Link className="btn secondary" href={`/invoices/${id}`}>Back to the bill</Link>
                 </div>
               </div>
             )}
             {result && (result.outcome === 'ok'
-              ? <div className="notice ok" role="status">Approved. The gateway pays it once and posts the books.</div>
-              : <div className="notice stop" role="alert"><strong>The database refused:</strong><ul>{reasonsOf(result.message).map(r => <li key={r}>{r}</li>)}</ul></div>)}
+              ? <div className="notice ok" role="status">Approved. The money goes out once, and the books update.</div>
+              : <div className="notice stop" role="alert"><strong>Refused:</strong><ul>{reasonsOf(result.message).map(r => <li key={r}>{r}</li>)}</ul></div>)}
           </section>
 
           <Settlement t={t} inv={inv} proposalId={p?.id} />
@@ -120,20 +120,20 @@ export default function ApprovalReview({ params }: { params: Promise<{ id: strin
 
         <div className="stack">
           <section className="sheet pad" aria-labelledby="payee">
-            <h2 id="payee">Payee</h2>
+            <h2 id="payee">Who gets the money</h2>
             {payee ? (
               <p style={{ marginTop: 0 }}>{payee.bank_name} ····{payee.last4}<br />
-                <span className="small muted">{payee.requested_via === 'seed' ? 'On file since onboarding.' : `Verified by ${ROLE_LABEL[payee.verified_by_role]} with ${viaContact?.name ?? 'a contact on file'}.`}</span></p>
+                <span className="small muted">{payee.requested_via === 'seed' ? 'This account has been on file from the start.' : `Checked by ${ROLE_LABEL[payee.verified_by_role]} with ${viaContact?.name ?? 'someone already on file'}.`}</span></p>
             ) : <p className="muted">No verified account on file.</p>}
             {pendingPayees.map(x => <PayeeChange key={x.id} profile={x} t={t} />)}
           </section>
 
           <section className="sheet pad" aria-labelledby="rcpt">
-            <h2 id="rcpt">Receipt</h2>
+            <h2 id="rcpt">Delivery</h2>
             {atts.length ? atts.map(a => (
-              <p key={a.id} className="small" style={{ marginTop: 0 }}><span className="chip ok">Manually confirmed</span><br />
+              <p key={a.id} className="small" style={{ marginTop: 0 }}><span className="chip ok">Confirmed</span><br />
                 {qty(a.quantity_milli, a.unit)}, {a.scope}. “{a.reason}” {ROLE_LABEL[a.attested_by_role]}, {when(a.created_at)}</p>
-            )) : <p className="muted small" style={{ margin: 0 }}>Not confirmed. Payment stays blocked until the superintendent confirms receipt.</p>}
+            )) : <p className="muted small" style={{ margin: 0 }}>Not confirmed. Payment stays blocked until someone on site confirms the delivery.</p>}
           </section>
         </div>
       </div>
@@ -171,7 +171,7 @@ function Settlement({ t, inv, proposalId }: { t: Tables; inv: Row; proposalId?: 
   const net = (acct: string) => lines.filter(l => l.account === acct).reduce((s, l) => s + l.credit_cents - l.debit_cents, 0);
   return (
     <section className="sheet pad" aria-labelledby="settle">
-      <h2 id="settle">Settlement and books</h2>
+      <h2 id="settle">What left the account</h2>
       {pay && <p style={{ marginTop: 0 }}><span className={`st ${pay.status === 'sent' ? 'ok' : 'stop'}`}>{pay.status === 'sent' ? 'Paid' : 'Failed'}</span>{' '}
         {money(pay.amount_cents)}, transfer <code>{pay.nessie_transfer_id}</code>{pay.nessie_transfer_id.includes('sim') ? ' (simulated Nessie)' : ''}.</p>}
       {allocs.map(a => <p key={a.id} className="small">Deposit applied once: {money(a.amount_cents)}.</p>)}

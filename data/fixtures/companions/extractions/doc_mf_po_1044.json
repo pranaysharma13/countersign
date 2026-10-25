@@ -1,0 +1,74 @@
+{
+  "document_id": "doc_mf_po_1044",
+  "document_kind": "po",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "po_number": {
+      "value": "MF-PO-1044",
+      "quote": "PURCHASE ORDER MF-PO-1044",
+      "fragments": [
+        "frag_mf_po_1044_p1_l3"
+      ]
+    },
+    "po_date": {
+      "value": "2026-10-08",
+      "quote": "PO date: 2026-10-08",
+      "fragments": [
+        "frag_mf_po_1044_p1_l4"
+      ]
+    },
+    "supplier_name": {
+      "value": "Cedar & Bolt Lumber",
+      "quote": "Supplier: Cedar & Bolt Lumber, 880 Industrial Pkwy, Hayward, CA 94545",
+      "fragments": [
+        "frag_mf_po_1044_p1_l5"
+      ]
+    },
+    "project_name": {
+      "value": "Oakview Lane Fourplex",
+      "quote": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA",
+      "fragments": [
+        "frag_mf_po_1044_p1_l6"
+      ]
+    },
+    "not_to_exceed_cents": {
+      "value": 418000,
+      "quote": "PO total, not to exceed: $4,180.00",
+      "fragments": [
+        "frag_mf_po_1044_p1_l11"
+      ]
+    },
+    "incorporates_quote": {
+      "value": "CBQ-880",
+      "quote": "Terms: Cedar & Bolt Quote CBQ-880 and its Terms and Conditions of Sale.",
+      "fragments": [
+        "frag_mf_po_1044_p1_l12"
+      ]
+    },
+    "supplier_acknowledged_on": {
+      "value": "2026-10-08",
+      "quote": "Cedar & Bolt Lumber acknowledges and accepts purchase order MF-PO-1044 on the terms of Quote CBQ-880. Acknowledged by: Mei Chen, Inside Sales, Cedar & Bolt Lumber    Date: 2026-10-08",
+      "fragments": [
+        "frag_mf_po_1044_p1_l16",
+        "frag_mf_po_1044_p1_l17"
+      ]
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "CDX plywood 4x8 3/4 in.",
+      "quantity_milli": 200000,
+      "unit": "sheet",
+      "unit_price_cents": 2090,
+      "amount_cents": 418000,
+      "quote": "1     CDX plywood 4x8 3/4 in.                     200.000  sheet $20.90        $4,180.00",
+      "fragments": [
+        "frag_mf_po_1044_p1_l9"
+      ]
+    }
+  ]
+}

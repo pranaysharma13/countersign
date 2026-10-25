@@ -23,7 +23,10 @@ from .ids import sha8, sha256_hex
 from .store import Result, Store
 from .supplier_docs import file_bytes
 from .supplier_seed import seed_document
+from .companion_world import COMPANION_DOCS
 from .supplier_world import PRIMARY_DOCS, SourceDoc
+
+ALL_DOCS = PRIMARY_DOCS + COMPANION_DOCS
 
 MAX_BYTES = 15 * 1024 * 1024
 MAX_PAGES = 50
@@ -32,7 +35,7 @@ _REPLY_PREFIX = re.compile(r"^((re|fwd?):\s*)+", re.I)
 
 @lru_cache(maxsize=1)
 def fixture_index() -> dict[str, SourceDoc]:
-    return {sha256_hex(file_bytes(d)): d for d in PRIMARY_DOCS}
+    return {sha256_hex(file_bytes(d)): d for d in ALL_DOCS}
 
 
 def job_id(document_id: str) -> str:

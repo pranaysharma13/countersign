@@ -1,0 +1,94 @@
+{
+  "document_id": "doc_vs_inv_310",
+  "document_kind": "invoice",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "supplier_name": {
+      "value": "Valley Sand & Gravel",
+      "quote": "Valley Sand & Gravel",
+      "fragments": [
+        "frag_vs_inv_310_p1_l1"
+      ]
+    },
+    "invoice_number": {
+      "value": "VS-310",
+      "quote": "INVOICE VS-310",
+      "fragments": [
+        "frag_vs_inv_310_p1_l3"
+      ]
+    },
+    "invoice_date": {
+      "value": "2026-10-21",
+      "quote": "Invoice date: 2026-10-21",
+      "fragments": [
+        "frag_vs_inv_310_p1_l4"
+      ]
+    },
+    "due_date": {
+      "value": "2026-11-05",
+      "quote": "Due date: 2026-11-05 (Net 15)",
+      "fragments": [
+        "frag_vs_inv_310_p1_l5"
+      ]
+    },
+    "po_number": {
+      "value": "MF-PO-1073",
+      "quote": "Your PO: MF-PO-1073    Quote: VSQ-31",
+      "fragments": [
+        "frag_vs_inv_310_p1_l8"
+      ]
+    },
+    "currency": {
+      "value": "USD",
+      "quote": "Gross amount: $3,990.00",
+      "fragments": [
+        "frag_vs_inv_310_p1_l13"
+      ]
+    },
+    "gross_cents": {
+      "value": 399000,
+      "quote": "Gross amount: $3,990.00",
+      "fragments": [
+        "frag_vs_inv_310_p1_l13"
+      ]
+    },
+    "balance_requested_cents": {
+      "value": 399000,
+      "quote": "Balance due: $3,990.00",
+      "fragments": [
+        "frag_vs_inv_310_p1_l14"
+      ]
+    },
+    "remit_account_last4": {
+      "value": "3382",
+      "quote": "Remit to: Valley Sand & Gravel, Delta Aggregate Bank, account ending 3382",
+      "fragments": [
+        "frag_vs_inv_310_p1_l17"
+      ]
+    },
+    "tax_cents": {
+      "value": null,
+      "missing_reason": "No tax line on this invoice; no tax rate is assumed."
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "Washed concrete sand",
+      "quantity_milli": 95000,
+      "unit": "ton",
+      "unit_price_cents": 4200,
+      "amount_cents": 399000,
+      "links": {
+        "term_code": "unit_price"
+      },
+      "quote": "1     Washed concrete sand                         95.000   ton   $42.00        $3,990.00",
+      "fragments": [
+        "frag_vs_inv_310_p1_l11"
+      ]
+    }
+  ]
+}

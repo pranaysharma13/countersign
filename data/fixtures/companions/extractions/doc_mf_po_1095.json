@@ -1,0 +1,74 @@
+{
+  "document_id": "doc_mf_po_1095",
+  "document_kind": "po",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "po_number": {
+      "value": "MF-PO-1095",
+      "quote": "PURCHASE ORDER MF-PO-1095",
+      "fragments": [
+        "frag_mf_po_1095_p1_l3"
+      ]
+    },
+    "po_date": {
+      "value": "2026-10-11",
+      "quote": "PO date: 2026-10-11",
+      "fragments": [
+        "frag_mf_po_1095_p1_l4"
+      ]
+    },
+    "supplier_name": {
+      "value": "Redline Haul",
+      "quote": "Supplier: Redline Haul, 55 Switchback Rd, Hayward, CA 94544",
+      "fragments": [
+        "frag_mf_po_1095_p1_l5"
+      ]
+    },
+    "project_name": {
+      "value": "Oakview Lane Fourplex",
+      "quote": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA",
+      "fragments": [
+        "frag_mf_po_1095_p1_l6"
+      ]
+    },
+    "not_to_exceed_cents": {
+      "value": 456000,
+      "quote": "PO total, not to exceed: $4,560.00",
+      "fragments": [
+        "frag_mf_po_1095_p1_l11"
+      ]
+    },
+    "incorporates_quote": {
+      "value": "RHQ-14",
+      "quote": "Terms: Redline Haul Quote RHQ-14 and its Terms and Conditions of Sale.",
+      "fragments": [
+        "frag_mf_po_1095_p1_l12"
+      ]
+    },
+    "supplier_acknowledged_on": {
+      "value": "2026-10-11",
+      "quote": "Redline Haul acknowledges and accepts purchase order MF-PO-1095 on the terms of Quote RHQ-14. Acknowledged by: Tess Quinn, Dispatch, Redline Haul    Date: 2026-10-11",
+      "fragments": [
+        "frag_mf_po_1095_p1_l16",
+        "frag_mf_po_1095_p1_l17"
+      ]
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "Dump truck haul 12-yard",
+      "quantity_milli": 12000,
+      "unit": "load",
+      "unit_price_cents": 38000,
+      "amount_cents": 456000,
+      "quote": "1     Dump truck haul 12-yard                      12.000   load  $380.00       $4,560.00",
+      "fragments": [
+        "frag_mf_po_1095_p1_l9"
+      ]
+    }
+  ]
+}
