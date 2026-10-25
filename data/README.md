@@ -10,7 +10,32 @@ Everything here is fictional: Marlow & Finch Builders (general contractor), BayM
 |---|---|---|
 | `fixtures/baymix_primary/extractions/` | Labelled fixture extractions, one per document: what Claude would return, with fragment ids and quotes for every material value. Every file says `"mode": "fixture"` and starts its label with `FIXTURE`. | `AI_MODE=fixture` extraction (`core/countersign/extractions.py`) |
 | `answer_keys/baymix_primary.json` | Ground truth: labelled fields, change-request classifications, exact assessment values, holds, final books. | Tests and the scorecard only. **Never a model input**; a test checks the extraction and assessment code never reads it. |
+| `seeds/baymix_opening.json`, `seeds/baymix_correction.json` | The primary scenario as replayable reducer calls (see below). Committed. | The web's local backend |
 | `generated/` | Rendered PDFs and `.eml` files, v1 bills, runs. Ignored by git. | Humans, the file preview API |
+
+## Seeds for the web's local backend
+
+Two ordered JSON lists of reducer calls, so the web's local demo shows the same invoice BM-23104 as Python:
+
+| File | Ends at |
+|---|---|
+| `seeds/baymix_opening.json` | The demo's starting state: actors and limits, supplier and contacts, documents with fragments and emails, purchase and terms, change requests, the purchasing decision on the weekend charge, supplier acceptances, the settled deposit (simulated) and its journal, invoice BM-23104 revision 1 with lines, its assessment and holds, and the clarification drafted to BayMix (simulated outbox). |
+| `seeds/baymix_correction.json` | BayMix's reply email (agrees to $165/cy, withdraws waiting), corrected revision 2 with lines, and its assessment. `RECEIPT_NOT_VERIFIED` carries over to revision 2 inside `record_invoice_revision`. |
+
+Format: `[{"role": "sync", "reducer": "add_fragment", "args": {"id": "...", ...}}, ...]`
+- `args` are named with the contract's parameter names, in contract order. There's no `request_id`: the replayer generates one per call. Every call returned `ok` when the seed was generated.
+- **Identities are placeholders.** `register_actor` and `set_authority` carry `identity_hex` as `"<identity:purchasing>"` (and so on for each role), because the web's local backend has its own identities. Substitute that role's identity when replaying.
+- `claim_admin` isn't included: the replayer's admin claims it first.
+- Integers are JSON numbers. Args named `*_cents` and `*_milli` are i64 in the module (convert to BigInt). Args ending in `_json` are JSON strings.
+- Extractions are labelled fixtures (`extraction_run.mode = fixture`). The deposit, the outbox and any payment are simulated.
+
+Regenerate after changing the fixtures, `core/countersign/supplier_world.py`, the assessment or the clarification template:
+
+```bash
+uv run --project core python scripts/export_supplier_seed.py
+```
+
+The output is byte-identical on every run (no timestamps or random ids). Tests fail if the committed files are stale, and replaying both files into a fresh module reference reproduces the exact values.
 
 ## The documents
 
