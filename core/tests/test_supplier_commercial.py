@@ -249,3 +249,22 @@ def test_a_check_that_crashes_holds_instead_of_passing(store, monkeypatch):
     a = assess(b)
     assert next(c for c in a.checks if c.code == "price_terms").status == "error"
     assert "PRICE_VARIANCE" in a.hold_amounts() and a.commercial_status != "matches" and a.proposed_payment_cents == 0
+
+
+def test_clarification_explains_each_line_and_never_offers_to_pay_less(store):
+    from countersign.clarify import draft, outbox_id, recipient, record_draft
+
+    b = bundle_from_store(store, INVOICE_ID)
+    a = assess(b)
+    assert record_draft(store, b, a) == outbox_id(REV1_ID)
+    ob = store.rows("outbox", id=outbox_id(REV1_ID))[0]
+    assert (ob["status"], ob["simulated"], ob["to_address"], ob["created_by_role"]) == ("draft", True, "ar@baymix-supply.example", "agent")
+    assert ob["subject"] == "Invoice BM-23104: 2 lines don't match what we agreed"
+    for text in ("$172.00", "$165.00", "$3,500.00", "Truck waiting time ($225.00)", "Weekend delivery, Saturday Oct 10 pour ($1,200.00)",
+                 "corrected invoice or an agreed credit memo", "$3,725.00"):
+        assert text in ob["body"], text
+    assert "pay" not in ob["body"].lower().replace("payable", "")  # asks for a correction; never announces a short payment
+    assert R.draft_outbox(store, "ob_x", INVOICE_ID, "ctc_baymix_ar", "s", "b", role="owner").outcome == "denied"
+    assert R.draft_outbox(store, "ob_x", INVOICE_ID, "ctc_nobody", "s", "b").outcome == "invalid"
+    a_clean = replace(a, lines=[replace(r, pending_cents=0, variance_cents=0) for r in a.lines])
+    assert draft(b, a_clean, recipient(store, BAYMIX.id)) is None

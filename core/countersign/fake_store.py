@@ -145,6 +145,7 @@ ALLOWED: dict[str, set[str] | None] = {
     "resolve_hold": {"owner"},
     "attest_receipt": {"receiver"},
     "decide_payee_profile": {"owner"},
+    "draft_outbox": {"agent"},
 }
 
 AUTO_INC = {"audit_log", "agent_step", "ledger_line"}
@@ -353,9 +354,9 @@ class FakeStore:
         self._put("actor", {"identity": "admin", "role": "admin", "display_name": "setup", "created_at": _now()}, "identity")
         return None
 
-    def _r_register_actor(self, rid: str, role: str, identity_hex: str, new_role: str, display_name: str) -> None:
-        self._need(new_role in ROLES - {"admin"}, f"bad role {new_role}")
-        self._put("actor", {"identity": identity_hex, "role": new_role, "display_name": display_name, "created_at": _now()}, "identity")
+    def _r_register_actor(self, rid: str, caller: str, identity_hex: str, role: str, display_name: str) -> None:
+        self._need(role in ROLES - {"admin"}, f"bad role {role}")
+        self._put("actor", {"identity": identity_hex, "role": role, "display_name": display_name, "created_at": _now()}, "identity")
 
     # ------------------------------------------------------------------ 4.2 records
     def _r_upsert_company(self, rid, role, id, name, owner_name, state, bank_account_ref, bank_last4):
@@ -688,14 +689,14 @@ class FakeStore:
             amount_cents=amount_cents, work_item_id=work_item_id))
 
     # ------------------------------------------------------------------ 9.4 setup and records
-    def _r_set_authority(self, rid, role, identity_hex, auth_role, limit_cents, project_scope):
-        self._need(auth_role in ROLES - {"admin"}, f"bad role {auth_role}")
+    def _r_set_authority(self, rid, caller, identity_hex, role, limit_cents, project_scope):
+        self._need(role in ROLES - {"admin"}, f"bad role {role}")
         self._need(isinstance(limit_cents, int) and limit_cents >= 0, "limit_cents must be integer cents >= 0")
         self._need(bool(project_scope), "project_scope is '*' or a project id")
         before = copy.deepcopy(self._get("authority", identity_hex))
-        row = self._put("authority", dict(identity=identity_hex, role=auth_role, limit_cents=limit_cents,
+        row = self._put("authority", dict(identity=identity_hex, role=role, limit_cents=limit_cents,
                                           project_scope=project_scope), "identity")
-        self._audit(rid, role, "set_authority", "authority", identity_hex, "ok", "", before, row)
+        self._audit(rid, caller, "set_authority", "authority", identity_hex, "ok", "", before, row)
 
     def _r_upsert_supplier(self, rid, role, id, name, email_domain, phone_on_file, crs_ref, status):
         self._need(status in {"active", "on_hold", "blocked"}, "bad status")
@@ -1083,3 +1084,19 @@ class FakeStore:
                 self._resolve_holds(rid, role, "decide_payee_profile", inv["active_revision_id"], "PAYEE_CHANGE_PENDING", resolution)
             self._update(rid, role, "decide_payee_profile", "invoice", inv["id"], {"payee_status": self._payee_status(sup),
                                                                                     "updated_at": _now()})
+
+    # ------------------------------------------------------------------ 9.4 clarifications
+    def _r_draft_outbox(self, rid, role, id, invoice_id, to_contact_id, subject, body):
+        if self._get("outbox", id):
+            return ("duplicate", "outbox message exists")
+        inv = self._get("invoice", invoice_id)
+        self._need(inv is not None, "unknown invoice")
+        contact = self._get("supplier_contact", to_contact_id)
+        self._need(contact is not None and contact["supplier_id"] == inv["supplier_id"],
+                   "the recipient must be a contact of the invoice's supplier")
+        self._need(bool(subject.strip()) and bool(body.strip()), "subject and body are required")
+        self._upsert(rid, role, "draft_outbox", "outbox", dict(
+            id=id, invoice_id=invoice_id, to_contact_id=to_contact_id, to_address=contact["email"], subject=subject,
+            body=body, status="draft", simulated=True, created_by_role=role, approved_by_role="", delivery_ref="",
+            created_at=_now()))
+        return None
