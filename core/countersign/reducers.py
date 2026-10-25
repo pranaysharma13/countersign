@@ -1,7 +1,7 @@
-"""Typed wrappers for every reducer in docs/CONTRACT.md §4.
+"""Typed wrappers for every reducer in docs/CONTRACT.md §4 and §9.4.
 
 This is the ONLY place that knows argument order. All other Python code calls these.
-`request_id` is added by the store. Keep in sync with CONTRACT.md (version v1).
+`request_id` is added by the store. Keep in sync with CONTRACT.md (version v2.1).
 """
 
 from __future__ import annotations
@@ -197,3 +197,87 @@ def record_score_case(
     s: Store, id: str, run_id: str, attack_type: str, expected: str, actual: str, correct: bool, amount_cents: int, work_item_id: str,
 ) -> Result:
     return s.call("sync", "record_score_case", id, run_id, attack_type, expected, actual, correct, amount_cents, work_item_id)
+
+
+# 9.4 Supplier invoices: setup and records
+def set_authority(s: Store, identity_hex: str, role: str, limit_cents: int, project_scope: str = "*") -> Result:
+    return s.call("admin", "set_authority", identity_hex, role, limit_cents, project_scope)
+
+
+def upsert_supplier(s: Store, role: str, id: str, name: str, email_domain: str, phone_on_file: str, crs_ref: str, status: str = "active") -> Result:
+    return s.call(role, "upsert_supplier", id, name, email_domain, phone_on_file, crs_ref, status)
+
+
+def upsert_supplier_contact(
+    s: Store, role: str, id: str, supplier_id: str, name: str, email: str, phone: str, title: str, pre_established: bool,
+) -> Result:
+    return s.call(role, "upsert_supplier_contact", id, supplier_id, name, email, phone, title, pre_established)
+
+
+def add_payee_profile(
+    s: Store, role: str, id: str, supplier_id: str, version: int, account_ref: str, last4: str, bank_name: str, requested_via: str,
+) -> Result:
+    return s.call(role, "add_payee_profile", id, supplier_id, version, account_ref, last4, bank_name, requested_via)
+
+
+def record_document(s: Store, id: str, kind: str, source_file_id: str, sha256: str, filename: str, pages: int) -> Result:
+    return s.call("sync", "record_document", id, kind, source_file_id, sha256, filename, pages)
+
+
+def add_fragment(
+    s: Store, role: str, id: str, document_id: str, page: int, email_message_id: str, line_start: int, line_end: int, text: str,
+) -> Result:
+    return s.call(role, "add_fragment", id, document_id, page, email_message_id, line_start, line_end, text)
+
+
+def record_email(
+    s: Store, id: str, thread_id: str, document_id: str, from_address: str, to_addresses: str, subject: str,
+    original_sent_at_iso: str, ingested_at_iso: str, body_fragment_id: str,
+) -> Result:
+    return s.call("sync", "record_email", id, thread_id, document_id, from_address, to_addresses, subject,
+                  original_sent_at_iso, ingested_at_iso, body_fragment_id)
+
+
+def record_extraction_run(
+    s: Store, id: str, document_id: str, mode: str, model: str, prompt_version: str, status: str, error: str, fields: Any,
+) -> Result:
+    return s.call("agent", "record_extraction_run", id, document_id, mode, model, prompt_version, status, error, _j(fields))
+
+
+def upsert_purchase(
+    s: Store, role: str, id: str, supplier_id: str, project_id: str, description: str, unit: str, po_number: str,
+    quote_document_id: str, po_document_id: str, status: str = "open",
+) -> Result:
+    return s.call(role, "upsert_purchase", id, supplier_id, project_id, description, unit, po_number,
+                  quote_document_id, po_document_id, status)
+
+
+def record_term(
+    s: Store, role: str, id: str, purchase_id: str, code: str, label: str, amount_cents: int, quantity_milli: int,
+    text: str, scope: Any, effective_from: str, effective_to: str, status: str, source_fragment_ids: Any, version: int,
+) -> Result:
+    return s.call(role, "record_term", id, purchase_id, code, label, amount_cents, quantity_milli, text, _j(scope),
+                  effective_from, effective_to, status, _j(source_fragment_ids), version)
+
+
+def record_deposit(s: Store, role: str, id: str, purchase_id: str, supplier_id: str, amount_cents: int, status: str, transfer_ref: str) -> Result:
+    return s.call(role, "record_deposit", id, purchase_id, supplier_id, amount_cents, status, transfer_ref)
+
+
+# 9.4 Amendments
+def propose_change_request(
+    s: Store, role: str, id: str, purchase_id: str, kind: str, description: str, amount_cents: int, rate_cents: int,
+    rate_unit: str, scope: Any, effective_from: str, original_sent_at_iso: str, ingested_at_iso: str,
+    classification: str, supplier_acceptance: str, source_fragment_ids: Any,
+) -> Result:
+    return s.call(role, "propose_change_request", id, purchase_id, kind, description, amount_cents, rate_cents, rate_unit,
+                  _j(scope), effective_from, original_sent_at_iso, ingested_at_iso, classification, supplier_acceptance,
+                  _j(source_fragment_ids))
+
+
+def record_supplier_acceptance(s: Store, role: str, change_request_id: str, supplier_acceptance: str, fragment_ids: Any) -> Result:
+    return s.call(role, "record_supplier_acceptance", change_request_id, supplier_acceptance, _j(fragment_ids))
+
+
+def decide_change_request(s: Store, role: str, id: str, approve: bool, note: str = "") -> Result:
+    return s.call(role, "decide_change_request", id, approve, note)
