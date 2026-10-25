@@ -25,7 +25,7 @@ class Journal:
     id: str
     entry_date: str
     memo: str
-    ref_type: str  # bill | payment (CONTRACT §3.2)
+    ref_type: str  # bill | payment | deposit (CONTRACT §3.2, v2.2)
     ref_id: str
     lines: tuple[dict[str, Any], ...]
 
@@ -38,7 +38,7 @@ def _pair(debit: str, credit: str, cents: int) -> tuple[dict[str, Any], ...]:
 
 
 def deposit_settled(deposit_id: str, amount_cents: int, entry_date: str) -> Journal:
-    return Journal(f"jrnl_dep_{deposit_id}", entry_date, "Supplier deposit settled (simulated)", "payment", deposit_id,
+    return Journal(f"jrnl_dep_{deposit_id}", entry_date, "Supplier deposit settled (simulated)", "deposit", deposit_id,
                    _pair(PREPAYMENT, CASH, amount_cents))
 
 
@@ -48,8 +48,8 @@ def bill_accepted(invoice_id: str, revision_id: str, project_id: str, gross_cent
 
 
 def deposit_applied(invoice_id: str, deposit_id: str, amount_cents: int, entry_date: str) -> Journal:
-    return Journal(f"jrnl_depapply_{invoice_id}_{deposit_id}", entry_date, "Deposit applied to invoice", "bill", invoice_id,
-                   _pair(AP, PREPAYMENT, amount_cents))
+    return Journal(f"jrnl_depapply_{invoice_id}_{deposit_id}", entry_date, f"Deposit applied to invoice {invoice_id}",
+                   "deposit", deposit_id, _pair(AP, PREPAYMENT, amount_cents))
 
 
 def settlement(ref_id: str, amount_cents: int, entry_date: str) -> Journal:

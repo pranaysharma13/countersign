@@ -25,30 +25,57 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 4. **Assessment** (`commercial.py`, no model calls): per line, claimed vs. accepted vs. pending vs. variance; independent holds (`PRICE_VARIANCE`, `PROPOSED_CHARGE`, `RECEIPT_NOT_VERIFIED`, ...); a fingerprint of every input; the proposed payment is the full balance requested or $0, never silently less.
 5. **Books** (`supplier_ledger.py`): CONTRACT §9.6 journals with idempotent ids.
 
+## Intake and the worker (step B core, done)
+
+1. **Intake** (`intake.py`, sync): keeps the original bytes and SHA-256, records the document and its fragments (and the email, for `.eml`), and queues `process_document`. The document id comes from the bytes, so receiving a file twice records nothing new and queues no second job. Any PDF or email that isn't a known fixture is cut into one fragment per text line. In fixture mode it goes to review, because there's no labelled extraction for it and nothing is guessed.
+2. **`process_document`** (`supplier_pipeline.py`, agent): fixture extraction (live Claude in step C), evidence check, then records what the document establishes.
+   - A quote and its PO become a purchase once both are read, in either order.
+   - An email goes to its supplier's single open purchase. If there are several, it goes to review; if there's none yet, the job retries.
+   - An invoice links by its PO number, then is assessed. When there are differences, the clarification is drafted to the simulated outbox.
+3. **Reassessment:** every drain round and every few seconds of polling, the worker reassesses any open invoice whose inputs changed (a receipt attestation, a purchasing decision, a new email). It records a new assessment only when the fingerprint changed.
+4. **Outbox:** a person approves the draft (`approve_outbox`); `send_outbox` marks it sent with a `simulated-` delivery ref. Nothing leaves the laptop.
+5. **Failures:** the module retries a failed job (10 s, 20 s backoff, three attempts) and hands a dead worker's job to another after its 5-minute lease. When retries run out on `process_document`, the document is marked failed, and an invoice revision it backs gets `EXTRACTION_REVIEW`. A failure never produces an approval. Handlers are idempotent, so a retried job never duplicates a record.
+
 ## Key files
 
 | File | What |
 |---|---|
-| `countersign/reducers.py` | The only place that knows reducer argument order (CONTRACT §4 and §9.4, v2.1) |
+| `countersign/reducers.py` | The only place that knows reducer argument order (CONTRACT §4 and §9.4, v2.2) |
 | `countersign/fake_store.py` | Runnable Python copy of the module's rules, for tests; the TypeScript module mirrors it |
 | `countersign/commercial.py` | v2 deterministic assessment, holds, fingerprint, bill-posting gate |
 | `countersign/extractions.py` | v2 evidence validation and recording; fixture loader |
-| `countersign/supplier_world.py`, `supplier_docs.py`, `supplier_seed.py` | v2 fictional world, document rendering and fragments, seeding |
+| `countersign/intake.py` | v2 intake: bytes, SHA-256, document, fragments, email, `process_document` job |
+| `countersign/supplier_pipeline.py` | v2 job handlers: `process_document`, `reassess` (+ the stale sweep), `send_outbox`, give-up path |
+| `countersign/supplier_world.py`, `supplier_docs.py` | v2 fictional world, document rendering and fragments |
 | `countersign/supplier_ledger.py` | v2 journals |
+| `countersign/clarify.py` | v2 clarification to the supplier: deterministic template until step C |
+| `countersign/supplier_seed.py` | v2 seeding, plus `RecordingStore` / `export_seeds` / `replay` for `data/seeds/` (`scripts/export_supplier_seed.py`; see `data/README.md`) |
 | `countersign/money.py` | Integer cents and integer-thousandth quantities; exact extension |
 | `countersign/checks.py`, `decide.py` | v1 deterministic checks and decision rules |
 | `countersign/agent.py` | v1 Droid agent, scripted agent, compromised-agent demo, "why?" chat |
 | `countersign/pipeline.py` | v1 seed, intake, agent tools, gateway (pays once, even after a timeout), ledger |
 | `countersign/world.py`, `attacks.py` | v1 company, history, demo pile and scam generator |
-| `countersign/worker.py` | Job worker; holds only the agent, gateway and sync keys |
+| `countersign/worker.py` | Job worker: ready jobs (backoff, expired leases), v1 and v2 handlers, reassessment sweep; holds only the agent, gateway and sync keys |
 
 ## Module reference coverage (CONTRACT §9.4)
 
-Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions. Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
+Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions, the outbox (`draft_outbox`, `approve_outbox`, `mark_outbox`), and the job rules (attempts, leases, backoff, §9.5 kinds). Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
 
-Not yet: clarification outbox, payment proposal/approval/settlement for supplier payments, deposit allocation, the new job kinds and worker leases.
+Not yet: payment proposal/approval/settlement for supplier payments, deposit allocation, and CONTRACT v2.2 (`decide_disputed_line`, `resolve_hold` refusing money holds).
 
-## Run against the SpacetimeDB module (v1 today)
+## Run against the SpacetimeDB module
+
+v2 (supplier invoices):
+
+```bash
+uv run --project core python scripts/setup_actors.py         # once per fresh module (now includes purchasing and receiver)
+uv run --project core python scripts/load_supplier_seed.py   # the demo's opening state; --all adds the reply and revision 2
+uv run --project core python scripts/run_worker.py           # leave running: processes documents, reassesses, sends (simulated)
+```
+
+`load_supplier_seed.py` hasn't been run against a live module from this branch yet; the same replay is tested against the module reference.
+
+v1 (subcontractor bills):
 
 ```bash
 uv run --project core python scripts/setup_actors.py   # once per fresh module; paste tokens into .env / web/.env.local
@@ -63,11 +90,11 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 ## Where Droid runs (for the Factory judges)
 
 - **v1 today:** every `process_bill` job starts a Droid session (`countersign/agent.py`, `run_droid`) limited to five tools we wrote (`read_bill`, `list_checks`, `run_check`, `get_sub_history`, `file_proposal`). Built-in file and shell tools are removed with `restrict_tools`. The database refuses approve/pay calls from the `agent` role. Every step goes to `agent_step`. If Droid errors, the scripted agent finishes with the same tools and holds.
-- **v2 (steps B–C):** `process_document` jobs with the supplier-invoice tools from the brief (`get_invoice_bundle`, `get_term_version`, `get_source_fragment`, `get_authority_policy`, `list_open_holds`, `run_check`, `open_hold`, `draft_clarification`, `propose_supplier_payment`). Not built yet.
+- **v2:** `process_document` jobs run today as deterministic handlers on labelled fixtures (step B). Step C puts a Droid session behind them, with the supplier-invoice tools from the brief (`get_invoice_bundle`, `get_term_version`, `get_source_fragment`, `get_authority_policy`, `list_open_holds`, `run_check`, `open_hold`, `draft_clarification`, `propose_supplier_payment`).
 
 ## Known gaps (as of this commit)
 
-- Steps B–E: intake jobs and worker retries/leases, live Claude extraction (strict schema), outbox, version-bound approval and settlement, audit export.
+- Steps C–E: live Claude extraction (strict schema) and the Droid session, the web's upload/email intake endpoint and file preview for v2, version-bound approval and settlement, audit export.
 - Variants: scoped amendment, fuel surcharge (Apify diesel index), supplier risk (CRS), prompt injection on supplier documents, judge page.
-- Reassessment after an owner resolves a commercial hold by hand: the assessment still reports the variance; how that becomes payable is decided in step B/E.
+- Settlement decisions on disputed lines (`decide_disputed_line`, CONTRACT v2.2): next, now that step B's core works. Until then, money holds clear only through a corrected invoice.
 - CRS business-report mapping and the Apify Actors are still to come (`integrations/`).

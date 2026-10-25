@@ -20,7 +20,7 @@ from countersign.supplier_docs import fragments
 from countersign.supplier_seed import seed_documents, seed_setup
 from countersign.supplier_world import (BAYMIX, DEPOSIT, INVOICE_ID, INVOICE_R1, INVOICE_R2, PO, PRIMARY_DOCS, PROJECT,
                                         PURCHASE_ID, QUOTE, REV1_ID, REV2_ID, WAITING_1, WAITING_CR_ID, WEEKEND_1,
-                                        WEEKEND_2, WEEKEND_3, WEEKEND_CR_ID)
+                                        WEEKEND_2, WEEKEND_3, WEEKEND_CR_ID, REPLY_1)
 
 KEY = json.loads((DATA_DIR / "answer_keys" / "baymix_primary.json").read_text())
 
@@ -133,12 +133,25 @@ def test_an_email_saying_approved_is_not_an_in_app_approval():
 
 
 def test_corrected_invoice_through_receipt_to_exact_books(store):
-    a1 = assess(bundle_from_store(store, INVOICE_ID))
+    from countersign.clarify import record_draft
+
+    b1 = bundle_from_store(store, INVOICE_ID)
+    a1 = assess(b1)
     record(store, a1)
     assert {h["code"] for h in store.rows("hold", revision_id=REV1_ID, status="open")} == set(KEY["revision_1"]["holds"])
     assert not ready_to_post_bill(a1)
+    ob = store.rows("outbox", id=record_draft(store, b1, a1))[0]
+    clar = KEY["clarification"]
+    assert (ob["id"], ob["to_contact_id"], ob["subject"]) == (clar["outbox_id"], clar["to_contact_id"], clar["subject"])
 
-    # BayMix agrees to $165 and drops waiting: the corrected invoice supersedes revision 1.
+    # BayMix replies to that email: $165/cy agreed, waiting withdrawn, corrected invoice attached.
+    assert REPLY_1.email.subject == f"Re: {ob['subject']}"
+    record_email_extraction(store, load_fixture(REPLY_1.id), PURCHASE_ID)
+    waiting = store.rows("change_request", id=WAITING_CR_ID)[0]
+    after = KEY["change_requests"]["cr_baymix_waiting"]["after_reply"]
+    assert (waiting["classification"], waiting["supplier_acceptance"]) == (after["classification"], after["supplier_acceptance"])
+
+    # The corrected invoice supersedes revision 1.
     assert record_invoice_extraction(store, load_fixture(INVOICE_R2.id), PURCHASE_ID) == (INVOICE_ID, REV2_ID)
     assert {h["status"] for h in store.rows("hold", revision_id=REV1_ID)} == {"superseded"}
     a2 = assess(bundle_from_store(store, INVOICE_ID))
@@ -249,3 +262,22 @@ def test_a_check_that_crashes_holds_instead_of_passing(store, monkeypatch):
     a = assess(b)
     assert next(c for c in a.checks if c.code == "price_terms").status == "error"
     assert "PRICE_VARIANCE" in a.hold_amounts() and a.commercial_status != "matches" and a.proposed_payment_cents == 0
+
+
+def test_clarification_explains_each_line_and_never_offers_to_pay_less(store):
+    from countersign.clarify import draft, outbox_id, recipient, record_draft
+
+    b = bundle_from_store(store, INVOICE_ID)
+    a = assess(b)
+    assert record_draft(store, b, a) == outbox_id(REV1_ID)
+    ob = store.rows("outbox", id=outbox_id(REV1_ID))[0]
+    assert (ob["status"], ob["simulated"], ob["to_address"], ob["created_by_role"]) == ("draft", True, "ar@baymix-supply.example", "agent")
+    assert ob["subject"] == "Invoice BM-23104: 2 lines don't match what we agreed"
+    for text in ("$172.00", "$165.00", "$3,500.00", "Truck waiting time ($225.00)", "Weekend delivery, Saturday Oct 10 pour ($1,200.00)",
+                 "corrected invoice or an agreed credit memo", "$3,725.00"):
+        assert text in ob["body"], text
+    assert "pay" not in ob["body"].lower().replace("payable", "")  # asks for a correction; never announces a short payment
+    assert R.draft_outbox(store, "ob_x", INVOICE_ID, "ctc_baymix_ar", "s", "b", role="owner").outcome == "denied"
+    assert R.draft_outbox(store, "ob_x", INVOICE_ID, "ctc_nobody", "s", "b").outcome == "invalid"
+    a_clean = replace(a, lines=[replace(r, pending_cents=0, variance_cents=0) for r in a.lines])
+    assert draft(b, a_clean, recipient(store, BAYMIX.id)) is None

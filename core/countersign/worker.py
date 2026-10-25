@@ -1,6 +1,9 @@
-"""Job worker (CONTRACT §4.5): poll queued jobs, claim with the assignee's role, do the work, finish.
+"""Job worker (CONTRACT §4.5, §9.5): poll ready jobs, claim with the assignee's role, do the work, finish.
 
 The worker holds only the agent, gateway and sync tokens. It never holds the owner's key.
+A failed job is retried by the module with backoff (10 s, 20 s) up to three attempts; a job whose
+worker died is re-claimed once its 5-minute lease expires. Handlers are idempotent (caller-chosen
+ids), so running one twice never duplicates anything.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ from typing import Any, Callable
 
 from . import agent
 from . import reducers as R
+from . import supplier_pipeline as v2
 from .attacks import ATTACK_TYPES, make_attack, make_legit_case
 from .ids import short_uuid
 from .pipeline import ingest, pay_proposal
@@ -124,14 +128,46 @@ HANDLERS: dict[str, Callable[[Store, dict[str, Any]], Any]] = {
     "legit_submit": _legit,
     "scorecard_run": _scorecard,
     "reset_demo": _reset,
+    # v2 (CONTRACT §9.5)
+    "process_document": lambda s, p: v2.process_document(s, p["document_id"]),
+    "reassess_invoice": lambda s, p: v2.reassess(s, p["invoice_id"], force=True),
+    "send_outbox": lambda s, p: v2.send_outbox(s, p["outbox_id"]),
+}
+
+MAX_ATTEMPTS = 3  # the module's limit (CONTRACT §9.5 retries)
+
+# When a job runs out of retries: never leave it silently failed; put the work in front of a person.
+ON_GIVE_UP: dict[str, Callable[[Store, dict[str, Any], str], None]] = {
+    "process_document": lambda s, p, err: v2.give_up_document(s, p["document_id"], err),
 }
 
 
-def run_job(store: Store, job: dict[str, Any]) -> bool:
+def _now_ms(store: Store) -> int:
+    clock = getattr(store, "now_ms", None)  # the fake store's movable clock; otherwise wall time
+    return clock() if callable(clock) else time.time_ns() // 1_000_000
+
+
+def _due(text: str, now_ms: int) -> bool:
+    from datetime import datetime
+
+    return not text or int(datetime.fromisoformat(text).timestamp() * 1000) <= now_ms
+
+
+def ready_jobs(store: Store) -> list[dict[str, Any]]:
+    """Queued jobs past their backoff, and claimed jobs whose lease expired (their worker died)."""
+    now = _now_ms(store)
+    jobs = [j for j in store.rows("job", status="queued") if _due(j.get("next_attempt_at_iso", ""), now)]
+    jobs += [j for j in store.rows("job", status="claimed") if j.get("lease_expires_at_iso") and _due(j["lease_expires_at_iso"], now)]
+    return sorted((j for j in jobs if j["assignee_role"] in WORKER_ROLES), key=lambda j: (j.get("created_at", 0), j["id"]))
+
+
+def run_job(store: Store, job: dict[str, Any]) -> bool | None:
+    """None if the claim was refused; otherwise whether the job finished ok."""
     role = job["assignee_role"]
     claim = R.claim_job(store, role, job["id"])
     if claim.outcome != "ok":
-        return False
+        return None
+    payload: dict[str, Any] = {}
     try:
         payload = json.loads(job.get("payload_json") or "{}")
         handler = HANDLERS.get(job["kind"])
@@ -141,34 +177,45 @@ def run_job(store: Store, job: dict[str, Any]) -> bool:
         R.finish_job(store, role, job["id"], True, result if isinstance(result, dict) else {"result": result})
         return True
     except Exception as e:  # noqa: BLE001
-        traceback.print_exc()
-        R.finish_job(store, role, job["id"], False, {}, f"{type(e).__name__}: {str(e)[:300]}")
+        if not isinstance(e, v2.NotYet):
+            traceback.print_exc()
+        error = f"{type(e).__name__}: {str(e)[:300]}"
+        if int(job.get("attempts", 0)) + 1 >= MAX_ATTEMPTS and job["kind"] in ON_GIVE_UP:
+            try:
+                ON_GIVE_UP[job["kind"]](store, payload, error)
+            except Exception:  # noqa: BLE001 - the job still finishes as failed
+                traceback.print_exc()
+        R.finish_job(store, role, job["id"], False, {}, error)
         return False
 
 
-def drain(store: Store) -> int:
-    """Run queued jobs until none are left (single-threaded; used by tests and scripts)."""
+def drain(store: Store, max_rounds: int = 200) -> int:
+    """Run ready jobs until a round claims nothing (single-threaded; used by tests and scripts).
+    Jobs waiting out a backoff or a lease are left for later."""
     done = 0
-    while True:
-        jobs = [j for j in store.rows("job", status="queued") if j["assignee_role"] in WORKER_ROLES]
-        if not jobs:
+    for _ in range(max_rounds):
+        outcomes = [run_job(store, job) for job in ready_jobs(store)]
+        done += sum(1 for o in outcomes if o)
+        reassessed = v2.reassess_stale(store)
+        if all(o is None for o in outcomes) and not reassessed:
             return done
-        jobs.sort(key=lambda j: j.get("created_at", 0))
-        for job in jobs:
-            done += int(run_job(store, job))
+    return done
 
 
-def run_forever(store: Store, poll_seconds: float = 1.0, threads: int = 4) -> None:
+def run_forever(store: Store, poll_seconds: float = 1.0, threads: int = 4, reassess_every: float = 5.0) -> None:
     in_flight: set[str] = set()
+    last_sweep = 0.0
     with ThreadPoolExecutor(max_workers=threads) as pool:
         while True:
             try:
-                jobs = [j for j in store.rows("job", status="queued")
-                        if j["assignee_role"] in WORKER_ROLES and j["id"] not in in_flight]
-                for job in sorted(jobs, key=lambda j: j.get("created_at", 0)):
+                jobs = [j for j in ready_jobs(store) if j["id"] not in in_flight]
+                for job in jobs:
                     in_flight.add(job["id"])
                     fut = pool.submit(run_job, store, job)
                     fut.add_done_callback(lambda _f, jid=job["id"]: in_flight.discard(jid))
+                if not in_flight and time.monotonic() - last_sweep >= reassess_every:
+                    v2.reassess_stale(store)  # receipt attested, change approved, new email... -> reassess
+                    last_sweep = time.monotonic()
             except Exception:  # noqa: BLE001 - keep polling through network blips
                 traceback.print_exc()
             time.sleep(poll_seconds)

@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import json
 import time
+from datetime import datetime, timezone
 from typing import Any, Callable
 
 from .ids import hold_id
@@ -65,9 +66,18 @@ JOB_KINDS: dict[str, tuple[set[str] | None, str]] = {
     "scorecard_run": ({"owner", "bookkeeper"}, "sync"),
     "compromised_agent_demo": ({"owner"}, "agent"),
     "reset_demo": ({"owner"}, "sync"),
+    # v2 (CONTRACT §9.5)
+    "process_document": ({"sync", "owner", "purchasing"}, "agent"),
+    "reassess_invoice": ({"sync", "agent", "owner"}, "agent"),
+    "send_outbox": (set(), "sync"),
+    "pay_supplier": (set(), "gateway"),
+    "sneak_charge": (None, "sync"),
+    "due_scan": ({"owner", "sync"}, "sync"),
 }
 
 PUBLIC_QUEUE_LIMIT = 3
+JOB_LEASE_MS = 5 * 60 * 1000  # a claimed job can be re-claimed after 5 minutes (worker restart)
+MAX_JOB_ATTEMPTS = 3  # then the job stays failed; backoff 10 s, 20 s, ...
 
 
 class Denied(Exception):
@@ -82,6 +92,14 @@ class Invalid(Exception):
 
 def _now() -> int:
     return time.time_ns() // 1000
+
+
+def iso_ms(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def parse_iso_ms(text: str) -> int:
+    return int(datetime.fromisoformat(text).timestamp() * 1000)
 
 
 ALLOWED: dict[str, set[str] | None] = {
@@ -145,6 +163,9 @@ ALLOWED: dict[str, set[str] | None] = {
     "resolve_hold": {"owner"},
     "attest_receipt": {"receiver"},
     "decide_payee_profile": {"owner"},
+    "draft_outbox": {"agent"},
+    "approve_outbox": {"purchasing", "owner"},
+    "mark_outbox": {"sync"},
 }
 
 AUTO_INC = {"audit_log", "agent_step", "ledger_line"}
@@ -155,6 +176,14 @@ class FakeStore:
         self.tables: dict[str, dict[Any, dict[str, Any]]] = {}
         self._seq: dict[str, int] = {}
         self.admin_claimed = False
+        self.clock_offset_ms = 0
+
+    def now_ms(self) -> int:
+        """The module's clock (tests move it with `advance` to expire leases and backoffs)."""
+        return time.time_ns() // 1_000_000 + self.clock_offset_ms
+
+    def advance(self, seconds: float) -> None:
+        self.clock_offset_ms += int(seconds * 1000)
 
     # ------------------------------------------------------------------ plumbing
     def _t(self, name: str) -> dict[Any, dict[str, Any]]:
@@ -339,7 +368,7 @@ class FakeStore:
             "id": job_id, "kind": kind, "assignee_role": assignee,
             "payload_json": payload if isinstance(payload, str) else dumps(payload), "status": "queued",
             "requested_by": role, "claimed_by": "", "result_json": "", "error": "",
-            "created_at": _now(), "updated_at": _now(),
+            "created_at": _now(), "updated_at": _now(), "attempts": 0, "next_attempt_at_iso": "", "lease_expires_at_iso": "",
         })
 
     def _set_state(self, rid: str, role: str, action: str, wi_id: str, state: str, note: str = "") -> None:
@@ -353,9 +382,9 @@ class FakeStore:
         self._put("actor", {"identity": "admin", "role": "admin", "display_name": "setup", "created_at": _now()}, "identity")
         return None
 
-    def _r_register_actor(self, rid: str, role: str, identity_hex: str, new_role: str, display_name: str) -> None:
-        self._need(new_role in ROLES - {"admin"}, f"bad role {new_role}")
-        self._put("actor", {"identity": identity_hex, "role": new_role, "display_name": display_name, "created_at": _now()}, "identity")
+    def _r_register_actor(self, rid: str, caller: str, identity_hex: str, role: str, display_name: str) -> None:
+        self._need(role in ROLES - {"admin"}, f"bad role {role}")
+        self._put("actor", {"identity": identity_hex, "role": role, "display_name": display_name, "created_at": _now()}, "identity")
 
     # ------------------------------------------------------------------ 4.2 records
     def _r_upsert_company(self, rid, role, id, name, owner_name, state, bank_account_ref, bank_last4):
@@ -599,17 +628,27 @@ class FakeStore:
         self._need(j is not None, "unknown job")
         if j["assignee_role"] != role:
             raise Denied(f"job is assigned to {j['assignee_role']}", "job", job_id)
-        if j["status"] != "queued":
+        now = self.now_ms()
+        lease_expired = j["status"] == "claimed" and bool(j["lease_expires_at_iso"]) and parse_iso_ms(j["lease_expires_at_iso"]) <= now
+        if j["status"] != "queued" and not lease_expired:
             raise Denied(f"job is {j['status']}", "job", job_id)
-        self._update(rid, role, "claim_job", "job", job_id, {"status": "claimed", "claimed_by": role, "updated_at": _now()})
+        if j["next_attempt_at_iso"] and parse_iso_ms(j["next_attempt_at_iso"]) > now:
+            raise Denied(f"job can't be retried before {j['next_attempt_at_iso']}", "job", job_id)
+        self._update(rid, role, "claim_job", "job", job_id, {
+            "status": "claimed", "claimed_by": role, "updated_at": _now(), "attempts": j["attempts"] + 1,
+            "lease_expires_at_iso": iso_ms(now + JOB_LEASE_MS)}, "re-claimed after lease expired" if lease_expired else "")
 
     def _r_finish_job(self, rid, role, job_id, ok, result_json, error):
         j = self._get("job", job_id)
         self._need(j is not None, "unknown job")
         if j["claimed_by"] != role or j["status"] != "claimed":
             raise Denied("only the claimer can finish a claimed job", "job", job_id)
-        self._update(rid, role, "finish_job", "job", job_id, {"status": "done" if ok else "failed", "result_json": result_json,
-                                                             "error": error, "updated_at": _now()})
+        retry = not ok and j["attempts"] < MAX_JOB_ATTEMPTS
+        nxt = iso_ms(self.now_ms() + 10_000 * 2 ** (j["attempts"] - 1)) if retry else ""
+        self._update(rid, role, "finish_job", "job", job_id, {
+            "status": "done" if ok else "queued" if retry else "failed", "result_json": result_json, "error": error,
+            "updated_at": _now(), "next_attempt_at_iso": nxt, "claimed_by": "" if retry else j["claimed_by"],
+            "lease_expires_at_iso": ""})
 
     # ------------------------------------------------------------------ 4.6 bank changes
     def _r_request_bank_change(self, rid, role, id, sub_id, new_account_ref, new_last4, new_owner_name, requested_via):
@@ -688,14 +727,14 @@ class FakeStore:
             amount_cents=amount_cents, work_item_id=work_item_id))
 
     # ------------------------------------------------------------------ 9.4 setup and records
-    def _r_set_authority(self, rid, role, identity_hex, auth_role, limit_cents, project_scope):
-        self._need(auth_role in ROLES - {"admin"}, f"bad role {auth_role}")
+    def _r_set_authority(self, rid, caller, identity_hex, role, limit_cents, project_scope):
+        self._need(role in ROLES - {"admin"}, f"bad role {role}")
         self._need(isinstance(limit_cents, int) and limit_cents >= 0, "limit_cents must be integer cents >= 0")
         self._need(bool(project_scope), "project_scope is '*' or a project id")
         before = copy.deepcopy(self._get("authority", identity_hex))
-        row = self._put("authority", dict(identity=identity_hex, role=auth_role, limit_cents=limit_cents,
+        row = self._put("authority", dict(identity=identity_hex, role=role, limit_cents=limit_cents,
                                           project_scope=project_scope), "identity")
-        self._audit(rid, role, "set_authority", "authority", identity_hex, "ok", "", before, row)
+        self._audit(rid, caller, "set_authority", "authority", identity_hex, "ok", "", before, row)
 
     def _r_upsert_supplier(self, rid, role, id, name, email_domain, phone_on_file, crs_ref, status):
         self._need(status in {"active", "on_hold", "blocked"}, "bad status")
@@ -1083,3 +1122,38 @@ class FakeStore:
                 self._resolve_holds(rid, role, "decide_payee_profile", inv["active_revision_id"], "PAYEE_CHANGE_PENDING", resolution)
             self._update(rid, role, "decide_payee_profile", "invoice", inv["id"], {"payee_status": self._payee_status(sup),
                                                                                     "updated_at": _now()})
+
+    # ------------------------------------------------------------------ 9.4 clarifications
+    def _r_draft_outbox(self, rid, role, id, invoice_id, to_contact_id, subject, body):
+        if self._get("outbox", id):
+            return ("duplicate", "outbox message exists")
+        inv = self._get("invoice", invoice_id)
+        self._need(inv is not None, "unknown invoice")
+        contact = self._get("supplier_contact", to_contact_id)
+        self._need(contact is not None and contact["supplier_id"] == inv["supplier_id"],
+                   "the recipient must be a contact of the invoice's supplier")
+        self._need(bool(subject.strip()) and bool(body.strip()), "subject and body are required")
+        self._upsert(rid, role, "draft_outbox", "outbox", dict(
+            id=id, invoice_id=invoice_id, to_contact_id=to_contact_id, to_address=contact["email"], subject=subject,
+            body=body, status="draft", simulated=True, created_by_role=role, approved_by_role="", delivery_ref="",
+            created_at=_now()))
+        self._update(rid, role, "draft_outbox", "invoice", invoice_id, {
+            "next_owner_role": "purchasing", "next_action": "Review and send the clarification to the supplier", "updated_at": _now()})
+        return None
+
+    def _r_approve_outbox(self, rid, role, id):
+        o = self._get("outbox", id)
+        self._need(o is not None, "unknown outbox message")
+        self._need(o["status"] == "draft", f"outbox message is {o['status']}")
+        self._update(rid, role, "approve_outbox", "outbox", id, {"status": "approved", "approved_by_role": role})
+        self._enqueue(rid, role, f"job_send_{id}", "send_outbox", {"outbox_id": id})
+        self._update(rid, role, "approve_outbox", "invoice", o["invoice_id"], {
+            "next_owner_role": "supplier", "next_action": "Waiting for the supplier to reply", "updated_at": _now()})
+
+    def _r_mark_outbox(self, rid, role, id, status, delivery_ref):
+        self._need(status in {"sent", "failed"}, "status must be sent or failed")
+        o = self._get("outbox", id)
+        self._need(o is not None, "unknown outbox message")
+        if o["status"] != "approved":
+            raise Denied(f"outbox message is {o['status']}, not approved", "outbox", id)
+        self._update(rid, role, "mark_outbox", "outbox", id, {"status": status, "delivery_ref": delivery_ref})

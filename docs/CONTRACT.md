@@ -1,4 +1,4 @@
-# Countersign — Interface Contract (v2.1)
+# Countersign — Interface Contract (v2.2)
 
 The agreement between the TypeScript side (`db/`, `web/`) and the Python side (`core/`, `data/`, `scripts/`).
 **Both sides build against this file.** Changing it needs both coders to agree, a version bump at the top, and a note in team chat.
@@ -120,7 +120,7 @@ Column order below is the declaration order. `PK` = primary key.
 
 **bank_snapshot** — `id PK`, `account_ref`, `balance_cents: i64`, `as_of_iso`
 
-**ledger_line** — `id: u64 PK autoInc`, `journal_id` (index), `entry_date`, `memo`, `ref_type` (`bill|payment|seed`), `ref_id`, `account`, `debit_cents: i64`, `credit_cents: i64`
+**ledger_line** — `id: u64 PK autoInc`, `journal_id` (index), `entry_date`, `memo`, `ref_type` (`bill|payment|seed|deposit`), `ref_id`, `account`, `debit_cents: i64`, `credit_cents: i64`
 - Accounts: `cash`, `accounts_payable`, `retainage_payable`, `job_cost:<project_id>`.
 
 ### 3.3 Work (the system of work)
@@ -322,6 +322,7 @@ Root `.env` (Python reads it; see `.env.example`). The web uses `web/.env.local`
 - v1 clarification — §4.6: IDs of the work item and proposal that `request_bank_change` creates.
 - v2 — §9 supplier invoices: new roles `purchasing` and `receiver`, 21 new tables, new reducers and job kinds. `check_code` becomes free text (non-empty). Additive only.
 - v2.1 — §9.8 clarifications: purchasing limit for a rate change without a scoped quantity, holds that survive a corrected revision, rejecting a payee change.
+- v2.2 — §9.9 settlement decisions: money holds can't be cleared by `resolve_hold`; new `settlement_decision` table and `decide_disputed_line` reducer (`accept_as_billed`, `pay_agreed_dispute_rest`); new statuses `disputed`, `partially_disputed`, `partially_settled`; change kind `settlement`; ledger `ref_type` `deposit`.
 
 ---
 
@@ -364,9 +365,9 @@ Column order is declaration order. `PK` = primary key. All `_cents` and `_milli`
 
 **term** — `id PK`, `purchase_id` (index), `code` (`unit_price|max_quantity|valid_through|deposit|payment_terms|price_change_rule|extra_charge_rule|fuel_surcharge_rule`), `label`, `amount_cents: i64`, `quantity_milli: i64`, `text`, `scope_json`, `effective_from`, `effective_to`, `status` (`accepted|proposed|declined|superseded`), `source_fragment_ids_json`, `version: u32`
 
-**change_request** — `id PK`, `purchase_id` (index), `kind` (`extra_charge|price_change|quantity_change`), `description`, `amount_cents: i64` (fixed charges), `rate_cents: i64` (per unit), `rate_unit`, `scope_json` (deliveries, orders or dates it applies to), `effective_from`, `original_sent_at_iso`, `ingested_at_iso`, `classification` (`AUTHORISED_FIXED|AUTHORISED_RATE_USAGE_MISSING|PROPOSED|DECLINED|AMBIGUOUS|UNRELATED`), `supplier_acceptance` (`none|proposed|accepted|declined`), `supplier_acceptance_fragment_ids_json`, `requested_by_identity`, `internal_status` (`pending|approved|rejected`), `decided_by_identity`, `decided_by_role`, `decision_note`, `source_fragment_ids_json`, `created_at: timestamp`
+**change_request** — `id PK`, `purchase_id` (index), `kind` (`extra_charge|price_change|quantity_change|settlement`), `description`, `amount_cents: i64` (fixed charges), `rate_cents: i64` (per unit), `rate_unit`, `scope_json` (deliveries, orders or dates it applies to), `effective_from`, `original_sent_at_iso`, `ingested_at_iso`, `classification` (`AUTHORISED_FIXED|AUTHORISED_RATE_USAGE_MISSING|PROPOSED|DECLINED|AMBIGUOUS|UNRELATED`), `supplier_acceptance` (`none|proposed|accepted|declined`), `supplier_acceptance_fragment_ids_json`, `requested_by_identity`, `internal_status` (`pending|approved|rejected`), `decided_by_identity`, `decided_by_role`, `decision_note`, `source_fragment_ids_json`, `created_at: timestamp`
 
-**invoice** — `id PK`, `supplier_id` (index), `purchase_id`, `invoice_number`, `invoice_date`, `due_date`, `currency`, `active_revision_id`, `commercial_status` (`pending|matches|differences_under_review|contract_review`), `receipt_status` (`not_required|required|manually_confirmed`), `payee_status` (`verified|change_pending|unverified`), `approval_status` (`none|approved|stale|rejected`), `payment_status` (`not_ready|ready|submitted|settled|failed`), `next_owner_role`, `next_action`, `updated_at: timestamp`
+**invoice** — `id PK`, `supplier_id` (index), `purchase_id`, `invoice_number`, `invoice_date`, `due_date`, `currency`, `active_revision_id`, `commercial_status` (`pending|matches|differences_under_review|contract_review|partially_disputed`), `receipt_status` (`not_required|required|manually_confirmed`), `payee_status` (`verified|change_pending|unverified`), `approval_status` (`none|approved|stale|rejected`), `payment_status` (`not_ready|ready|submitted|settled|partially_settled|failed`), `next_owner_role`, `next_action`, `updated_at: timestamp`
 
 **invoice_revision** — `id PK`, `invoice_id` (index), `revision: u32`, `document_id`, `gross_cents: i64`, `deposit_shown_cents: i64`, `balance_requested_cents: i64`, `supersedes_revision_id`, `status` (`active|superseded`), `created_at: timestamp`
 
@@ -374,7 +375,7 @@ Column order is declaration order. `PK` = primary key. All `_cents` and `_milli`
 
 **assessment** — `id PK`, `revision_id` (index), `version: u32`, `fingerprint` (hash of every input the agent used), `policy_version`, `claimed_cents: i64`, `authorised_cents: i64`, `pending_cents: i64`, `variance_cents: i64`, `deposit_available_cents: i64`, `proposed_payment_cents: i64`, `commercial_status`, `summary`, `details_json` (per line: claimed, accepted, pending, calculation, fragment ids, uncertainty), `next_action`, `created_at: timestamp`
 
-**hold** — `id PK`, `revision_id` (index), `code` (`CONTRACT_REVIEW|PRICE_VARIANCE|PROPOSED_CHARGE|USAGE_EVIDENCE_MISSING|PO_CEILING|DUPLICATE_REVIEW|EXTRACTION_REVIEW|RECEIPT_NOT_VERIFIED|PAYEE_CHANGE_PENDING|APPROVAL_STALE|PROMPT_INJECTION|SUPPLIER_RISK`), `status` (`open|resolved|superseded`), `amount_cents: i64`, `reason`, `evidence_json`, `opened_by_role`, `resolved_by_role`, `resolution_note`, `created_at: timestamp`, `resolved_at_iso`
+**hold** — `id PK`, `revision_id` (index), `code` (`CONTRACT_REVIEW|PRICE_VARIANCE|PROPOSED_CHARGE|USAGE_EVIDENCE_MISSING|PO_CEILING|DUPLICATE_REVIEW|EXTRACTION_REVIEW|RECEIPT_NOT_VERIFIED|PAYEE_CHANGE_PENDING|APPROVAL_STALE|PROMPT_INJECTION|SUPPLIER_RISK`), `status` (`open|resolved|disputed|superseded`), `amount_cents: i64`, `reason`, `evidence_json`, `opened_by_role`, `resolved_by_role`, `resolution_note`, `created_at: timestamp`, `resolved_at_iso`
 
 **receipt_attestation** — `id PK`, `invoice_id` (index), `scope`, `quantity_milli: i64`, `unit`, `reason`, `label` (always `MANUALLY_CONFIRMED`), `attested_by_identity`, `attested_by_role`, `created_at: timestamp`
 
@@ -393,9 +394,11 @@ Column order is declaration order. `PK` = primary key. All `_cents` and `_milli`
 
 | Hold | Cleared by |
 |---|---|
-| `PRICE_VARIANCE`, `PROPOSED_CHARGE`, `USAGE_EVIDENCE_MISSING`, `PO_CEILING`, `DUPLICATE_REVIEW`, `EXTRACTION_REVIEW`, `CONTRACT_REVIEW`, `PROMPT_INJECTION`, `SUPPLIER_RISK` | A corrected revision (old revision's holds become `superseded` and the agent re-assesses the new one), **or** `owner` via `resolve_hold` with a note |
+| `PRICE_VARIANCE`, `PROPOSED_CHARGE`, `USAGE_EVIDENCE_MISSING`, `PO_CEILING` (money holds) | A corrected revision, **or** the owner's `decide_disputed_line` on every disputed line the hold covers (§9.9). **Never** `resolve_hold`. |
+| `DUPLICATE_REVIEW`, `EXTRACTION_REVIEW`, `CONTRACT_REVIEW`, `PROMPT_INJECTION` | A corrected revision (old revision's holds become `superseded` and the agent re-assesses the new one), **or** `owner` via `resolve_hold` with a note |
+| `SUPPLIER_RISK` | `owner` via `resolve_hold` with a note (a correction carries it over, §9.8.2) |
 | `RECEIPT_NOT_VERIFIED` | Only `attest_receipt` covering the billed quantity (module resolves it automatically) |
-| `PAYEE_CHANGE_PENDING` | Only an approved `decide_payee_profile` (module resolves it automatically) |
+| `PAYEE_CHANGE_PENDING` | Only `decide_payee_profile`, approve or reject (§9.8.3; module resolves it automatically) |
 | `APPROVAL_STALE` | Only a new `approve_supplier_payment` |
 
 **The agent can open holds but never resolve them.** `resolve_hold` by `agent` = denied.
@@ -428,7 +431,7 @@ Column order is declaration order. `PK` = primary key. All `_cents` and `_milli`
 - `record_invoice_line(request_id, id, revision_id, kind, description, quantity_milli, unit, unit_price_cents, amount_cents, linked_term_id, linked_change_request_id, source_fragment_ids_json)` — `sync`, `agent`. **Invalid** unless `quantity_milli × unit_price_cents / 1000 = amount_cents` when both are set (exact integer math).
 - `record_assessment(request_id, id, revision_id, version, fingerprint, policy_version, claimed_cents, authorised_cents, pending_cents, variance_cents, deposit_available_cents, proposed_payment_cents, commercial_status, summary, details_json, next_action)` — `agent`. Updates `invoice.commercial_status` / `next_action`; any `active` approval whose fingerprint differs → `stale` and opens `APPROVAL_STALE`.
 - `open_hold(request_id, id, revision_id, code, amount_cents, reason, evidence_json)` — `agent`, `sync`
-- `resolve_hold(request_id, id, note)` — `owner` only, and only for the codes in §9.3's first row. Note required.
+- `resolve_hold(request_id, id, note)` — `owner` only, and only for the codes §9.3 lists with `resolve_hold` (never the money holds, §9.9). Note required.
 
 **People in the loop (A)**
 - `attest_receipt(request_id, id, invoice_id, scope, quantity_milli, unit, reason)` — `receiver`. Label is always `MANUALLY_CONFIRMED`. If the total attested ≥ the material quantity on the active revision (same unit): resolves `RECEIPT_NOT_VERIFIED` and sets `receipt_status = manually_confirmed`.
@@ -459,7 +462,7 @@ Column order is declaration order. `PK` = primary key. All `_cents` and `_milli`
 | kind | who may enqueue | assignee | payload |
 |---|---|---|---|
 | `process_document` | `sync`, `owner`, `purchasing` | `agent` | `{"document_id"}` |
-| `reassess_invoice` | `sync`, `agent`, `owner` | `agent` | `{"invoice_id"}` |
+| `reassess_invoice` | `sync`, `agent`, `owner` (also created by `decide_disputed_line`) | `agent` | `{"invoice_id"}` |
 | `send_outbox` | (created by `approve_outbox`) | `sync` | `{"outbox_id"}` |
 | `pay_supplier` | (created by `approve_supplier_payment`) | `gateway` | `{"proposal_id"}` |
 | `sneak_charge` | anyone (`public` max 3 queued) | `sync` | `{"kind": "price|extra|waiting|fuel|bank_change|injection", "amount_cents", "note"}` |
@@ -486,3 +489,36 @@ Retries: the worker increments `attempts` on failure and sets `next_attempt_at_i
 1. **Purchasing limit for a rate change** (`decide_change_request`). `scope_json` keys, all optional: `{"quantity_milli", "unit", "from", "to", "delivery_refs"}` (`from`/`to` are `YYYY-MM-DD`). For a rate change (`rate_cents > 0`) the exposure checked against `authority.limit_cents` is `rate_cents × quantity_milli / 1000`, rounded up. Without a scoped `quantity_milli`, use the purchase's **remaining ceiling quantity** as the worst case: its latest `accepted` `max_quantity` term minus the `material` quantity on the active revisions of its **settled** invoices (`payment_status = settled`; an unpaid invoice can still be repriced). Units must match (`rate_unit` = the scope's `unit` or `purchase.unit`); if they don't, or there's no accepted `max_quantity` term, the exposure can't be sized and approval is **denied**. The limit applies to approvals only; rejecting a change commits no money.
 2. **Holds that survive a correction** (`record_invoice_revision`). When a revision is superseded its open holds become `superseded` as before, but open `RECEIPT_NOT_VERIFIED`, `PAYEE_CHANGE_PENDING` and `SUPPLIER_RISK` holds are reopened on the new revision with the same code, amount, reason and evidence (a correction can't clear them; see §9.3). Holds the module creates (these, and the one `add_payee_profile` opens) use the id `hold_<revision_id>_<code in lowercase>`. `open_hold` with an id that already exists changes nothing (outcome `duplicate`).
 3. **Rejecting a payee change** (`decide_payee_profile`, approve = false; still needs a `pre_established` contact). The profile → `rejected`. If the supplier has no other `pending` profile, `PAYEE_CHANGE_PENDING` is resolved on its invoices and `payee_status` returns to `verified` (or `unverified` if it has no verified profile). Approvals bound to the still-verified old profile stay `active`.
+
+### 9.9 v2.2 settlement decisions on disputed lines
+
+The primary path is still the corrected invoice. When the supplier won't correct it, the owner decides each disputed line explicitly. Nothing is ever paid short without a recorded decision and a notice to the supplier.
+
+**Money holds.** `PRICE_VARIANCE`, `PROPOSED_CHARGE`, `USAGE_EVIDENCE_MISSING` and `PO_CEILING` can't be cleared by `resolve_hold` (denied and logged). They clear only through a corrected revision or `decide_disputed_line` on every disputed line they cover. `resolve_hold` (owner, note required) still clears `DUPLICATE_REVIEW`, `EXTRACTION_REVIEW`, `CONTRACT_REVIEW`, `PROMPT_INJECTION` and `SUPPLIER_RISK`.
+
+**What the module reads from the assessment.** `record_assessment.details_json` must contain `"lines": [...]`, one entry per invoice line of the revision, each with at least `line_id`, `hold_code` (`''` or a money hold), `pending_cents` and `variance_cents`. A line is **disputed** when its `hold_code` is a money hold and `pending_cents + variance_cents > 0`. The module reads nothing else from `details_json`.
+
+**New table**
+
+**settlement_decision** — `id PK`, `invoice_id` (index), `revision_id` (index), `invoice_line_id`, `decision` (`accept_as_billed|pay_agreed_dispute_rest`), `amount_cents: i64` (the line's disputed amount when decided), `assessment_fingerprint`, `change_request_id` (`accept_as_billed`: the approved change it created, else `''`), `outbox_id` (`pay_agreed_dispute_rest`: the notice draft, else `''`), `note`, `decided_by_identity`, `decided_by_role`, `status` (`active|superseded`), `created_at: timestamp`
+
+**New reducer**
+
+- `decide_disputed_line(request_id, id, invoice_line_id, decision, amount_cents, expected_fingerprint, to_contact_id, note)` — `owner` only.
+  - **Invalid** unless: the line is on its invoice's active revision; in the latest assessment of that revision the line is disputed and its `pending_cents + variance_cents = amount_cents`; the line has no `active` decision yet; `note` is non-empty; for `pay_agreed_dispute_rest`, `to_contact_id` is a contact of the invoice's supplier; for `accept_as_billed`, `to_contact_id = ''`.
+  - **Denied** if `expected_fingerprint` isn't the latest assessment's fingerprint for that revision ("the assessment changed; review it again"), or, for `accept_as_billed`, if `amount_cents` is above the caller's `authority.limit_cents` or the purchase is outside its `project_scope`. `pay_agreed_dispute_rest` commits no money beyond what's authorised, so it has no limit check.
+  - `accept_as_billed` creates `change_request` `cr_<id>`: `kind = settlement`, `amount_cents` = the decided amount, `rate_cents = 0`, `rate_unit = ''`, `scope_json = {"invoice_line_id", "settlement_decision_id"}`, `classification = AUTHORISED_FIXED`, `supplier_acceptance = accepted` with the line's fragments (the supplier's own invoice line is its claim), `requested_by_identity = ''`, `internal_status = approved`, `decided_by_identity`/`decided_by_role` = the owner, `decision_note` = note, `source_fragment_ids_json` = the line's fragments. `propose_change_request` with `kind = settlement` is invalid.
+  - `pay_agreed_dispute_rest` creates `outbox` `ob_<id>` (`draft`, `simulated = true`, `created_by_role = owner`) to that contact, subject `Invoice <invoice_number>: paying the agreed amount, <amount> disputed`. The body names the line and the disputed amount, says the agreed amount is being paid, and asks for a corrected invoice or an agreed credit. The owner's note stays internal. Sending still needs `approve_outbox`.
+  - Both insert the `settlement_decision` (`active`). Then, for each money hold on the revision whose disputed lines all have an `active` decision: the hold → `resolved` if every one is `accept_as_billed`, otherwise → `disputed`; `resolved_by_role = owner`, `resolution_note` = note. Finally the module enqueues `reassess_invoice` for the invoice.
+
+**Reassessment (Python, deterministic).** An `accept_as_billed` line is accepted at the decided amount, which moves into `authorised_cents`; if everything claimed is then authorised, the proposed payment is the full balance requested. A `pay_agreed_dispute_rest` line keeps its disputed amount in `pending_cents`/`variance_cents`, and the assessment proposes `authorised_cents − deposit applied` with `commercial_status = partially_disputed`. A decision applies only while its `amount_cents` still equals the line's disputed amount; otherwise the line is disputed again and needs a new decision.
+
+**Status additions**
+- `hold.status` `disputed`: the amount stays open and unpaid, but the hold doesn't block approval (`approve_supplier_payment` eligibility 2 counts only `open` holds).
+- `invoice.commercial_status` `partially_disputed`: the agreed part is payable; the disputed remainder stays open.
+- `invoice.payment_status` `partially_settled`: `record_payment` sets it instead of `settled` when the invoice has an `active` `pay_agreed_dispute_rest` decision. It counts as settled for the remaining ceiling (§9.8.1). The amount still open is the sum of those decisions' `amount_cents`.
+- `change_request.kind` `settlement`: created only by `decide_disputed_line`.
+
+**Corrections.** `record_invoice_revision` with `supersedes_revision_id` also marks the old revision's `active` settlement decisions `superseded`, and its `disputed` holds `superseded` like its open ones. The new revision is assessed from scratch.
+
+**Ledger.** `ledger_line.ref_type` gains `deposit` (deposit settled and deposit applied). For a `partially_disputed` invoice the bill is booked at `authorised_cents`, not the gross; the disputed remainder isn't booked while it's disputed.

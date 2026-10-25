@@ -334,3 +334,16 @@ def attest_receipt(
 
 def decide_payee_profile(s: Store, role: str, id: str, approve: bool, verified_via_contact_id: str, note: str = "") -> Result:
     return s.call(role, "decide_payee_profile", id, approve, verified_via_contact_id, note)
+
+
+# 9.4 Clarifications
+def draft_outbox(s: Store, id: str, invoice_id: str, to_contact_id: str, subject: str, body: str, role: str = "agent") -> Result:
+    return s.call(role, "draft_outbox", id, invoice_id, to_contact_id, subject, body)
+
+
+def approve_outbox(s: Store, role: str, id: str) -> Result:
+    return s.call(role, "approve_outbox", id)
+
+
+def mark_outbox(s: Store, id: str, status: str, delivery_ref: str = "", role: str = "sync") -> Result:
+    return s.call(role, "mark_outbox", id, status, delivery_ref)

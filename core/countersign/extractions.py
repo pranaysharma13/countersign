@@ -33,6 +33,11 @@ def load_fixture(document_id: str, fixture_dir: Path = FIXTURE_DIR) -> dict[str,
     return ext
 
 
+def find_fixture(document_id: str, fixture_dir: Path = FIXTURE_DIR) -> dict[str, Any] | None:
+    """The labelled extraction for this document, or None if there isn't one."""
+    return load_fixture(document_id, fixture_dir) if (fixture_dir / f"{document_id}.json").exists() else None
+
+
 def values(ext: dict[str, Any]) -> dict[str, Any]:
     return {k: f.get("value") for k, f in ext.get("fields", {}).items()}
 
@@ -115,6 +120,21 @@ def change_request_id(ref: str) -> str:
 # ---------------------------------------------------------------- recording (deterministic linking)
 
 
+def _named(store: Store, table: str, name: Any) -> dict[str, Any] | None:
+    return next((r for r in store.rows(table) if r["name"].lower() == str(name).lower()), None)
+
+
+def purchase_id_for(store: Store, quote: dict[str, Any], po: dict[str, Any]) -> str:
+    """pur_<supplier>_<project>, or with the PO number appended if that id is taken by another PO."""
+    q, p = values(quote), values(po)
+    supplier, project = _named(store, "supplier", q["supplier_name"]), _named(store, "project", q["project_name"])
+    if supplier is None or project is None:
+        raise ValueError("quote names a supplier or project that isn't on file")
+    base = f"pur_{supplier['id'].removeprefix('sup_')}_{project['id'].removeprefix('prj_')}"
+    taken = one(store, "purchase", id=base)
+    return base if taken is None or taken["po_number"] == p["po_number"] else f"{base}_{_slug(str(p['po_number']))}"
+
+
 def record_purchase(store: Store, quote: dict[str, Any], po: dict[str, Any], purchase_id: str) -> str:
     """Purchase + quote terms. Terms are accepted only if the buyer accepted the quote and the
     supplier acknowledged a PO that incorporates it; otherwise the purchase needs contract review."""
@@ -123,8 +143,7 @@ def record_purchase(store: Store, quote: dict[str, Any], po: dict[str, Any], pur
         if problems:
             raise ValueError(f"{ext['document_id']}: evidence problems: {problems}")
     q, p = values(quote), values(po)
-    supplier = next((s for s in store.rows("supplier") if s["name"].lower() == str(q["supplier_name"]).lower()), None)
-    project = next((x for x in store.rows("project") if x["name"].lower() == str(q["project_name"]).lower()), None)
+    supplier, project = _named(store, "supplier", q["supplier_name"]), _named(store, "project", q["project_name"])
     if supplier is None or project is None:
         raise ValueError("quote names a supplier or project that isn't on file")
     agreed = bool(q.get("buyer_accepted_on")) and bool(p.get("supplier_acknowledged_on")) and \
@@ -169,23 +188,27 @@ def record_invoice_extraction(store: Store, ext: dict[str, Any], purchase_id: st
     purchase = one(store, "purchase", id=purchase_id)
     assert purchase is not None
     number = str(v["invoice_number"])
-    invoice_id = f"inv_{_slug(number)}"
-    existing = one(store, "invoice", id=invoice_id)
-    supersedes = v.get("supersedes") or {}
-    revision_no, supersedes_rev = 1, ""
-    if existing is not None and existing["supplier_id"] == purchase["supplier_id"] and supersedes.get("invoice_number") == number:
-        prior = one(store, "invoice_revision", id=existing["active_revision_id"])
-        assert prior is not None
-        revision_no, supersedes_rev = int(v.get("revision") or prior["revision"] + 1), prior["id"]
-    elif existing is not None:
-        invoice_id = f"inv_{_slug(number)}_{sha8(ext['document_id'])}"
-    if not supersedes_rev:
-        _ok(R.record_invoice(store, "agent", invoice_id, purchase["supplier_id"], purchase_id, number, str(v["invoice_date"]),
-                             str(v.get("due_date") or ""), str(v.get("currency") or "USD")), "invoice")
-    revision_id = f"rev_{invoice_id.removeprefix('inv_')}_r{revision_no}"
-    _ok(R.record_invoice_revision(store, "agent", revision_id, invoice_id, revision_no, ext["document_id"], int(v["gross_cents"]),
-                                  int(v.get("deposit_shown_cents") or 0), int(v["balance_requested_cents"]), supersedes_rev),
-        "revision")
+    already = one(store, "invoice_revision", document_id=ext["document_id"])
+    if already is not None:  # this very document was recorded before (a retried job): same ids, lines topped up below
+        invoice_id, revision_id = already["invoice_id"], already["id"]
+    else:
+        invoice_id = f"inv_{_slug(number)}"
+        existing = one(store, "invoice", id=invoice_id)
+        supersedes = v.get("supersedes") or {}
+        revision_no, supersedes_rev = 1, ""
+        if existing is not None and existing["supplier_id"] == purchase["supplier_id"] and supersedes.get("invoice_number") == number:
+            prior = one(store, "invoice_revision", id=existing["active_revision_id"])
+            assert prior is not None
+            revision_no, supersedes_rev = int(v.get("revision") or prior["revision"] + 1), prior["id"]
+        elif existing is not None:
+            invoice_id = f"inv_{_slug(number)}_{sha8(ext['document_id'])}"
+        if not supersedes_rev:
+            _ok(R.record_invoice(store, "agent", invoice_id, purchase["supplier_id"], purchase_id, number, str(v["invoice_date"]),
+                                 str(v.get("due_date") or ""), str(v.get("currency") or "USD")), "invoice")
+        revision_id = f"rev_{invoice_id.removeprefix('inv_')}_r{revision_no}"
+        _ok(R.record_invoice_revision(store, "agent", revision_id, invoice_id, revision_no, ext["document_id"],
+                                      int(v["gross_cents"]), int(v.get("deposit_shown_cents") or 0),
+                                      int(v["balance_requested_cents"]), supersedes_rev), "revision")
     for i, line in enumerate(ext["lines"], start=1):
         links = line.get("links", {})
         term = term_id(purchase_id, links["term_code"]) if links.get("term_code") else ""
