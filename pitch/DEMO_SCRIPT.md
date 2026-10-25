@@ -18,9 +18,9 @@ Exact clicks and lines. Every step has a fallback. Numbers are the answer key's;
 | 0:20 | Point at the reconciliation: $87,425 claimed, $3,725 under review | "Countersign keeps the $1,200 and holds $3,725 *under review*. Not 'saved': it's only money back if BayMix agrees." |
 | 0:35 | Click an evidence chip on the concrete line | "Every number points to the exact line it came from: here's the quote at $165." *(The chip shows the fragment's text from the module; no API needed.)* |
 | 0:50 | Approve tab: "Nothing is ready to pay yet" | "Can the owner just pay? No. Countersign proposed nothing, and the open holds on the bill say why: price and waiting time disputed, nobody has confirmed delivery. Approval is checked by the database itself, not by a prompt." |
-| 1:05 | I am → Jordan Pike, buyer; Invoice tab → **Send to supplier** | "The buyer sends the clarification it drafted. BayMix replies and sends a corrected invoice for $83,700." *(Offline the reply and correction are simulated; the timeline says so.)* |
-| 1:20 | I am → Luis Ortega, site; Receive tab → 500 cy, note → **Confirm what arrived** | "The superintendent confirms what arrived. We don't see delivery tickets, so receipt is a person's signature, labelled as such." |
-| 1:35 | I am → Dana Marlow; Approve tab → **Approve $73,700.00** | "$83,700 less the $10,000 deposit, applied once. The owner approves exactly $73,700; the gateway pays once (simulated bank); accounts payable ends at zero." |
+| 1:05 | I am → Buyer; Invoice tab → **Send to supplier** | "The buyer sends the clarification it drafted. BayMix replies and sends a corrected invoice for $83,700." *(Offline the reply and correction are simulated; the timeline says so.)* |
+| 1:20 | I am → Site; Receive tab → 500 cy, note → **Confirm what arrived** | "The superintendent confirms what arrived. We don't see delivery tickets, so receipt is a person's signature, labelled as such." |
+| 1:35 | I am → Owner; Approve tab → **Approve $73,700.00** | "$83,700 less the $10,000 deposit, applied once. The owner approves exactly $73,700; the gateway pays once (simulated bank); accounts payable ends at zero." |
 | 1:50 | Scorecard slide | "Measured, not claimed: 18 scenarios through the real pipeline. Every expected hold caught, no false holds, all 73 amounts exact." |
 
 ## 3-minute version

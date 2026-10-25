@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { refreshAll } from '@/lib/client';
-import { PERSONAS, personaLabel, personaOf, initials } from '@/lib/personas';
+import { PERSONAS, personaOf, initials } from '@/lib/personas';
 
 interface Session { persona: string; unlocked: boolean; mode: 'live' | 'local'; pinRequired: boolean }
 
@@ -59,7 +59,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Link className="btn" href="/inbox">Open inbox</Link>
           {me && <div className="avatar" title={me.name}>{initials(me.name)}</div>}
           <select className="who-pick" value={s?.persona ?? 'owner'} onChange={e => post({ persona: e.target.value })} aria-label="I am">
-            {PERSONAS.map(p => <option key={p.id} value={p.id}>{personaLabel(p.id)}</option>)}
+            {PERSONAS.map(p => <option key={p.id} value={p.id}>{p.role}</option>)}
           </select>
         </div>
       </header>
