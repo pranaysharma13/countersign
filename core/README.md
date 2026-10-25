@@ -42,20 +42,6 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 | `countersign/world.py`, `attacks.py` | v1 company, history, demo pile and scam generator |
 | `countersign/worker.py` | Job worker; holds only the agent, gateway and sync keys |
 
-## JSON seed for the web's local backend
-
-`data/seeds/baymix_primary.json` is the primary scenario as replayable reducer calls, produced by the same code the tests run (`supplier_seed.export_primary_seed`). Regenerate it after changing the fixtures, `supplier_world.py` or the assessment:
-
-```bash
-uv run --project core python scripts/export_supplier_seed.py
-```
-
-A test fails if the committed file is stale. What's in it:
-- **Stages:** `people` → `purchase` → `invoice_r1` → `correction_r2` → `receipt`. Load up to any stage to start the demo there. `invoice_r1` is the opening state ($87,425 claimed, holds open).
-- **Calls:** positional args in CONTRACT order, without `request_id`. Each call carries its own fixed `request_id`, so loading twice changes nothing. Args named `*_cents` and `*_milli` are i64. `{{identity:<role>}}` stands for that role's identity hex (only in `set_authority`).
-- **Actors:** the loader registers actors first. The roles needed are listed in `conventions.roles_needed`.
-- **Documents:** the PDF and `.eml` bytes (base64), for the source viewer. Their SHA-256 matches `record_document`.
-
 ## Module reference coverage (CONTRACT §9.4)
 
 Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions. Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.

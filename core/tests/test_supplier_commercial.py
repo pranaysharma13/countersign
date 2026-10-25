@@ -20,7 +20,7 @@ from countersign.supplier_docs import fragments
 from countersign.supplier_seed import seed_documents, seed_setup
 from countersign.supplier_world import (BAYMIX, DEPOSIT, INVOICE_ID, INVOICE_R1, INVOICE_R2, PO, PRIMARY_DOCS, PROJECT,
                                         PURCHASE_ID, QUOTE, REV1_ID, REV2_ID, WAITING_1, WAITING_CR_ID, WEEKEND_1,
-                                        WEEKEND_2, WEEKEND_3, WEEKEND_CR_ID)
+                                        WEEKEND_2, WEEKEND_3, WEEKEND_CR_ID, REPLY_1)
 
 KEY = json.loads((DATA_DIR / "answer_keys" / "baymix_primary.json").read_text())
 
@@ -133,12 +133,25 @@ def test_an_email_saying_approved_is_not_an_in_app_approval():
 
 
 def test_corrected_invoice_through_receipt_to_exact_books(store):
-    a1 = assess(bundle_from_store(store, INVOICE_ID))
+    from countersign.clarify import record_draft
+
+    b1 = bundle_from_store(store, INVOICE_ID)
+    a1 = assess(b1)
     record(store, a1)
     assert {h["code"] for h in store.rows("hold", revision_id=REV1_ID, status="open")} == set(KEY["revision_1"]["holds"])
     assert not ready_to_post_bill(a1)
+    ob = store.rows("outbox", id=record_draft(store, b1, a1))[0]
+    clar = KEY["clarification"]
+    assert (ob["id"], ob["to_contact_id"], ob["subject"]) == (clar["outbox_id"], clar["to_contact_id"], clar["subject"])
 
-    # BayMix agrees to $165 and drops waiting: the corrected invoice supersedes revision 1.
+    # BayMix replies to that email: $165/cy agreed, waiting withdrawn, corrected invoice attached.
+    assert REPLY_1.email.subject == f"Re: {ob['subject']}"
+    record_email_extraction(store, load_fixture(REPLY_1.id), PURCHASE_ID)
+    waiting = store.rows("change_request", id=WAITING_CR_ID)[0]
+    after = KEY["change_requests"]["cr_baymix_waiting"]["after_reply"]
+    assert (waiting["classification"], waiting["supplier_acceptance"]) == (after["classification"], after["supplier_acceptance"])
+
+    # The corrected invoice supersedes revision 1.
     assert record_invoice_extraction(store, load_fixture(INVOICE_R2.id), PURCHASE_ID) == (INVOICE_ID, REV2_ID)
     assert {h["status"] for h in store.rows("hold", revision_id=REV1_ID)} == {"superseded"}
     a2 = assess(bundle_from_store(store, INVOICE_ID))
