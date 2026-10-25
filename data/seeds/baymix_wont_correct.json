@@ -1,0 +1,256 @@
+[
+  {
+    "role": "owner",
+    "reducer": "decide_disputed_line",
+    "args": {
+      "id": "dec_bm_price",
+      "invoice_line_id": "ln_bm23104_r1_1",
+      "decision": "pay_agreed_dispute_rest",
+      "amount_cents": 350000,
+      "expected_fingerprint": "fp_793b0b940fbd88878c9faab3bc218509",
+      "to_contact_id": "ctc_baymix_ar",
+      "note": "BayMix won't correct the invoice: pay what was agreed and dispute the rest"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "claim_job",
+    "args": {
+      "job_id": "job_reassess_dec_bm_price"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_assessment",
+    "args": {
+      "id": "asm_bm23104_r1_v2",
+      "revision_id": "rev_bm23104_r1",
+      "version": 2,
+      "fingerprint": "fp_eeeea01a76e65a1c876b8e4f86f2fe71",
+      "policy_version": "commercial-2026-10-24.1",
+      "claimed_cents": 8742500,
+      "authorised_cents": 8370000,
+      "pending_cents": 22500,
+      "variance_cents": 350000,
+      "deposit_available_cents": 1000000,
+      "proposed_payment_cents": 0,
+      "commercial_status": "differences_under_review",
+      "summary": "Claimed $87,425.00: $83,700.00 authorised, $3,500.00 price variance, $225.00 pending. $3,725.00 under review (not savings until the supplier agrees).",
+      "details_json": "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $87,425.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":8250000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\",\"claimed_cents\":8600000,\"classification\":\"\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_price\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r1_1\",\"pending_cents\":0,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_price: the agreed part is paid, $3,500.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":350000}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[{\"accepted_cents\":120000,\"awaiting_decision_by\":\"\",\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l12\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r1_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"awaiting_decision_by\":\"\",\"calculation\":\"\",\"claimed_cents\":22500,\"classification\":\"PROPOSED\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Truck waiting time\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"hold_code\":\"PROPOSED_CHARGE\",\"kind\":\"waiting\",\"line_id\":\"ln_bm23104_r1_3\",\"pending_cents\":22500,\"status\":\"pending\",\"uncertainty\":\"Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Kept Weekend delivery, Saturday Oct 10 pour ($1,200.00): AUTHORISED_FIXED; Pending Truck waiting time ($225.00): Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":500000,\"this_invoice_milli\":500000,\"unit\":\"cy\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"500 cy billed to date of 500 cy allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":1000000,\"shown_cents\":1000000},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"Deposit of $10,000.00 applied once.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"fail\",\"summary\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_baymix:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 2290 (sup_baymix:v1).\"}],\"clarification_points\":[\"Truck waiting time ($225.00): Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\",\"Please send a corrected invoice or an agreed credit memo. We'll keep your original invoice on file.\"],\"conditional_payment_cents\":7370000,\"deposit_applied_cents\":1000000,\"holds\":[{\"amount_cents\":350000,\"code\":\"PRICE_VARIANCE\",\"evidence\":{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"line_ids\":[\"ln_bm23104_r1_1\"]},\"reason\":\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\"},{\"amount_cents\":22500,\"code\":\"PROPOSED_CHARGE\",\"evidence\":{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"line_ids\":[\"ln_bm23104_r1_3\"]},\"reason\":\"Truck waiting time: Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\"},{\"amount_cents\":0,\"code\":\"RECEIPT_NOT_VERIFIED\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"reason\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"}],\"inputs\":{\"allocations\":{},\"attestations\":{},\"authorities\":{\"all\":\"7072307adb37490d\"},\"change_requests\":{\"cr_baymix_waiting\":\"ce66566375b2ecc3\",\"cr_baymix_weekend_oct10\":\"0c0811e4491ce9f1\"},\"deposits\":{\"dep_baymix_oak_1\":\"b292454327aa5873\"},\"document\":{\"doc_bm_inv_23104_r1\":\"059dfd85353a2b0d1b787fd663ef192ccd1566f51c88d0412eec5b6593453aec\"},\"invoice\":{\"inv_bm23104\":\"bd32178f19952aff\"},\"lines\":{\"ln_bm23104_r1_1\":\"21bdfd014c5a7b09\",\"ln_bm23104_r1_2\":\"40e7b51f8a28b3b1\",\"ln_bm23104_r1_3\":\"da37f387df6ca8f3\"},\"others\":{},\"payee_profiles\":{\"sup_baymix:v1\":\"abfcecde6c31ec3b\"},\"policy_version\":\"commercial-2026-10-24.1\",\"purchase\":{\"pur_baymix_oak\":\"8df7f6a61a602ed8\"},\"revision\":{\"rev_bm23104_r1\":\"2d49579fe2695672\"},\"settlement_decisions\":{\"dec_bm_price\":\"91f1127380bccdea\"},\"terms\":{\"term_baymix_oak_deposit\":\"01a7dcdab163a928\",\"term_baymix_oak_extra_charge_rule\":\"a7f7f25248f7e543\",\"term_baymix_oak_fuel_surcharge_rule\":\"f68dc92cc992f863\",\"term_baymix_oak_max_quantity\":\"aca1cf2f0842044a\",\"term_baymix_oak_payment_terms\":\"8fec49768021be8c\",\"term_baymix_oak_price_change_rule\":\"56acdbec42cd1ad4\",\"term_baymix_oak_unit_price\":\"fb692b4f3ba8a001\",\"term_baymix_oak_valid_through\":\"e829a5484ba6d334\"}},\"lines\":[{\"accepted_cents\":8250000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\",\"claimed_cents\":8600000,\"classification\":\"\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_price\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r1_1\",\"pending_cents\":0,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_price: the agreed part is paid, $3,500.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":350000},{\"accepted_cents\":120000,\"awaiting_decision_by\":\"\",\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l12\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r1_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"awaiting_decision_by\":\"\",\"calculation\":\"\",\"claimed_cents\":22500,\"classification\":\"PROPOSED\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Truck waiting time\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"hold_code\":\"PROPOSED_CHARGE\",\"kind\":\"waiting\",\"line_id\":\"ln_bm23104_r1_3\",\"pending_cents\":22500,\"status\":\"pending\",\"uncertainty\":\"Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":372500}",
+      "next_action": "Ask the supplier for a corrected invoice or an agreed credit for the $3,725.00 under review."
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "log_agent_step",
+    "args": {
+      "work_item_id": "wi_inv_bm23104",
+      "kind": "decision",
+      "title": "Claimed $87,425.00: $83,700.00 authorised, $3,500.00 price variance, $225.00 pending. $3,725.00 under review (not savings until the supplier agrees).",
+      "detail_json": "{\"assessment_id\":\"asm_bm23104_r1_v2\",\"holds\":{\"PRICE_VARIANCE\":350000,\"PROPOSED_CHARGE\":22500,\"RECEIPT_NOT_VERIFIED\":0},\"next_action\":\"Ask the supplier for a corrected invoice or an agreed credit for the $3,725.00 under review.\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "finish_job",
+    "args": {
+      "job_id": "job_reassess_dec_bm_price",
+      "ok": true,
+      "result_json": "{\"assessment_id\":\"asm_bm23104_r1_v2\",\"authorised_cents\":8370000,\"claimed_cents\":8742500,\"commercial_status\":\"differences_under_review\",\"holds\":{\"PRICE_VARIANCE\":350000,\"PROPOSED_CHARGE\":22500,\"RECEIPT_NOT_VERIFIED\":0},\"outbox_id\":null,\"proposal_id\":null,\"proposed_payment_cents\":0,\"status\":\"assessed\",\"under_review_cents\":372500}",
+      "error": ""
+    }
+  },
+  {
+    "role": "owner",
+    "reducer": "decide_disputed_line",
+    "args": {
+      "id": "dec_bm_waiting",
+      "invoice_line_id": "ln_bm23104_r1_3",
+      "decision": "pay_agreed_dispute_rest",
+      "amount_cents": 22500,
+      "expected_fingerprint": "fp_eeeea01a76e65a1c876b8e4f86f2fe71",
+      "to_contact_id": "ctc_baymix_ar",
+      "note": "BayMix won't correct the invoice: pay what was agreed and dispute the rest"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "claim_job",
+    "args": {
+      "job_id": "job_reassess_dec_bm_waiting"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_assessment",
+    "args": {
+      "id": "asm_bm23104_r1_v3",
+      "revision_id": "rev_bm23104_r1",
+      "version": 3,
+      "fingerprint": "fp_3d1c47042608f75e19cc83c4344569b1",
+      "policy_version": "commercial-2026-10-24.1",
+      "claimed_cents": 8742500,
+      "authorised_cents": 8370000,
+      "pending_cents": 22500,
+      "variance_cents": 350000,
+      "deposit_available_cents": 1000000,
+      "proposed_payment_cents": 7370000,
+      "commercial_status": "partially_disputed",
+      "summary": "Claimed $87,425.00: $83,700.00 authorised, $3,500.00 price variance, $225.00 pending. The owner decided every disputed line: $73,700.00 agreed proposed after the $10,000.00 deposit; $3,725.00 stays disputed (not savings until the supplier agrees).",
+      "details_json": "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $87,425.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":8250000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\",\"claimed_cents\":8600000,\"classification\":\"\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_price\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r1_1\",\"pending_cents\":0,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_price: the agreed part is paid, $3,500.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":350000}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[{\"accepted_cents\":120000,\"awaiting_decision_by\":\"\",\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l12\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r1_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"awaiting_decision_by\":\"\",\"calculation\":\"\",\"claimed_cents\":22500,\"classification\":\"PROPOSED\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_waiting\",\"description\":\"Truck waiting time\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"hold_code\":\"PROPOSED_CHARGE\",\"kind\":\"waiting\",\"line_id\":\"ln_bm23104_r1_3\",\"pending_cents\":22500,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_waiting: the agreed part is paid, $225.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Kept Weekend delivery, Saturday Oct 10 pour ($1,200.00): AUTHORISED_FIXED; Pending Truck waiting time ($225.00): Disputed by the owner's decision dec_bm_waiting: the agreed part is paid, $225.00 stays open until the supplier sends a corrected invoice or an agreed credit.\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":500000,\"this_invoice_milli\":500000,\"unit\":\"cy\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"500 cy billed to date of 500 cy allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":1000000,\"shown_cents\":1000000},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"Deposit of $10,000.00 applied once.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"fail\",\"summary\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_baymix:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 2290 (sup_baymix:v1).\"}],\"clarification_points\":[],\"conditional_payment_cents\":7370000,\"deposit_applied_cents\":1000000,\"holds\":[{\"amount_cents\":350000,\"code\":\"PRICE_VARIANCE\",\"evidence\":{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"line_ids\":[\"ln_bm23104_r1_1\"]},\"reason\":\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\"},{\"amount_cents\":22500,\"code\":\"PROPOSED_CHARGE\",\"evidence\":{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"line_ids\":[\"ln_bm23104_r1_3\"]},\"reason\":\"Truck waiting time: Disputed by the owner's decision dec_bm_waiting: the agreed part is paid, $225.00 stays open until the supplier sends a corrected invoice or an agreed credit.\"},{\"amount_cents\":0,\"code\":\"RECEIPT_NOT_VERIFIED\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"reason\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"}],\"inputs\":{\"allocations\":{},\"attestations\":{},\"authorities\":{\"all\":\"7072307adb37490d\"},\"change_requests\":{\"cr_baymix_waiting\":\"ce66566375b2ecc3\",\"cr_baymix_weekend_oct10\":\"0c0811e4491ce9f1\"},\"deposits\":{\"dep_baymix_oak_1\":\"b292454327aa5873\"},\"document\":{\"doc_bm_inv_23104_r1\":\"059dfd85353a2b0d1b787fd663ef192ccd1566f51c88d0412eec5b6593453aec\"},\"invoice\":{\"inv_bm23104\":\"bd32178f19952aff\"},\"lines\":{\"ln_bm23104_r1_1\":\"21bdfd014c5a7b09\",\"ln_bm23104_r1_2\":\"40e7b51f8a28b3b1\",\"ln_bm23104_r1_3\":\"da37f387df6ca8f3\"},\"others\":{},\"payee_profiles\":{\"sup_baymix:v1\":\"abfcecde6c31ec3b\"},\"policy_version\":\"commercial-2026-10-24.1\",\"purchase\":{\"pur_baymix_oak\":\"8df7f6a61a602ed8\"},\"revision\":{\"rev_bm23104_r1\":\"2d49579fe2695672\"},\"settlement_decisions\":{\"dec_bm_price\":\"91f1127380bccdea\",\"dec_bm_waiting\":\"123299a39dc6baaf\"},\"terms\":{\"term_baymix_oak_deposit\":\"01a7dcdab163a928\",\"term_baymix_oak_extra_charge_rule\":\"a7f7f25248f7e543\",\"term_baymix_oak_fuel_surcharge_rule\":\"f68dc92cc992f863\",\"term_baymix_oak_max_quantity\":\"aca1cf2f0842044a\",\"term_baymix_oak_payment_terms\":\"8fec49768021be8c\",\"term_baymix_oak_price_change_rule\":\"56acdbec42cd1ad4\",\"term_baymix_oak_unit_price\":\"fb692b4f3ba8a001\",\"term_baymix_oak_valid_through\":\"e829a5484ba6d334\"}},\"lines\":[{\"accepted_cents\":8250000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\",\"claimed_cents\":8600000,\"classification\":\"\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_price\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r1_1\",\"pending_cents\":0,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_price: the agreed part is paid, $3,500.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":350000},{\"accepted_cents\":120000,\"awaiting_decision_by\":\"\",\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l12\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r1_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"awaiting_decision_by\":\"\",\"calculation\":\"\",\"claimed_cents\":22500,\"classification\":\"PROPOSED\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_waiting\",\"description\":\"Truck waiting time\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"hold_code\":\"PROPOSED_CHARGE\",\"kind\":\"waiting\",\"line_id\":\"ln_bm23104_r1_3\",\"pending_cents\":22500,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_waiting: the agreed part is paid, $225.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":372500}",
+      "next_action": "Superintendent: confirm what was received (manual attestation)."
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "log_agent_step",
+    "args": {
+      "work_item_id": "wi_inv_bm23104",
+      "kind": "decision",
+      "title": "Claimed $87,425.00: $83,700.00 authorised, $3,500.00 price variance, $225.00 pending. The owner decided every disputed line: $73,700.00 agreed proposed after the $10,000.00 deposit; $3,725.00 stays disputed (not savings until the supplier agrees).",
+      "detail_json": "{\"assessment_id\":\"asm_bm23104_r1_v3\",\"holds\":{\"PRICE_VARIANCE\":350000,\"PROPOSED_CHARGE\":22500,\"RECEIPT_NOT_VERIFIED\":0},\"next_action\":\"Superintendent: confirm what was received (manual attestation).\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "finish_job",
+    "args": {
+      "job_id": "job_reassess_dec_bm_waiting",
+      "ok": true,
+      "result_json": "{\"assessment_id\":\"asm_bm23104_r1_v3\",\"authorised_cents\":8370000,\"claimed_cents\":8742500,\"commercial_status\":\"partially_disputed\",\"holds\":{\"PRICE_VARIANCE\":350000,\"PROPOSED_CHARGE\":22500,\"RECEIPT_NOT_VERIFIED\":0},\"outbox_id\":null,\"proposal_id\":null,\"proposed_payment_cents\":7370000,\"status\":\"assessed\",\"under_review_cents\":372500}",
+      "error": ""
+    }
+  },
+  {
+    "role": "owner",
+    "reducer": "approve_outbox",
+    "args": {
+      "id": "ob_dec_bm_price"
+    }
+  },
+  {
+    "role": "owner",
+    "reducer": "approve_outbox",
+    "args": {
+      "id": "ob_dec_bm_waiting"
+    }
+  },
+  {
+    "role": "receiver",
+    "reducer": "attest_receipt",
+    "args": {
+      "id": "att_bm_500",
+      "invoice_id": "inv_bm23104",
+      "scope": "All pours, Oct 5-22",
+      "quantity_milli": 500000,
+      "unit": "cy",
+      "reason": "Checked against the pour log"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "claim_job",
+    "args": {
+      "job_id": "job_send_ob_dec_bm_price"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "mark_outbox",
+    "args": {
+      "id": "ob_dec_bm_price",
+      "status": "sent",
+      "delivery_ref": "simulated-ob_dec_bm_price"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "finish_job",
+    "args": {
+      "job_id": "job_send_ob_dec_bm_price",
+      "ok": true,
+      "result_json": "{\"delivery\":\"simulated\",\"outbox_id\":\"ob_dec_bm_price\",\"status\":\"sent\",\"to\":\"ar@baymix-supply.example\"}",
+      "error": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "claim_job",
+    "args": {
+      "job_id": "job_send_ob_dec_bm_waiting"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "mark_outbox",
+    "args": {
+      "id": "ob_dec_bm_waiting",
+      "status": "sent",
+      "delivery_ref": "simulated-ob_dec_bm_waiting"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "finish_job",
+    "args": {
+      "job_id": "job_send_ob_dec_bm_waiting",
+      "ok": true,
+      "result_json": "{\"delivery\":\"simulated\",\"outbox_id\":\"ob_dec_bm_waiting\",\"status\":\"sent\",\"to\":\"ar@baymix-supply.example\"}",
+      "error": ""
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_assessment",
+    "args": {
+      "id": "asm_bm23104_r1_v4",
+      "revision_id": "rev_bm23104_r1",
+      "version": 4,
+      "fingerprint": "fp_5c7614ae2f26935e7ca15cc2d33082ef",
+      "policy_version": "commercial-2026-10-24.1",
+      "claimed_cents": 8742500,
+      "authorised_cents": 8370000,
+      "pending_cents": 22500,
+      "variance_cents": 350000,
+      "deposit_available_cents": 1000000,
+      "proposed_payment_cents": 7370000,
+      "commercial_status": "partially_disputed",
+      "summary": "Claimed $87,425.00: $83,700.00 authorised, $3,500.00 price variance, $225.00 pending. The owner decided every disputed line: $73,700.00 agreed proposed after the $10,000.00 deposit; $3,725.00 stays disputed (not savings until the supplier agrees).",
+      "details_json": "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $87,425.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":8250000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\",\"claimed_cents\":8600000,\"classification\":\"\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_price\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r1_1\",\"pending_cents\":0,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_price: the agreed part is paid, $3,500.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":350000}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[{\"accepted_cents\":120000,\"awaiting_decision_by\":\"\",\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l12\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r1_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"awaiting_decision_by\":\"\",\"calculation\":\"\",\"claimed_cents\":22500,\"classification\":\"PROPOSED\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_waiting\",\"description\":\"Truck waiting time\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"hold_code\":\"PROPOSED_CHARGE\",\"kind\":\"waiting\",\"line_id\":\"ln_bm23104_r1_3\",\"pending_cents\":22500,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_waiting: the agreed part is paid, $225.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Kept Weekend delivery, Saturday Oct 10 pour ($1,200.00): AUTHORISED_FIXED; Pending Truck waiting time ($225.00): Disputed by the owner's decision dec_bm_waiting: the agreed part is paid, $225.00 stays open until the supplier sends a corrected invoice or an agreed credit.\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":500000,\"this_invoice_milli\":500000,\"unit\":\"cy\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"500 cy billed to date of 500 cy allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":1000000,\"shown_cents\":1000000},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"Deposit of $10,000.00 applied once.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{\"cy\":500000},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Receipt of 500 cy attested by the superintendent (MANUALLY_CONFIRMED, not machine-verified).\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_baymix:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 2290 (sup_baymix:v1).\"}],\"clarification_points\":[],\"conditional_payment_cents\":7370000,\"deposit_applied_cents\":1000000,\"holds\":[{\"amount_cents\":350000,\"code\":\"PRICE_VARIANCE\",\"evidence\":{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"line_ids\":[\"ln_bm23104_r1_1\"]},\"reason\":\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\"},{\"amount_cents\":22500,\"code\":\"PROPOSED_CHARGE\",\"evidence\":{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"line_ids\":[\"ln_bm23104_r1_3\"]},\"reason\":\"Truck waiting time: Disputed by the owner's decision dec_bm_waiting: the agreed part is paid, $225.00 stays open until the supplier sends a corrected invoice or an agreed credit.\"}],\"inputs\":{\"allocations\":{},\"attestations\":{\"att_bm_500\":\"3f4b5218b0fbe2c0\"},\"authorities\":{\"all\":\"7072307adb37490d\"},\"change_requests\":{\"cr_baymix_waiting\":\"ce66566375b2ecc3\",\"cr_baymix_weekend_oct10\":\"0c0811e4491ce9f1\"},\"deposits\":{\"dep_baymix_oak_1\":\"b292454327aa5873\"},\"document\":{\"doc_bm_inv_23104_r1\":\"059dfd85353a2b0d1b787fd663ef192ccd1566f51c88d0412eec5b6593453aec\"},\"invoice\":{\"inv_bm23104\":\"bd32178f19952aff\"},\"lines\":{\"ln_bm23104_r1_1\":\"21bdfd014c5a7b09\",\"ln_bm23104_r1_2\":\"40e7b51f8a28b3b1\",\"ln_bm23104_r1_3\":\"da37f387df6ca8f3\"},\"others\":{},\"payee_profiles\":{\"sup_baymix:v1\":\"abfcecde6c31ec3b\"},\"policy_version\":\"commercial-2026-10-24.1\",\"purchase\":{\"pur_baymix_oak\":\"8df7f6a61a602ed8\"},\"revision\":{\"rev_bm23104_r1\":\"2d49579fe2695672\"},\"settlement_decisions\":{\"dec_bm_price\":\"91f1127380bccdea\",\"dec_bm_waiting\":\"123299a39dc6baaf\"},\"terms\":{\"term_baymix_oak_deposit\":\"01a7dcdab163a928\",\"term_baymix_oak_extra_charge_rule\":\"a7f7f25248f7e543\",\"term_baymix_oak_fuel_surcharge_rule\":\"f68dc92cc992f863\",\"term_baymix_oak_max_quantity\":\"aca1cf2f0842044a\",\"term_baymix_oak_payment_terms\":\"8fec49768021be8c\",\"term_baymix_oak_price_change_rule\":\"56acdbec42cd1ad4\",\"term_baymix_oak_unit_price\":\"fb692b4f3ba8a001\",\"term_baymix_oak_valid_through\":\"e829a5484ba6d334\"}},\"lines\":[{\"accepted_cents\":8250000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\",\"claimed_cents\":8600000,\"classification\":\"\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_price\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r1_1\",\"pending_cents\":0,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_price: the agreed part is paid, $3,500.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":350000},{\"accepted_cents\":120000,\"awaiting_decision_by\":\"\",\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l12\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r1_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"awaiting_decision_by\":\"\",\"calculation\":\"\",\"claimed_cents\":22500,\"classification\":\"PROPOSED\",\"decision\":\"pay_agreed_dispute_rest\",\"decision_id\":\"dec_bm_waiting\",\"description\":\"Truck waiting time\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"hold_code\":\"PROPOSED_CHARGE\",\"kind\":\"waiting\",\"line_id\":\"ln_bm23104_r1_3\",\"pending_cents\":22500,\"status\":\"disputed\",\"uncertainty\":\"Disputed by the owner's decision dec_bm_waiting: the agreed part is paid, $225.00 stays open until the supplier sends a corrected invoice or an agreed credit.\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":372500}",
+      "next_action": "Review and approve the $73,700.00 agreed payment once the notice to the supplier is sent; $3,725.00 stays disputed."
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "log_agent_step",
+    "args": {
+      "work_item_id": "wi_inv_bm23104",
+      "kind": "decision",
+      "title": "Claimed $87,425.00: $83,700.00 authorised, $3,500.00 price variance, $225.00 pending. The owner decided every disputed line: $73,700.00 agreed proposed after the $10,000.00 deposit; $3,725.00 stays disputed (not savings until the supplier agrees).",
+      "detail_json": "{\"assessment_id\":\"asm_bm23104_r1_v4\",\"holds\":{\"PRICE_VARIANCE\":350000,\"PROPOSED_CHARGE\":22500},\"next_action\":\"Review and approve the $73,700.00 agreed payment once the notice to the supplier is sent; $3,725.00 stays disputed.\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "propose_supplier_payment",
+    "args": {
+      "id": "prop_bm23104_r1_v4",
+      "invoice_id": "inv_bm23104",
+      "revision_id": "rev_bm23104_r1",
+      "assessment_id": "asm_bm23104_r1_v4",
+      "amount_cents": 7370000,
+      "deposit_allocation_cents": 1000000,
+      "payee_profile_id": "sup_baymix:v1"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "log_agent_step",
+    "args": {
+      "work_item_id": "wi_inv_bm23104",
+      "kind": "decision",
+      "title": "Proposed paying $73,700.00 to the verified account ending 2290 ($10,000.00 deposit applied); waiting for the owner's approval",
+      "detail_json": "{\"assessment_id\":\"asm_bm23104_r1_v4\",\"proposal_id\":\"prop_bm23104_r1_v4\"}"
+    }
+  }
+]
