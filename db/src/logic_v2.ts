@@ -540,7 +540,9 @@ export function record_assessment(ctx: Ctx, sender: Identity, request_id: string
     audit(c, 'assessment', id, null, row, summary);
     const inv = ctx.db.invoice.id.find(rev.invoice_id);
     if (inv && inv.active_revision_id === revision_id) {
-      touchInvoice(c, inv.id, { commercial_status, next_action });
+      // Who acts next: once the commercial terms match, the remaining gap is usually receipt.
+      const next_owner_role = commercial_status === 'matches' && inv.receipt_status === 'required' ? 'receiver' : inv.next_owner_role;
+      touchInvoice(c, inv.id, { commercial_status, next_action, next_owner_role });
       for (const ap of activeApprovalsForInvoice(ctx, inv.id)) {
         if (ap.assessment_fingerprint !== fingerprint) makeStale(c, ap.id, 'assessment changed');
       }

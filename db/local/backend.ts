@@ -14,13 +14,13 @@ import type { Ctx } from '../src/schema';
 
 export const PERSONAS = {
   admin: { n: 1, name: 'Setup script' },
-  owner: { n: 2, name: 'Dana Marlow (owner / controller)' },
-  bookkeeper: { n: 3, name: 'Sam Okafor (bookkeeper)' },
+  owner: { n: 2, name: 'Dana Marlow' },
+  bookkeeper: { n: 3, name: 'Sam Okafor' },
   agent: { n: 4, name: 'Countersign agent' },
   gateway: { n: 5, name: 'Payment gateway' },
   sync: { n: 6, name: 'Intake' },
-  purchasing: { n: 7, name: 'Jordan Reyes (purchasing, $2,000 limit)' },
-  receiver: { n: 8, name: 'Ana Ruiz (superintendent)' },
+  purchasing: { n: 7, name: 'Jordan Reyes' },
+  receiver: { n: 8, name: 'Ana Ruiz' },
 } as const;
 export type Persona = keyof typeof PERSONAS;
 const ident = (n: number) => new Identity('0x' + n.toString(16).padStart(64, '0'));
@@ -236,6 +236,8 @@ export class LocalBackend {
     term('term_extra', 'extra_charge_rule', 'Extra charges', 0n, 0n, 'Only when agreed in writing before the work', ['frag_q_extra']);
     term('term_dep', 'deposit', 'Deposit', D(10000), 0n, '$10,000 on acceptance, applied to the final invoice', ['frag_q_dep']);
     this.must('sync', 'record_deposit', 'dep_2201', 'pur_2201', 'sup_baymix', D(10000), 'settled', 'nessie_sim_dep_2201');
+    this.must('sync', 'post_journal', 'jr_2201_dep', '2026-10-03', 'Deposit to BayMix for PO-2201 (simulated Nessie)', 'deposit', 'pur_2201',
+      j([{ account: 'supplier_prepayment', debit_cents: 1000000, credit_cents: 0 }, { account: 'cash', debit_cents: 0, credit_cents: 1000000 }]));
 
     // Amendments: weekend charge (legit, approved within limit) and waiting (only proposed).
     this.must('sync', 'propose_change_request', 'cr_weekend', 'pur_2201', 'extra_charge', 'Weekend delivery, Oct 11 pour', D(1200), 0n, '',
@@ -291,13 +293,21 @@ export class LocalBackend {
 
 function toJson(row: Record<string, unknown>) {
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(row)) {
-    if (typeof v === 'bigint') out[k] = Number(v);
-    else if (v instanceof Timestamp) out[k] = Number(v.microsSinceUnixEpoch);
-    else if (v instanceof Identity) out[k] = v.toHexString();
-    else out[k] = v;
-  }
+  for (const [k, v] of Object.entries(row)) out[k] = plain(v);
   return out;
+}
+
+/** Rows hold bigint, Timestamp and Identity values; turn them into JSON-safe numbers and hex strings. */
+function plain(v: unknown): unknown {
+  if (typeof v === 'bigint') return Number(v);
+  if (v && typeof v === 'object') {
+    const o = v as any;
+    if (typeof o.microsSinceUnixEpoch === 'bigint') return Number(o.microsSinceUnixEpoch);
+    if (typeof o.toHexString === 'function') return o.toHexString();
+    if (Array.isArray(v)) return v.map(plain);
+    return Object.fromEntries(Object.entries(o).map(([k, x]) => [k, plain(x)]));
+  }
+  return v;
 }
 
 let singleton: LocalBackend | null = null;

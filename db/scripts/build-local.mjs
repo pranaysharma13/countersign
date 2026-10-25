@@ -27,8 +27,9 @@ await build({
   external: ['./portable-datastore-wasm/*'],
   // spacetimedb's server polyfill replaces globalThis.console with the module-host stub; restore the
   // real one after the bundle loads so the host app (Next.js) keeps its logs.
-  banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url); const __realConsole = globalThis.console;" },
-  footer: { js: 'globalThis.console = __realConsole;' },
+  banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url); const __realConsole = globalThis.console; const __hadWindow = 'window' in globalThis; const __hadGlobal = 'global' in globalThis;" },
+  // It also aliases globalThis.window (Next.js would then think server rendering runs in a browser).
+  footer: { js: 'globalThis.console = __realConsole; if (!__hadWindow) delete globalThis.window; if (!__hadGlobal) delete globalThis.global;' },
   logLevel: 'warning',
 });
 

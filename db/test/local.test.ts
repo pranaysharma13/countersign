@@ -31,6 +31,8 @@ test('BayMix demo clicks through to $73,700 settled with AP at $0', () => {
   expect(s().payment[0].amount_cents).toBe(7370000);
   const ap = s().ledger_line.filter((l: any) => l.account === 'accounts_payable').reduce((t: number, l: any) => t + l.credit_cents - l.debit_cents, 0);
   expect(ap).toBe(0);
+  const cash = s().ledger_line.filter((l: any) => l.account === 'cash').reduce((t: number, l: any) => t + l.credit_cents - l.debit_cents, 0);
+  expect(cash).toBe(8370000); // $83,700 out in total, including the $10,000 deposit
 });
 
 test('reset restores the opening state', () => {
