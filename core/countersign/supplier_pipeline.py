@@ -17,7 +17,7 @@ from . import live_extract
 from . import reducers as R
 from . import sandbox
 from .clarify import outbox_id, record_draft
-from .commercial import Assessment, InvoiceBundle, assess, bundle_from_store, record
+from .commercial import Assessment, InvoiceBundle, assess, blocking_holds, bundle_from_store, record
 from .config import settings
 from .extractions import (NotYet, find_fixture, purchase_id_for, record_email_extraction, record_invoice_extraction,
                           record_purchase, validated, values)
@@ -310,8 +310,12 @@ def _maybe_draft(store: Store, b: InvoiceBundle, a: Assessment, reading: str) ->
 def propose_payment(store: Store, b: InvoiceBundle, a: Assessment, assessment_id: str) -> str | None:
     """Propose exactly what the assessment proposes, to the supplier's verified account, with the deposit it
     applies. One proposal per assessment (the module cancels older pending ones and denies any other
-    amount). The owner approves it in the app; eligibility is the module's."""
-    if a.proposed_payment_cents <= 0:
+    amount). The owner approves it in the app; eligibility is the module's.
+
+    Only from an assessment with no blocking hold (receipt attested, payee verified, nothing disputed): a
+    proposal made earlier could be approved in the seconds before the sweep reassesses a new input such
+    as the receipt attestation, and the gateway would then refuse it as stale."""
+    if a.proposed_payment_cents <= 0 or blocking_holds(a):
         return None
     payee = next((p for p in b.payee_profiles if p["status"] == "verified"), None)
     if payee is None:

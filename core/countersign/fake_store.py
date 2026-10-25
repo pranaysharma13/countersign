@@ -1087,7 +1087,7 @@ class FakeStore:
             next_action="Assess against the purchase terms", updated_at=_now()))
         if not self._get("work_item", f"wi_{id}"):
             self._upsert(rid, role, "record_invoice", "work_item", dict(
-                id=f"wi_{id}", kind="supplier_invoice", entity_id=id, origin="upload", state="new",
+                id=f"wi_{id}", kind="supplier_invoice", entity_id=id, origin="inbox", state="new",  # as the module does
                 summary=f"Invoice {invoice_number}", risk_level="low", created_at=_now(), updated_at=_now()))
         return None
 
