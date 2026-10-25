@@ -26,6 +26,7 @@ def _flag(name: str, default: bool) -> bool:
 @dataclass(frozen=True)
 class Settings:
     use_mocks: bool = field(default_factory=lambda: _flag("USE_MOCKS", True))
+    ai_mode: str = field(default_factory=lambda: os.getenv("AI_MODE", "fixture").strip().lower() or "fixture")  # fixture | live
     store_backend: str = field(default_factory=lambda: os.getenv("STORE_BACKEND", "spacetime"))
 
     spacetimedb_uri: str = field(default_factory=lambda: os.getenv("SPACETIMEDB_URI", "http://localhost:3000"))
@@ -33,7 +34,7 @@ class Settings:
     tokens: dict[str, str] = field(
         default_factory=lambda: {
             role: os.getenv(f"SPACETIMEDB_{role.upper()}_TOKEN", "")
-            for role in ("admin", "agent", "gateway", "sync", "owner", "bookkeeper")
+            for role in ("admin", "agent", "gateway", "sync", "owner", "bookkeeper", "purchasing", "receiver")
         }
     )
 
