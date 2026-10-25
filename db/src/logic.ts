@@ -262,7 +262,7 @@ export function create_work_item(ctx: Ctx, sender: Identity, request_id: string,
   return handle(ctx, sender, 'create_work_item', request_id, ['sync', 'agent'], c => {
     const err = firstErr(oneOf(kind, WORK_KINDS, 'kind'), oneOf(origin, ORIGINS, 'origin'));
     if (err) return invalid(err);
-    if (ctx.db.work_item.id.find(id)) return ok('already exists');
+    if (ctx.db.work_item.id.find(id)) return { outcome: 'duplicate', message: 'work item exists' };
     const row = {
       id, kind, entity_id, origin, state: 'new', summary, risk_level: 'low',
       created_at: ctx.timestamp, updated_at: ctx.timestamp,
@@ -443,7 +443,38 @@ export function decide_proposal(ctx: Ctx, sender: Identity, request_id: string,
       return ok();
     }
 
-    return deny(c, `deciding '${p.kind}' proposals isn't available yet`, 'proposal', p.id);
+    if (p.kind === 'bank_change') {
+      const wi = ctx.db.work_item.id.find(p.work_item_id);
+      const bc = wi ? ctx.db.bank_change.id.find(wi.entity_id) : null;
+      if (!bc) return invalid('bank change for this proposal not found');
+      if (approve) {
+        const passed = new Set([...ctx.db.verification.bank_change_id.filter(bc.id)]
+          .filter(v => v.result === 'pass').map(v => v.method));
+        const missing = ['callback_phone_on_file', 'crs_idv'].filter(m => !passed.has(m));
+        if (missing.length) return deny(c, `bank change needs passing verification: ${missing.join(', ')}`, 'proposal', p.id);
+        const sub = ctx.db.sub.id.find(bc.sub_id);
+        if (!sub) return invalid(`sub ${bc.sub_id} not found`);
+        // The ONLY path that changes a sub's bank fields.
+        const subAfter = { ...sub, bank_account_ref: bc.new_account_ref, bank_last4: bc.new_last4, bank_owner_name: bc.new_owner_name };
+        ctx.db.sub.id.update(subAfter);
+        audit(c, 'sub', sub.id,
+          { bank_account_ref: sub.bank_account_ref, bank_last4: sub.bank_last4, bank_owner_name: sub.bank_owner_name },
+          { bank_account_ref: bc.new_account_ref, bank_last4: bc.new_last4, bank_owner_name: bc.new_owner_name },
+          'verified bank change');
+        ctx.db.bank_change.id.update({ ...bc, status: 'approved' });
+        audit(c, 'bank_change', bc.id, { status: bc.status }, { status: 'approved' }, note);
+        decide('approved');
+        setItemState(c, p.work_item_id, 'approved', note);
+      } else {
+        ctx.db.bank_change.id.update({ ...bc, status: 'rejected' });
+        audit(c, 'bank_change', bc.id, { status: bc.status }, { status: 'rejected' }, note);
+        decide('rejected');
+        setItemState(c, p.work_item_id, 'closed_held', note);
+      }
+      return ok();
+    }
+
+    return invalid(`unknown proposal kind '${p.kind}'`);
   });
 }
 
@@ -514,7 +545,7 @@ export function enqueue_job(ctx: Ctx, sender: Identity, request_id: string,
       return deny(c, `role '${c.role}' may not enqueue '${kind}' jobs`, 'job', id);
     }
     try { JSON.parse(payload_json); } catch { return invalid('payload_json is not valid JSON'); }
-    if (ctx.db.job.id.find(id)) return invalid(`job ${id} already exists`);
+    if (ctx.db.job.id.find(id)) return { outcome: 'duplicate', message: 'job exists' };
     if (c.role === 'public') {
       const queued = [...ctx.db.job.status.filter('queued')].filter(j => j.requested_by === c.sender_hex).length;
       if (queued >= PUBLIC_QUEUED_LIMIT) return deny(c, `limit of ${PUBLIC_QUEUED_LIMIT} queued jobs reached; wait for one to finish`, 'job', id);
@@ -534,7 +565,7 @@ export function claim_job(ctx: Ctx, sender: Identity, request_id: string, job_id
     const j = ctx.db.job.id.find(job_id);
     if (!j) return invalid(`job ${job_id} not found`);
     if (c.role !== j.assignee_role) return deny(c, `job ${job_id} is for '${j.assignee_role}'`, 'job', job_id);
-    if (j.status !== 'queued') return invalid(`job ${job_id} is '${j.status}', not queued`);
+    if (j.status !== 'queued') return deny(c, `job ${job_id} is '${j.status}'`, 'job', job_id);
     ctx.db.job.id.update({ ...j, status: 'claimed', claimed_by: c.sender_hex, updated_at: ctx.timestamp });
     audit(c, 'job', job_id, { status: j.status }, { status: 'claimed' });
     return ok();
@@ -546,8 +577,9 @@ export function finish_job(ctx: Ctx, sender: Identity, request_id: string,
   return handle(ctx, sender, 'finish_job', request_id, ['*'], c => {
     const j = ctx.db.job.id.find(job_id);
     if (!j) return invalid(`job ${job_id} not found`);
-    if (j.claimed_by !== c.sender_hex) return deny(c, `job ${job_id} wasn't claimed by you`, 'job', job_id);
-    if (j.status !== 'claimed') return invalid(`job ${job_id} is '${j.status}', not claimed`);
+    if (j.claimed_by !== c.sender_hex || j.status !== 'claimed') {
+      return deny(c, 'only the claimer can finish a claimed job', 'job', job_id);
+    }
     const status = ok_ ? 'done' : 'failed';
     ctx.db.job.id.update({ ...j, status, result_json, error, updated_at: ctx.timestamp });
     audit(c, 'job', job_id, { status: j.status }, { status, result_json, error });
