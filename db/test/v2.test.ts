@@ -55,6 +55,19 @@ function firstInvoice() {
   }
 }
 
+/** §9.9: money holds clear only through a correction or the owner's decisions, never resolve_hold. Records an assessment
+ * that shows both lines disputed (version 1, fingerprint fp0) and accepts both as billed. */
+function acceptMoneyHolds() {
+  const details = JSON.stringify({ lines: [
+    { line_id: 'l1', hold_code: 'PRICE_VARIANCE', pending_cents: 0, variance_cents: 350000 },
+    { line_id: 'l2', hold_code: '', pending_cents: 0, variance_cents: 0 },
+    { line_id: 'l3', hold_code: 'USAGE_EVIDENCE_MISSING', pending_cents: 22500, variance_cents: 0 },
+  ] });
+  expectOk(run(ctx => V.record_assessment(ctx, AGENT, rid(), 'as_0', 'rev_1', 1, 'fp0', 'p', D(87425), D(83700), D(225), D(3500), D(10000), 0n, 'differences_under_review', 's', details, '')));
+  expectOk(run(ctx => V.decide_disputed_line(ctx, OWNER, rid(), 'dec_l1', 'l1', 'accept_as_billed', D(3500), 'fp0', '', 'accepted')));
+  expectOk(run(ctx => V.decide_disputed_line(ctx, OWNER, rid(), 'dec_l3', 'l3', 'accept_as_billed', D(225), 'fp0', '', 'accepted')));
+}
+
 beforeEach(() => { h = createModuleTestHarness(spacetimedb, mod); n = 0; seed(); });
 
 describe('primary scenario', () => {
@@ -124,9 +137,9 @@ describe('eligibility (§9.4)', () => {
 
   test('wrong fingerprint is refused; agent and proposer can never approve', () => {
     firstInvoice();
-    for (const id of ['h_price', 'h_wait']) expectOk(run(ctx => V.resolve_hold(ctx, OWNER, rid(), id, 'supplier agreed')));
+    acceptMoneyHolds();
     expectOk(run(ctx => V.attest_receipt(ctx, RECV, rid(), 'a1', 'inv_1', 'all', YD(500), 'cy', 'ok')));
-    expectOk(run(ctx => V.record_assessment(ctx, AGENT, rid(), 'as_1', 'rev_1', 1, 'fp1', 'p', 0n, 0n, 0n, 0n, 0n, D(77425), 'matches', 's', '{}', '')));
+    expectOk(run(ctx => V.record_assessment(ctx, AGENT, rid(), 'as_1', 'rev_1', 2, 'fp1', 'p', 0n, 0n, 0n, 0n, 0n, D(77425), 'matches', 's', '{}', '')));
     expectOk(run(ctx => V.propose_supplier_payment(ctx, AGENT, rid(), 'pp', 'inv_1', 'rev_1', 'as_1', D(77425), 0n, 'sup_baymix:v1')));
     expect(run(ctx => V.approve_supplier_payment(ctx, AGENT, rid(), 'pp', 'fp1', '')).outcome).toBe('denied');
     expect(run(ctx => L.decide_proposal(ctx, OWNER, rid(), 'pp', true, '')).outcome).toBe('denied');
@@ -140,16 +153,16 @@ describe('eligibility (§9.4)', () => {
 describe('stale approvals', () => {
   function approved() {
     firstInvoice();
-    for (const id of ['h_price', 'h_wait']) run(ctx => V.resolve_hold(ctx, OWNER, rid(), id, 'agreed'));
+    acceptMoneyHolds();
     run(ctx => V.attest_receipt(ctx, RECV, rid(), 'a1', 'inv_1', 'all', YD(500), 'cy', 'ok'));
-    run(ctx => V.record_assessment(ctx, AGENT, rid(), 'as_1', 'rev_1', 1, 'fp1', 'p', 0n, 0n, 0n, 0n, 0n, D(77425), 'matches', 's', '{}', ''));
+    run(ctx => V.record_assessment(ctx, AGENT, rid(), 'as_1', 'rev_1', 2, 'fp1', 'p', 0n, 0n, 0n, 0n, 0n, D(77425), 'matches', 's', '{}', ''));
     run(ctx => V.propose_supplier_payment(ctx, AGENT, rid(), 'pp', 'inv_1', 'rev_1', 'as_1', D(77425), 0n, 'sup_baymix:v1'));
     expectOk(run(ctx => V.approve_supplier_payment(ctx, OWNER, rid(), 'pp', 'fp1', '')));
   }
 
   test('a new assessment fingerprint makes the approval stale and start_payment refuses', () => {
     approved();
-    expectOk(run(ctx => V.record_assessment(ctx, AGENT, rid(), 'as_2', 'rev_1', 2, 'fp2', 'p', 0n, 0n, 0n, 0n, 0n, D(77425), 'matches', 's', '{}', '')));
+    expectOk(run(ctx => V.record_assessment(ctx, AGENT, rid(), 'as_2', 'rev_1', 3, 'fp2', 'p', 0n, 0n, 0n, 0n, 0n, D(77425), 'matches', 's', '{}', '')));
     expect(find('payment_approval', 'appr_pp').status).toBe('stale');
     expect(find('invoice', 'inv_1').approval_status).toBe('stale');
     expect(run(ctx => L.start_payment(ctx, GATEWAY, rid(), 'pp')).outcome).toBe('denied');
@@ -182,10 +195,14 @@ describe('holds (§9.3)', () => {
     expect(r.outcome).toBe('denied');
     expect(r.message).toContain('receiver attesting receipt');
   });
-  test('resolving one hold leaves the others open', () => {
+  test('resolving one hold leaves the others open; a money hold is never resolved by hand', () => {
     firstInvoice();
-    expectOk(run(ctx => V.resolve_hold(ctx, OWNER, rid(), 'h_price', 'supplier agreed to $165')));
-    expect(openHoldCodes('rev_1')).toEqual(['RECEIPT_NOT_VERIFIED', 'USAGE_EVIDENCE_MISSING']);
+    expectOk(run(ctx => V.open_hold(ctx, AGENT, rid(), 'h_dup', 'rev_1', 'DUPLICATE_REVIEW', 0n, 'looks like BM-1041', '[]')));
+    expectOk(run(ctx => V.resolve_hold(ctx, OWNER, rid(), 'h_dup', 'a different pour')));
+    expect(openHoldCodes('rev_1')).toEqual(['PRICE_VARIANCE', 'RECEIPT_NOT_VERIFIED', 'USAGE_EVIDENCE_MISSING']);
+    const r = run(ctx => V.resolve_hold(ctx, OWNER, rid(), 'h_price', 'supplier agreed to $165'));
+    expect(r.outcome).toBe('denied');
+    expect(r.message).toContain('deciding each disputed line');
   });
   test('partial receipt does not clear the hold', () => {
     firstInvoice();

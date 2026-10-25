@@ -279,3 +279,10 @@ export const reject_supplier_payment = spacetimedb.reducer(
 export const record_deposit_allocation = spacetimedb.reducer(
   { request_id: s(), id: s(), deposit_id: s(), invoice_id: s(), amount_cents: t.i64() },
   (ctx, a) => { V.record_deposit_allocation(ctx, ctx.sender, a.request_id, a.id, a.deposit_id, a.invoice_id, a.amount_cents); });
+
+// ---- 9.9 Settlement decisions on disputed lines ----
+export const decide_disputed_line = spacetimedb.reducer(
+  { request_id: s(), id: s(), invoice_line_id: s(), decision: s(), amount_cents: t.i64(), expected_fingerprint: s(),
+    to_contact_id: s(), note: s() },
+  (ctx, a) => { V.decide_disputed_line(ctx, ctx.sender, a.request_id, a.id, a.invoice_line_id, a.decision, a.amount_cents,
+    a.expected_fingerprint, a.to_contact_id, a.note); });

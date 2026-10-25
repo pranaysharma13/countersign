@@ -67,4 +67,5 @@ export const REDUCER_ARGS: Record<string, string[]> = {
   approve_supplier_payment: ["request_id", "proposal_id", "expected_fingerprint", "note"],
   reject_supplier_payment: ["request_id", "proposal_id", "note"],
   record_deposit_allocation: ["request_id", "id", "deposit_id", "invoice_id", "amount_cents"],
+  decide_disputed_line: ["request_id", "id", "invoice_line_id", "decision", "amount_cents", "expected_fingerprint", "to_contact_id", "note"],
 };
