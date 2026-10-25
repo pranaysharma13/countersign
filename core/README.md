@@ -83,5 +83,5 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 
 - Steps B–E: intake jobs and worker retries/leases, live Claude extraction (strict schema), outbox, version-bound approval and settlement, audit export.
 - Variants: scoped amendment, fuel surcharge (Apify diesel index), supplier risk (CRS), prompt injection on supplier documents, judge page.
-- Reassessment after an owner resolves a commercial hold by hand: the assessment still reports the variance; how that becomes payable is decided in step B/E.
+- Settlement decisions on disputed lines (`decide_disputed_line`, CONTRACT v2.2 proposal on `docs/contract-v2.2`): built after step B's core works. Until then, money holds clear only through a corrected invoice.
 - CRS business-report mapping and the Apify Actors are still to come (`integrations/`).
