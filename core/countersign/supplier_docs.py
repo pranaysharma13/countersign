@@ -8,6 +8,7 @@ PDFs are rendered with reportlab's invariant mode, so the bytes and SHA-256 are 
 
 from __future__ import annotations
 
+import io
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -78,7 +79,13 @@ def email_body(doc: SourceDoc) -> str:
 
 def render_pdf(doc: SourceDoc, path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    c = canvas.Canvas(str(path), pagesize=letter, invariant=1)
+    path.write_bytes(pdf_bytes(doc))
+    return path
+
+
+def pdf_bytes(doc: SourceDoc) -> bytes:
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=letter, invariant=1)
     c.setTitle(doc.filename.removesuffix(".pdf").replace("_", " "))
     for page_no, lines in enumerate(doc.pages, start=1):
         y = H - 0.9 * inch
@@ -94,7 +101,11 @@ def render_pdf(doc: SourceDoc, path: Path) -> Path:
         c.drawRightString(W - 0.75 * inch, 0.5 * inch, f"Page {page_no} of {len(doc.pages)}")
         c.showPage()
     c.save()
-    return path
+    return buf.getvalue()
+
+
+def file_bytes(doc: SourceDoc) -> bytes:
+    return render_eml(doc) if doc.email else pdf_bytes(doc)
 
 
 def render_eml(doc: SourceDoc) -> bytes:
@@ -113,11 +124,9 @@ def render_eml(doc: SourceDoc) -> bytes:
 
 def write(doc: SourceDoc, out_dir: Path) -> Path:
     path = out_dir / doc.filename
-    if doc.email:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(render_eml(doc))
-        return path
-    return render_pdf(doc, path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(file_bytes(doc))
+    return path
 
 
 def write_all(docs: tuple[SourceDoc, ...], out_dir: Path) -> dict[str, Path]:

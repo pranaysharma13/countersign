@@ -1,4 +1,4 @@
-"""In-memory reference implementation of the SpacetimeDB module (docs/CONTRACT.md v1).
+"""In-memory reference implementation of the SpacetimeDB module (docs/CONTRACT.md v2.1).
 
 Used for Python tests and for running the pipeline before the real module is up
 (STORE_BACKEND=fake). It also documents, in runnable form, what the TypeScript
@@ -15,10 +15,32 @@ import json
 import time
 from typing import Any, Callable
 
+from .ids import hold_id
+from .money import extend_up, fmt
 from .store import Result, StoreError, dumps
 
+ROLES = {"admin", "owner", "bookkeeper", "agent", "gateway", "sync", "purchasing", "receiver"}
 HARD_STOP_CHECKS = {"bank_mismatch", "quiet_bank_edit", "license", "crs_identity"}
 AGENT_STATE_TARGETS = {"reading", "investigating", "needs_info", "failed"}
+
+# v2 (CONTRACT §9)
+DOCUMENT_KINDS = {"quote", "terms", "po", "invoice", "email", "other"}
+DOC_STATUS_AFTER_RUN = {"ok": "validated", "invalid": "needs_review", "failed": "failed"}
+TERM_CODES = {"unit_price", "max_quantity", "valid_through", "deposit", "payment_terms", "price_change_rule",
+              "extra_charge_rule", "fuel_surcharge_rule"}
+CHANGE_KINDS = {"extra_charge", "price_change", "quantity_change"}
+AUTHORISED = {"AUTHORISED_FIXED", "AUTHORISED_RATE_USAGE_MISSING"}
+CLASSIFICATIONS = AUTHORISED | {"PROPOSED", "DECLINED", "AMBIGUOUS", "UNRELATED"}
+SUPPLIER_ACCEPTANCE = {"none", "proposed", "accepted", "declined"}
+
+
+def _classify(cr: dict[str, Any]) -> str:
+    """The stored classification follows the decision records; only they can make a change authorised."""
+    if cr["internal_status"] == "rejected" or cr["supplier_acceptance"] == "declined":
+        return "DECLINED"
+    if cr["internal_status"] == "approved" and cr["supplier_acceptance"] == "accepted":
+        return "AUTHORISED_RATE_USAGE_MISSING" if cr["kind"] == "extra_charge" and cr["rate_cents"] else "AUTHORISED_FIXED"
+    return "PROPOSED" if cr["classification"] in AUTHORISED else cr["classification"]
 
 JOB_KINDS: dict[str, tuple[set[str] | None, str]] = {
     # kind: (who may enqueue (None = anyone), assignee)
@@ -91,6 +113,21 @@ ALLOWED: dict[str, set[str] | None] = {
     "post_chat_answer": {"agent"},
     "record_score_run": {"sync"},
     "record_score_case": {"sync"},
+    # v2 (CONTRACT §9.4)
+    "set_authority": {"admin"},
+    "upsert_supplier": {"sync", "admin"},
+    "upsert_supplier_contact": {"sync", "admin"},
+    "add_payee_profile": {"sync", "agent", "admin"},
+    "record_document": {"sync"},
+    "add_fragment": {"sync", "agent"},
+    "record_email": {"sync"},
+    "record_extraction_run": {"agent"},
+    "upsert_purchase": {"sync", "agent"},
+    "record_term": {"sync", "agent"},
+    "record_deposit": {"sync", "gateway"},
+    "propose_change_request": {"agent", "sync", "purchasing"},
+    "record_supplier_acceptance": {"agent", "sync"},
+    "decide_change_request": {"purchasing", "owner"},
 }
 
 AUTO_INC = {"audit_log", "agent_step", "ledger_line"}
@@ -145,7 +182,7 @@ class FakeStore:
         handler: Callable[..., tuple[str, str] | None] | None = getattr(self, f"_r_{reducer}", None)
         if handler is None:
             raise StoreError(f"unknown reducer {reducer}")
-        caller = role if role in {"admin", "owner", "bookkeeper", "agent", "gateway", "sync"} else "public"
+        caller = role if role in ROLES else "public"
         allowed = ALLOWED.get(reducer)
         if allowed is not None and caller not in allowed:
             msg = f"role '{caller}' may not call {reducer}"
@@ -181,6 +218,72 @@ class FakeStore:
         if not cond:
             raise Invalid(msg)
 
+    @staticmethod
+    def _json_obj(raw: str, name: str) -> dict[str, Any]:
+        try:
+            value = json.loads(raw or "{}")
+        except json.JSONDecodeError as e:
+            raise Invalid(f"{name}: {e}") from e
+        if not isinstance(value, dict):
+            raise Invalid(f"{name} must be a JSON object")
+        return value
+
+    def _need_fragments(self, ids_json: str, required: bool) -> list[str]:
+        try:
+            ids = json.loads(ids_json or "[]")
+        except json.JSONDecodeError as e:
+            raise Invalid(f"fragment ids: {e}") from e
+        self._need(isinstance(ids, list) and all(isinstance(i, str) for i in ids), "fragment ids must be a JSON list of strings")
+        self._need(bool(ids) or not required, "at least one source fragment is required")
+        missing = [i for i in ids if self._get("source_fragment", i) is None]
+        self._need(not missing, f"unknown source fragment(s): {', '.join(missing)}")
+        return ids
+
+    def _module_hold(self, rid: str, role: str, action: str, revision_id: str, code: str, amount_cents: int,
+                     reason: str, evidence: Any) -> None:
+        """A hold the module opens itself (CONTRACT §9.8 id convention). Reopens it if it was closed."""
+        hid = hold_id(revision_id, code)
+        existing = self._get("hold", hid)
+        if existing and existing["status"] == "open":
+            return
+        self._upsert(rid, role, action, "hold", dict(
+            id=hid, revision_id=revision_id, code=code, status="open", amount_cents=amount_cents, reason=reason,
+            evidence_json=evidence if isinstance(evidence, str) else dumps(evidence), opened_by_role=role,
+            resolved_by_role="", resolution_note="", created_at=_now(), resolved_at_iso=""))
+
+    def _open_invoices(self, supplier_id: str) -> list[dict[str, Any]]:
+        return [i for i in self._t("invoice").values() if i["supplier_id"] == supplier_id and i["payment_status"] != "settled"]
+
+    def _active_material_milli(self, invoice: dict[str, Any], unit: str) -> int:
+        return sum(int(l["quantity_milli"]) for l in self._t("invoice_line").values()
+                   if l["revision_id"] == invoice["active_revision_id"] and l["kind"] == "material" and l["unit"] == unit)
+
+    def _remaining_ceiling(self, purchase: dict[str, Any]) -> int | None:
+        terms = [t for t in self._t("term").values()
+                 if t["purchase_id"] == purchase["id"] and t["code"] == "max_quantity" and t["status"] == "accepted"]
+        if not terms:
+            return None
+        ceiling = int(max(terms, key=lambda t: t["version"])["quantity_milli"])
+        billed = sum(self._active_material_milli(inv, purchase["unit"]) for inv in self._t("invoice").values()
+                     if inv["purchase_id"] == purchase["id"])
+        return max(ceiling - billed, 0)
+
+    def _exposure(self, cr: dict[str, Any], purchase: dict[str, Any]) -> tuple[int | None, str]:
+        """Money an approval commits (CONTRACT §9.8.1). None = can't be sized, so it can't be approved."""
+        fixed = int(cr["amount_cents"])
+        if not cr["rate_cents"]:
+            return fixed, ""
+        scope = json.loads(cr["scope_json"] or "{}")
+        unit = scope.get("unit") or purchase["unit"]
+        if unit != cr["rate_unit"]:
+            return None, f"the rate is per {cr['rate_unit']} but the quantity is in {unit}"
+        qty = scope.get("quantity_milli")
+        if qty is None:
+            qty = self._remaining_ceiling(purchase)  # worst case: the rest of the PO
+            if qty is None:
+                return None, "no scoped quantity and no accepted max_quantity term"
+        return fixed + extend_up(int(qty), int(cr["rate_cents"])), ""
+
     def _enqueue(self, rid: str, role: str, job_id: str, kind: str, payload: Any) -> None:
         assignee = JOB_KINDS[kind][1]
         self._upsert(rid, role, "enqueue_job", "job", {
@@ -202,7 +305,7 @@ class FakeStore:
         return None
 
     def _r_register_actor(self, rid: str, role: str, identity_hex: str, new_role: str, display_name: str) -> None:
-        self._need(new_role in {"owner", "bookkeeper", "agent", "gateway", "sync"}, f"bad role {new_role}")
+        self._need(new_role in ROLES - {"admin"}, f"bad role {new_role}")
         self._put("actor", {"identity": identity_hex, "role": new_role, "display_name": display_name, "created_at": _now()}, "identity")
 
     # ------------------------------------------------------------------ 4.2 records
@@ -299,7 +402,7 @@ class FakeStore:
 
     # ------------------------------------------------------------------ 4.3 work
     def _r_create_work_item(self, rid, role, id, kind, entity_id, origin, summary):
-        self._need(kind in {"bill", "bank_change", "contract_onboarding"}, "bad kind")
+        self._need(kind in {"bill", "bank_change", "contract_onboarding", "supplier_invoice"}, "bad kind")
         if self._get("work_item", id):
             return ("duplicate", "work item exists")
         self._upsert(rid, role, "create_work_item", "work_item", dict(
@@ -534,3 +637,200 @@ class FakeStore:
         self._upsert(rid, role, "record_score_case", "score_case", dict(
             id=id, run_id=run_id, attack_type=attack_type, expected=expected, actual=actual, correct=correct,
             amount_cents=amount_cents, work_item_id=work_item_id))
+
+    # ------------------------------------------------------------------ 9.4 setup and records
+    def _r_set_authority(self, rid, role, identity_hex, auth_role, limit_cents, project_scope):
+        self._need(auth_role in ROLES - {"admin"}, f"bad role {auth_role}")
+        self._need(isinstance(limit_cents, int) and limit_cents >= 0, "limit_cents must be integer cents >= 0")
+        self._need(bool(project_scope), "project_scope is '*' or a project id")
+        before = copy.deepcopy(self._get("authority", identity_hex))
+        row = self._put("authority", dict(identity=identity_hex, role=auth_role, limit_cents=limit_cents,
+                                          project_scope=project_scope), "identity")
+        self._audit(rid, role, "set_authority", "authority", identity_hex, "ok", "", before, row)
+
+    def _r_upsert_supplier(self, rid, role, id, name, email_domain, phone_on_file, crs_ref, status):
+        self._need(status in {"active", "on_hold", "blocked"}, "bad status")
+        existing = self._get("supplier", id)
+        self._upsert(rid, role, "upsert_supplier", "supplier", dict(
+            id=id, name=name, email_domain=email_domain.lower(), phone_on_file=phone_on_file, crs_ref=crs_ref,
+            status=status, created_at=(existing or {}).get("created_at", _now())))
+
+    def _r_upsert_supplier_contact(self, rid, role, id, supplier_id, name, email, phone, title, pre_established):
+        self._need(self._get("supplier", supplier_id) is not None, "unknown supplier")
+        existing = self._get("supplier_contact", id)
+        if existing is not None:
+            if pre_established and not existing["pre_established"]:
+                raise Denied("a contact can only be pre-established when it is first set up", "supplier_contact", id)
+            if existing["pre_established"] and (existing["email"], existing["phone"]) != (email.lower(), phone):
+                raise Denied("a pre-established contact's email and phone can't change: payee changes are verified "
+                             "through them", "supplier_contact", id)
+        self._upsert(rid, role, "upsert_supplier_contact", "supplier_contact", dict(
+            id=id, supplier_id=supplier_id, name=name, email=email.lower(), phone=phone, title=title,
+            pre_established=bool(pre_established)))
+
+    def _r_add_payee_profile(self, rid, role, id, supplier_id, version, account_ref, last4, bank_name, requested_via):
+        self._need(self._get("supplier", supplier_id) is not None, "unknown supplier")
+        self._need(id == f"{supplier_id}:v{version}", "payee profile id must be <supplier_id>:v<version>")
+        self._need(requested_via in {"seed", "email", "portal"}, "bad requested_via")
+        self._need(len(last4) == 4 and last4.isdigit(), "last4 must be 4 digits")
+        fields = dict(supplier_id=supplier_id, version=version, account_ref=account_ref, last4=last4,
+                      bank_name=bank_name, requested_via=requested_via)
+        existing = self._get("payee_profile", id)
+        if existing is not None:
+            if all(existing[k] == v for k, v in fields.items()):
+                return ("duplicate", "payee profile exists")
+            raise Denied("payee profiles are immutable; add a new version", "payee_profile", id)
+        seeded = role == "admin" and requested_via == "seed"
+        if seeded and self.rows("payee_profile", supplier_id=supplier_id, status="verified"):
+            raise Invalid("supplier already has a verified payee profile")
+        self._upsert(rid, role, "add_payee_profile", "payee_profile", dict(
+            id=id, **fields, status="verified" if seeded else "pending", verified_by_role="admin" if seeded else "",
+            verified_via_contact_id="", created_at=_now()))
+        if not seeded:
+            for inv in self._open_invoices(supplier_id):
+                self._update(rid, role, "add_payee_profile", "invoice", inv["id"],
+                             {"payee_status": "change_pending", "updated_at": _now()})
+                if inv["active_revision_id"]:
+                    self._module_hold(rid, role, "add_payee_profile", inv["active_revision_id"], "PAYEE_CHANGE_PENDING", 0,
+                                      f"New payee account ending {last4} requested via {requested_via}. Verify it by "
+                                      "calling a contact already on file.", {"payee_profile_id": id})
+        return None
+
+    def _r_record_document(self, rid, role, id, kind, source_file_id, sha256, filename, pages):
+        self._need(kind in DOCUMENT_KINDS, f"bad document kind {kind}")
+        self._need(len(sha256) == 64, "sha256 must be 64 hex characters")
+        existing = self._get("document", id)
+        if existing is not None:
+            if existing["sha256"] == sha256:
+                return ("duplicate", "document exists")
+            raise Denied("a document's bytes can't change; record a new document", "document", id)
+        self._upsert(rid, role, "record_document", "document", dict(
+            id=id, kind=kind, source_file_id=source_file_id, sha256=sha256, filename=filename, pages=pages,
+            status="received", created_at=_now()))
+        return None
+
+    def _r_add_fragment(self, rid, role, id, document_id, page, email_message_id, line_start, line_end, text):
+        existing = self._get("source_fragment", id)
+        if existing is not None:
+            if existing["text"] == text:
+                return ("duplicate", "fragment exists")
+            raise Denied("source fragments are immutable", "source_fragment", id)
+        self._need(self._get("document", document_id) is not None, "unknown document")
+        self._need(bool(text.strip()), "fragment text is empty")
+        self._need(0 <= line_start <= line_end, "bad line range")
+        self._upsert(rid, role, "add_fragment", "source_fragment", dict(
+            id=id, document_id=document_id, page=page, email_message_id=email_message_id, line_start=line_start,
+            line_end=line_end, text=text, created_at=_now()))
+        return None
+
+    def _r_record_email(self, rid, role, id, thread_id, document_id, from_address, to_addresses, subject,
+                        original_sent_at_iso, ingested_at_iso, body_fragment_id):
+        self._need(self._get("document", document_id) is not None, "unknown document")
+        self._need(not body_fragment_id or self._get("source_fragment", body_fragment_id) is not None, "unknown body fragment")
+        known = any(c["email"] == from_address.strip().lower() for c in self._t("supplier_contact").values())
+        self._upsert(rid, role, "record_email", "email_message", dict(
+            id=id, thread_id=thread_id, document_id=document_id, from_address=from_address, to_addresses=to_addresses,
+            subject=subject, original_sent_at_iso=original_sent_at_iso, ingested_at_iso=ingested_at_iso,
+            body_fragment_id=body_fragment_id, from_known_contact=known))
+
+    def _r_record_extraction_run(self, rid, role, id, document_id, mode, model, prompt_version, status, error, fields_json):
+        self._need(self._get("document", document_id) is not None, "unknown document")
+        self._need(mode in {"live", "fixture"}, "mode must be live or fixture")
+        self._need(status in DOC_STATUS_AFTER_RUN, "bad extraction status")
+        self._upsert(rid, role, "record_extraction_run", "extraction_run", dict(
+            id=id, document_id=document_id, mode=mode, model=model, prompt_version=prompt_version, status=status,
+            error=error, fields_json=fields_json, created_at=_now()))
+        self._update(rid, role, "record_extraction_run", "document", document_id, {"status": DOC_STATUS_AFTER_RUN[status]})
+
+    def _r_upsert_purchase(self, rid, role, id, supplier_id, project_id, description, unit, po_number,
+                           quote_document_id, po_document_id, status):
+        self._need(self._get("supplier", supplier_id) is not None, "unknown supplier")
+        self._need(self._get("project", project_id) is not None, "unknown project")
+        self._need(status in {"open", "contract_review", "closed"}, "bad status")
+        self._need(bool(unit), "unit is required")
+        existing = self._get("purchase", id)
+        self._upsert(rid, role, "upsert_purchase", "purchase", dict(
+            id=id, supplier_id=supplier_id, project_id=project_id, description=description, unit=unit, currency="USD",
+            po_number=po_number, quote_document_id=quote_document_id, po_document_id=po_document_id, status=status,
+            created_at=(existing or {}).get("created_at", _now())))
+
+    def _r_record_term(self, rid, role, id, purchase_id, code, label, amount_cents, quantity_milli, text, scope_json,
+                       effective_from, effective_to, status, source_fragment_ids_json, version):
+        self._need(self._get("purchase", purchase_id) is not None, "unknown purchase")
+        self._need(code in TERM_CODES, f"bad term code {code}")
+        self._need(status in {"accepted", "proposed", "declined", "superseded"}, "bad term status")
+        self._need(isinstance(amount_cents, int) and isinstance(quantity_milli, int),
+                   "money is integer cents and quantities integer thousandths")
+        self._json_obj(scope_json, "scope_json")
+        self._need_fragments(source_fragment_ids_json, required=True)
+        self._upsert(rid, role, "record_term", "term", dict(
+            id=id, purchase_id=purchase_id, code=code, label=label, amount_cents=amount_cents,
+            quantity_milli=quantity_milli, text=text, scope_json=scope_json, effective_from=effective_from,
+            effective_to=effective_to, status=status, source_fragment_ids_json=source_fragment_ids_json, version=version))
+
+    def _r_record_deposit(self, rid, role, id, purchase_id, supplier_id, amount_cents, status, transfer_ref):
+        p = self._get("purchase", purchase_id)
+        self._need(p is not None and p["supplier_id"] == supplier_id, "unknown purchase for this supplier")
+        self._need(status in {"approved", "settled"}, "bad deposit status")
+        self._need(isinstance(amount_cents, int) and amount_cents > 0, "amount must be positive integer cents")
+        existing = self._get("deposit", id)
+        if existing is not None and existing["amount_cents"] != amount_cents:
+            raise Denied("a deposit's amount can't change", "deposit", id)
+        self._upsert(rid, role, "record_deposit", "deposit", dict(
+            id=id, purchase_id=purchase_id, supplier_id=supplier_id, amount_cents=amount_cents, status=status,
+            transfer_ref=transfer_ref, approved_by_role=role, created_at=(existing or {}).get("created_at", _now())))
+
+    # ------------------------------------------------------------------ 9.4 amendments
+    def _r_propose_change_request(self, rid, role, id, purchase_id, kind, description, amount_cents, rate_cents,
+                                  rate_unit, scope_json, effective_from, original_sent_at_iso, ingested_at_iso,
+                                  classification, supplier_acceptance, source_fragment_ids_json):
+        self._need(self._get("purchase", purchase_id) is not None, "unknown purchase")
+        self._need(kind in CHANGE_KINDS, f"bad change kind {kind}")
+        self._need(classification in CLASSIFICATIONS - AUTHORISED,
+                   "a new change request can't be authorised; only the in-app decision and supplier acceptance make it so")
+        self._need(supplier_acceptance in SUPPLIER_ACCEPTANCE, "bad supplier_acceptance")
+        self._need(isinstance(amount_cents, int) and isinstance(rate_cents, int) and amount_cents >= 0 and rate_cents >= 0,
+                   "amounts must be non-negative integer cents")
+        self._need(not rate_cents or bool(rate_unit), "a rate needs a unit")
+        self._json_obj(scope_json, "scope_json")
+        self._need_fragments(source_fragment_ids_json, required=role != "purchasing")
+        if self._get("change_request", id):
+            return ("duplicate", "change request exists")
+        self._upsert(rid, role, "propose_change_request", "change_request", dict(
+            id=id, purchase_id=purchase_id, kind=kind, description=description, amount_cents=amount_cents,
+            rate_cents=rate_cents, rate_unit=rate_unit, scope_json=scope_json, effective_from=effective_from,
+            original_sent_at_iso=original_sent_at_iso, ingested_at_iso=ingested_at_iso, classification=classification,
+            supplier_acceptance=supplier_acceptance, supplier_acceptance_fragment_ids_json="[]",
+            requested_by_identity=role, internal_status="pending", decided_by_identity="", decided_by_role="",
+            decision_note="", source_fragment_ids_json=source_fragment_ids_json, created_at=_now()))
+        return None
+
+    def _r_record_supplier_acceptance(self, rid, role, change_request_id, supplier_acceptance, fragment_ids_json):
+        cr = self._get("change_request", change_request_id)
+        self._need(cr is not None, "unknown change request")
+        self._need(supplier_acceptance in SUPPLIER_ACCEPTANCE, "bad supplier_acceptance")
+        ids = self._need_fragments(fragment_ids_json, required=supplier_acceptance in {"accepted", "declined"})
+        changes: dict[str, Any] = {"supplier_acceptance": supplier_acceptance, "supplier_acceptance_fragment_ids_json": dumps(ids)}
+        changes["classification"] = _classify({**cr, **changes})
+        self._update(rid, role, "record_supplier_acceptance", "change_request", change_request_id, changes)
+
+    def _r_decide_change_request(self, rid, role, id, approve, note):
+        cr = self._get("change_request", id)
+        self._need(cr is not None, "unknown change request")
+        self._need(cr["internal_status"] == "pending", f"change request is already {cr['internal_status']}")
+        if cr["requested_by_identity"] == role:
+            raise Denied("can't decide a change you requested", "change_request", id)
+        purchase = self._get("purchase", cr["purchase_id"])
+        auth = self._get("authority", role) or {"limit_cents": 0, "project_scope": ""}
+        if auth["project_scope"] not in {"*", purchase["project_id"]}:
+            raise Denied(f"no purchasing authority on {purchase['project_id']}", "change_request", id)
+        if approve:
+            exposure, why = self._exposure(cr, purchase)
+            if exposure is None:
+                raise Denied(f"can't size this change ({why}); scope it to a quantity first", "change_request", id)
+            if exposure > auth["limit_cents"] or auth["limit_cents"] == 0:
+                raise Denied(f"{fmt(exposure)} is above your approval limit of {fmt(auth['limit_cents'])}", "change_request", id)
+        changes: dict[str, Any] = {"internal_status": "approved" if approve else "rejected", "decided_by_identity": role,
+                                   "decided_by_role": role, "decision_note": note}
+        changes["classification"] = _classify({**cr, **changes})
+        self._update(rid, role, "decide_change_request", "change_request", id, changes, note)
