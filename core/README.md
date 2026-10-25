@@ -50,6 +50,10 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 
 **Measured** (`scripts/check_extraction.py`, 2026-10-25, `claude-opus-5-5`, effort medium, no fallback): 27/27 labelled fields correct; all exact values reproduced ($87,425 claimed, $83,700 authorised, $3,500 variance, $225 pending; corrected $83,700, $73,700 proposed, no holds after receipt). Claude time per document: emails 3–7 s, PO 11 s, quote and invoices 19–22 s (classify about 3 s of that). One run; numbers will vary.
 
+## Gmail intake (`POST /intake`)
+
+The web app's Import button sends one Gmail message (`format=raw`) to `POST /intake` (header `X-Countersign-Intake: 1`, so no other page in the browser can post here). `intake.ingest_mail` records, as the sync role, the email's text as one document (an HTML-only body is turned into text locally; links and images are never fetched) and each `application/pdf` attachment as its own document, 15 MB each; other attachments are listed as skipped. A known fixture is recognised by its bytes, so BayMix's revision 2 PDF forwarded from Gmail is read exactly like the fixture. The job payload carries `{"source": "gmail", "gmail_message_id": ...}` for the "From Gmail" label. Same message twice: nothing new is recorded. Tests: `tests/test_mail_intake.py`.
+
 ## Payment and settlement (step E, done)
 
 1. **Proposal from the assessment** (`supplier_pipeline.propose_payment`): whenever a recorded assessment proposes more than $0 and the supplier has a verified payee, the agent proposes exactly that amount, with the deposit it applies, to the verified account. One proposal per assessment; the module denies any other amount and cancels older pending ones.

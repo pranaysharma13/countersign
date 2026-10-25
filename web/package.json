@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -p 3001",
     "typecheck": "tsc --noEmit",
+    "check:gmail": "node scripts/check-gmail-env.mjs",
     "predev": "npm --prefix ../db run build:local",
     "prebuild": "npm --prefix ../db run build:local"
   },

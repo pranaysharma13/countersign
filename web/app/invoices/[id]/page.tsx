@@ -6,10 +6,11 @@ import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, assessmentL
 import { StatusStrip, Evidence, Loading, Outcome, sourceOf } from '@/components/parts';
 import { Papers } from '@/components/Stationery';
 import { auditHref } from '@/lib/files';
+import { fromGmail } from '@/lib/mail';
 
 const TABLES = ['invoice', 'invoice_revision', 'invoice_line', 'assessment', 'hold', 'supplier', 'supplier_contact', 'purchase',
   'project', 'document', 'source_file', 'source_fragment', 'email_message', 'outbox', 'agent_step', 'audit_log', 'receipt_attestation',
-  'change_request', 'proposal', 'settlement_decision'];
+  'change_request', 'proposal', 'settlement_decision', 'job'];
 const ACTION_WORDS: Record<string, string> = {
   record_invoice: 'recorded the invoice', record_invoice_revision: 'recorded a revision', record_invoice_line: 'recorded a line',
   set_work_item_state: 'updated the case', open_hold: 'opened a hold', resolve_hold: 'cleared a hold', record_assessment: 'assessed the invoice',
@@ -72,7 +73,7 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
           {assessment && <Ledger a={assessment} holds={holds} t={t} invoiceId={id} />}
           <Holds holds={holds} inv={inv} pur={pur} t={t} />
           <DisputedLines inv={inv} a={assessment} t={t} />
-          <Revisions revs={revs} active={inv.active_revision_id} />
+          <Revisions revs={revs} active={inv.active_revision_id} t={t} />
         </div>
         <div className="stack">
           <Clarifications inv={inv} t={t} mode={mode} />
@@ -359,7 +360,7 @@ function Why({ invoiceId, lineId, t }: { invoiceId: string; lineId: string; t: T
   );
 }
 
-function Revisions({ revs, active }: { revs: Row[]; active: string }) {
+function Revisions({ revs, active, t }: { revs: Row[]; active: string; t: Tables }) {
   if (revs.length < 2) return null;
   return (
     <section className="sheet pad" aria-labelledby="revs">
@@ -368,7 +369,7 @@ function Revisions({ revs, active }: { revs: Row[]; active: string }) {
       <table>
         <thead><tr><th>Revision</th><th className="num">Gross</th><th className="num">Balance requested</th><th>Status</th></tr></thead>
         <tbody>{revs.map(r => (
-          <tr key={r.id}><td>{r.revision}{r.id === active ? ' (active)' : ''}</td><td className="num">{money(r.gross_cents)}</td>
+          <tr key={r.id}><td>{r.revision}{r.id === active ? ' (active)' : ''}{fromGmail(t, r.document_id) && <> <span className="chip idle">From Gmail</span></>}</td><td className="num">{money(r.gross_cents)}</td>
             <td className="num">{money(r.balance_requested_cents)}</td>
             <td>{r.status === 'active' ? <span className="st ok">Active</span> : <span className="st idle">Superseded, kept on record</span>}</td></tr>
         ))}</tbody>
@@ -427,7 +428,7 @@ function Thread({ inv, sup, pur, t }: { inv: Row; sup?: Row; pur?: Row; t: Table
         return (
           <div key={m.id} className="mail">
             <div className="meta"><span>{m.from_address}{m.from_address.endsWith('@marlowfinch.example') ? ' (our team)' : m.from_known_contact ? '' : ' (not a contact on file)'}</span><span>{day(m.original_sent_at_iso)}</span></div>
-            <strong className="small">{m.subject}</strong>
+            <strong className="small">{m.subject}</strong>{fromGmail(t, m.document_id) && <> <span className="chip idle">From Gmail</span></>}
             <p className="small">{frag?.text}</p>
           </div>
         );
