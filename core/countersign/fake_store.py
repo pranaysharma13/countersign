@@ -166,6 +166,10 @@ ALLOWED: dict[str, set[str] | None] = {
     "draft_outbox": {"agent"},
     "approve_outbox": {"purchasing", "owner"},
     "mark_outbox": {"sync"},
+    "propose_supplier_payment": {"agent"},
+    "approve_supplier_payment": {"owner"},
+    "reject_supplier_payment": {"owner"},
+    "record_deposit_allocation": {"gateway"},
 }
 
 AUTO_INC = {"audit_log", "agent_step", "ledger_line"}
@@ -304,13 +308,99 @@ class FakeStore:
                     "status": "resolved", "resolved_by_role": role, "resolution_note": note,
                     "resolved_at_iso": time.strftime("%Y-%m-%dT%H:%M:%S")}, note)
 
+    def _make_stale(self, rid: str, role: str, action: str, approval_id: str, reason: str) -> None:
+        """The module's makeStale: approval stale, invoice back to the owner, APPROVAL_STALE on the active
+        revision for the approval's amount, and the approved proposal cancelled."""
+        ap = self._get("payment_approval", approval_id)
+        if ap is None or ap["status"] != "active":
+            return
+        self._update(rid, role, action, "payment_approval", approval_id, {"status": "stale", "stale_reason": reason}, reason)
+        inv = self._get("invoice", ap["invoice_id"])
+        if inv is not None:
+            self._update(rid, role, action, "invoice", inv["id"], {
+                "approval_status": "stale", "payment_status": "not_ready", "next_owner_role": "owner",
+                "next_action": "Re-approve: the approved payment is out of date", "updated_at": _now()}, reason)
+            self._module_hold(rid, role, action, inv["active_revision_id"] or ap["revision_id"], "APPROVAL_STALE",
+                              ap["amount_cents"], f"Approval is stale: {reason}", {"approval_ids": [approval_id]})
+        prop = self._get("proposal", ap["proposal_id"])
+        if prop is not None and prop["status"] == "approved":
+            self._update(rid, role, action, "proposal", prop["id"], {"status": "cancelled", "decision_note": f"approval stale: {reason}"},
+                         reason)
+
     def _stale_approvals(self, rid: str, role: str, action: str, invoice_id: str, reason: str,
                          keep: Callable[[dict[str, Any]], bool] = lambda a: False) -> None:
         for a in list(self._t("payment_approval").values()):
             if a["invoice_id"] == invoice_id and a["status"] == "active" and not keep(a):
-                self._update(rid, role, action, "payment_approval", a["id"], {"status": "stale", "stale_reason": reason}, reason)
-                self._update(rid, role, action, "invoice", invoice_id, {"approval_status": "stale", "payment_status": "not_ready",
-                                                                         "updated_at": _now()})
+                self._make_stale(rid, role, action, a["id"], reason)
+
+    # -- supplier payments (CONTRACT §9.4): the module's eligibility rules
+    @staticmethod
+    def _ref(p: dict[str, Any]) -> dict[str, Any] | None:
+        try:
+            ref = json.loads(p.get("evidence_json") or "")
+        except json.JSONDecodeError:
+            return None
+        return ref if isinstance(ref, dict) and isinstance(ref.get("invoice_id"), str) else None
+
+    def _verified_profile(self, supplier_id: str) -> dict[str, Any] | None:
+        return next(iter(self.rows("payee_profile", supplier_id=supplier_id, status="verified")), None)
+
+    def _latest_assessment(self, revision_id: str) -> dict[str, Any] | None:
+        return max(self.rows("assessment", revision_id=revision_id), key=lambda a: a["version"], default=None)
+
+    def _deposit_remaining(self, purchase_id: str) -> int:
+        total = used = 0
+        for d in self._t("deposit").values():
+            if d["purchase_id"] == purchase_id and d["status"] == "settled":
+                total += int(d["amount_cents"])
+                used += sum(int(a["amount_cents"]) for a in self._t("deposit_allocation").values() if a["deposit_id"] == d["id"])
+        return total - used
+
+    def _blocked_reasons(self, proposal_id: str, expected_fingerprint: str | None) -> list[str]:
+        """§9.4's six eligibility rules; empty = eligible."""
+        p = self._get("proposal", proposal_id)
+        ref = self._ref(p) if p else None
+        if p is None or ref is None:
+            return ["proposal not found"]
+        inv = self._get("invoice", ref["invoice_id"])
+        if inv is None:
+            return ["invoice not found"]
+        reasons = []
+        if inv["active_revision_id"] != ref["revision_id"]:
+            reasons.append("the invoice has a newer revision")
+        for h in self._t("hold").values():  # APPROVAL_STALE is what a new approval clears, so it doesn't block one
+            if h["revision_id"] == ref["revision_id"] and h["status"] == "open" and (h["code"] != "APPROVAL_STALE" or expected_fingerprint is None):
+                reasons.append(f"open hold {h['code']}: {h['reason']}")
+        if inv["receipt_status"] not in {"manually_confirmed", "not_required"}:
+            reasons.append("receipt not attested")
+        verified = self._verified_profile(inv["supplier_id"])
+        if verified is None or verified["id"] != ref["payee_profile_id"]:
+            reasons.append("payee is not the supplier's current verified account")
+        if verified is not None and p["payee_account_ref"] != verified["account_ref"]:
+            reasons.append("payee account does not match the verified profile")
+        latest = self._latest_assessment(ref["revision_id"])
+        approval = self._get("payment_approval", f"appr_{proposal_id}")
+        fp = expected_fingerprint if expected_fingerprint is not None else (approval or {}).get("assessment_fingerprint", "")
+        if latest is None or latest["fingerprint"] != fp:
+            reasons.append("the assessment has changed since this was proposed")
+        if latest is not None and latest["proposed_payment_cents"] != p["amount_cents"]:
+            reasons.append("amount differs from the latest assessment")
+        alloc = int(ref.get("deposit_allocation_cents") or 0)
+        if alloc > 0 and alloc > self._deposit_remaining(inv["purchase_id"]):
+            reasons.append("deposit allocation exceeds the remaining deposit")
+        return reasons
+
+    def _on_supplier_payment(self, rid: str, role: str, action: str, proposal_id: str, phase: str) -> None:
+        ref = self._ref(self._get("proposal", proposal_id) or {})
+        if ref is None:
+            return
+        self._update(rid, role, action, "invoice", ref["invoice_id"], {
+            "payment_status": phase, "updated_at": _now(),
+            "next_owner_role": "" if phase == "settled" else "owner" if phase == "failed" else "gateway",
+            "next_action": "Paid" if phase == "settled" else "Payment failed; review" if phase == "failed" else "Settling"})
+        ap = self._get("payment_approval", f"appr_{proposal_id}")
+        if phase == "settled" and ap is not None and ap["status"] == "active":
+            self._update(rid, role, action, "payment_approval", ap["id"], {"status": "used"})
 
     def _payee_status(self, supplier_id: str) -> str:
         if self.rows("payee_profile", supplier_id=supplier_id, status="pending"):
@@ -539,6 +629,8 @@ class FakeStore:
         self._need(p["status"] == "pending", f"proposal is {p['status']}")
         if p["proposed_by_identity"] == role:
             raise Denied("can't decide your own proposal", "proposal", proposal_id)
+        if p["kind"] == "supplier_payment":
+            raise Denied("supplier payments are approved with approve_supplier_payment", "proposal", proposal_id)
         if p["kind"] in {"payment", "hold", "bank_change"} and role != "owner":
             raise Denied("only the owner decides payments, holds and bank changes", "proposal", proposal_id)
         wi_id = p["work_item_id"]
@@ -588,8 +680,19 @@ class FakeStore:
     def _r_start_payment(self, rid, role, proposal_id):
         p = self._get("proposal", proposal_id)
         self._need(p is not None, "unknown proposal")
-        if p["status"] not in {"approved", "executing"}:
+        if p["status"] != "approved":
             raise Denied(f"proposal is {p['status']}, not approved", "proposal", proposal_id)
+        if p["kind"] == "supplier_payment":  # re-check every bound value; a mismatch makes the approval stale
+            ap = self._get("payment_approval", f"appr_{proposal_id}")
+            reasons = (["no active approval for this payment"] if ap is None or ap["status"] != "active"
+                       else self._blocked_reasons(proposal_id, ap["assessment_fingerprint"]))
+            if ap is not None and p["amount_cents"] != ap["amount_cents"]:
+                reasons.append("amount changed since approval")
+            if reasons:
+                if ap is not None:
+                    self._make_stale(rid, role, "start_payment", ap["id"], "; ".join(reasons))
+                raise Denied(json.dumps(reasons), "proposal", proposal_id)  # like the module: the stale marking stays
+            self._on_supplier_payment(rid, role, "start_payment", proposal_id, "submitted")
         self._update(rid, role, "start_payment", "proposal", proposal_id, {"status": "executing"})
         self._set_state(rid, role, "start_payment", p["work_item_id"], "paying")
 
@@ -606,6 +709,8 @@ class FakeStore:
             payee_account_ref=p["payee_account_ref"], status=status, error=error, at=_now()))
         self._update(rid, role, "record_payment", "proposal", proposal_id, {"status": "executed" if status == "sent" else "failed"})
         self._set_state(rid, role, "record_payment", p["work_item_id"], "paid" if status == "sent" else "failed", error)
+        if p["kind"] == "supplier_payment":
+            self._on_supplier_payment(rid, role, "record_payment", proposal_id, "settled" if status == "sent" else "failed")
         return None
 
     # ------------------------------------------------------------------ 4.5 jobs
@@ -980,10 +1085,11 @@ class FakeStore:
                     if h["code"] in CARRIED_HOLDS:
                         self._module_hold(rid, role, "record_invoice_revision", id, h["code"], h["amount_cents"], h["reason"],
                                           h["evidence_json"])
-            self._stale_approvals(rid, role, "record_invoice_revision", invoice_id, "revision superseded")
         self._update(rid, role, "record_invoice_revision", "invoice", invoice_id, {
             "active_revision_id": id, "commercial_status": "pending", "payment_status": "not_ready", "next_owner_role": "agent",
             "next_action": "Assess this revision against the purchase terms", "updated_at": _now()})
+        if supersedes_revision_id:
+            self._stale_approvals(rid, role, "record_invoice_revision", invoice_id, "revision superseded")
         return None
 
     def _r_record_invoice_line(self, rid, role, id, revision_id, kind, description, quantity_milli, unit, unit_price_cents,
@@ -1042,13 +1148,8 @@ class FakeStore:
         self._update(rid, role, "record_assessment", "invoice", inv["id"], {
             "commercial_status": commercial_status, "next_action": next_action,
             "next_owner_role": self._next_owner(inv, commercial_status), "updated_at": _now()})
-        changed = [a["id"] for a in self._t("payment_approval").values()
-                   if a["invoice_id"] == inv["id"] and a["status"] == "active" and a["assessment_fingerprint"] != fingerprint]
-        if changed:
-            self._stale_approvals(rid, role, "record_assessment", inv["id"], "assessment changed",
-                                  keep=lambda a: a["assessment_fingerprint"] == fingerprint)
-            self._module_hold(rid, role, "record_assessment", revision_id, "APPROVAL_STALE", 0,
-                              "The assessment changed after the payment was approved; approve it again.", {"approval_ids": changed})
+        self._stale_approvals(rid, role, "record_assessment", inv["id"], "the assessment changed after the payment was approved",
+                              keep=lambda a: a["assessment_fingerprint"] == fingerprint)
         return None
 
     def _r_open_hold(self, rid, role, id, revision_id, code, amount_cents, reason, evidence_json):
@@ -1157,3 +1258,96 @@ class FakeStore:
         if o["status"] != "approved":
             raise Denied(f"outbox message is {o['status']}, not approved", "outbox", id)
         self._update(rid, role, "mark_outbox", "outbox", id, {"status": status, "delivery_ref": delivery_ref})
+
+    # ------------------------------------------------------------------ 9.4 payment
+    def _r_propose_supplier_payment(self, rid, role, id, invoice_id, revision_id, assessment_id, amount_cents,
+                                    deposit_allocation_cents, payee_profile_id):
+        self._need(isinstance(amount_cents, int) and amount_cents > 0, "amount_cents must be above zero")
+        self._need(isinstance(deposit_allocation_cents, int) and deposit_allocation_cents >= 0, "deposit_allocation_cents can't be negative")
+        inv, rev = self._get("invoice", invoice_id), self._get("invoice_revision", revision_id)
+        a, payee = self._get("assessment", assessment_id), self._get("payee_profile", payee_profile_id)
+        self._need(inv is not None and rev is not None and rev["invoice_id"] == invoice_id, "invoice and revision do not match")
+        self._need(a is not None and a["revision_id"] == revision_id, "assessment is not for this revision")
+        self._need(payee is not None and payee["supplier_id"] == inv["supplier_id"], "payee profile is not the supplier's")
+        if self._get("proposal", id):
+            return ("duplicate", "proposal exists")
+        if amount_cents != a["proposed_payment_cents"]:
+            raise Denied(f"amount {amount_cents} must equal the assessment's proposed payment {a['proposed_payment_cents']}", "proposal", id)
+        wi_id = f"wi_{invoice_id}"
+        for other in list(self._t("proposal").values()):
+            if other["work_item_id"] == wi_id and other["status"] == "pending":
+                self._update(rid, role, "propose_supplier_payment", "proposal", other["id"],
+                             {"status": "cancelled", "decision_note": f"superseded by {id}"}, f"superseded by {id}")
+        ref = {"invoice_id": invoice_id, "revision_id": revision_id, "assessment_id": assessment_id,
+               "deposit_allocation_cents": str(deposit_allocation_cents), "payee_profile_id": payee_profile_id}
+        self._upsert(rid, role, "propose_supplier_payment", "proposal", dict(
+            id=id, work_item_id=wi_id, kind="supplier_payment", amount_cents=amount_cents, payee_sub_id=inv["supplier_id"],
+            payee_account_ref=payee["account_ref"], reason=a["summary"], evidence_json=dumps(ref), status="pending",
+            proposed_by_role=role, proposed_by_identity=role, decided_by_role="", decided_by_identity="", decision_note="",
+            created_at=_now(), decided_at_iso=""))
+        self._update(rid, role, "propose_supplier_payment", "invoice", invoice_id, {
+            "next_owner_role": "owner", "next_action": "Review and approve the payment", "updated_at": _now()})
+        wi = self._get("work_item", wi_id)
+        if wi is not None and wi["state"] in {"new", "reading", "investigating", "needs_info", "held", "proposed"}:
+            self._set_state(rid, role, "propose_supplier_payment", wi_id, "proposed", a["summary"])
+        return None
+
+    def _r_approve_supplier_payment(self, rid, role, proposal_id, expected_fingerprint, note):
+        p = self._get("proposal", proposal_id)
+        self._need(p is not None and p["kind"] == "supplier_payment", f"supplier payment proposal {proposal_id} not found")
+        if p["proposed_by_identity"] == role:
+            raise Denied("you can't approve your own proposal", "proposal", proposal_id)
+        self._need(p["status"] == "pending", f"proposal is {p['status']}, not pending")
+        reasons = self._blocked_reasons(proposal_id, expected_fingerprint)
+        if reasons:
+            raise Denied(json.dumps(reasons), "proposal", proposal_id)
+        ref = self._ref(p)
+        latest = self._latest_assessment(ref["revision_id"])
+        before = copy.deepcopy(self._get("payment_approval", f"appr_{proposal_id}"))
+        approval = dict(id=f"appr_{proposal_id}", proposal_id=proposal_id, invoice_id=ref["invoice_id"], revision_id=ref["revision_id"],
+                        amount_cents=p["amount_cents"], deposit_allocation_cents=int(ref.get("deposit_allocation_cents") or 0),
+                        payee_profile_id=ref["payee_profile_id"], assessment_fingerprint=latest["fingerprint"],
+                        policy_version=latest["policy_version"], approved_by_identity=role, status="active", stale_reason="",
+                        created_at=_now())
+        self._put("payment_approval", approval)
+        self._audit(rid, role, "approve_supplier_payment", "payment_approval", approval["id"], "ok", note, before, approval)
+        self._update(rid, role, "approve_supplier_payment", "proposal", proposal_id, {
+            "status": "approved", "decided_by_role": role, "decided_by_identity": role, "decision_note": note,
+            "decided_at_iso": time.strftime("%Y-%m-%dT%H:%M:%S")}, note)
+        self._resolve_holds(rid, role, "approve_supplier_payment", ref["revision_id"], "APPROVAL_STALE", "new approval")
+        self._update(rid, role, "approve_supplier_payment", "invoice", ref["invoice_id"], {
+            "approval_status": "approved", "payment_status": "ready", "next_owner_role": "gateway",
+            "next_action": "Settle the payment", "updated_at": _now()})
+        self._set_state(rid, role, "approve_supplier_payment", p["work_item_id"], "approved", note)
+        self._enqueue(rid, role, f"job_pay_{proposal_id}", "pay_supplier", {"proposal_id": proposal_id})
+
+    def _r_reject_supplier_payment(self, rid, role, proposal_id, note):
+        p = self._get("proposal", proposal_id)
+        self._need(p is not None and p["kind"] == "supplier_payment", f"supplier payment proposal {proposal_id} not found")
+        self._need(p["status"] == "pending", f"proposal is {p['status']}, not pending")
+        self._update(rid, role, "reject_supplier_payment", "proposal", proposal_id, {
+            "status": "rejected", "decided_by_role": role, "decided_by_identity": role, "decision_note": note,
+            "decided_at_iso": time.strftime("%Y-%m-%dT%H:%M:%S")}, note)
+        ref = self._ref(p)
+        if ref is not None:
+            self._update(rid, role, "reject_supplier_payment", "invoice", ref["invoice_id"], {
+                "approval_status": "rejected", "next_owner_role": "agent", "next_action": f"Owner rejected: {note}", "updated_at": _now()})
+        self._set_state(rid, role, "reject_supplier_payment", p["work_item_id"], "rejected", note)
+
+    def _r_record_deposit_allocation(self, rid, role, id, deposit_id, invoice_id, amount_cents):
+        self._need(isinstance(amount_cents, int) and amount_cents > 0, "amount_cents must be above zero")
+        d = self._get("deposit", deposit_id)
+        self._need(d is not None, f"deposit {deposit_id} not found")
+        self._need(d["status"] == "settled", f"deposit {deposit_id} is not settled")
+        self._need(self._get("invoice", invoice_id) is not None, f"invoice {invoice_id} not found")
+        if self._get("deposit_allocation", id):
+            return ("duplicate", "allocation exists")
+        used = 0
+        for a in self._t("deposit_allocation").values():
+            if a["deposit_id"] == deposit_id:
+                self._need(a["invoice_id"] != invoice_id, f"deposit {deposit_id} is already applied to invoice {invoice_id}")
+                used += int(a["amount_cents"])
+        self._need(used + amount_cents <= d["amount_cents"], f"allocation would exceed the deposit: {used} + {amount_cents} > {d['amount_cents']}")
+        self._upsert(rid, role, "record_deposit_allocation", "deposit_allocation", dict(
+            id=id, deposit_id=deposit_id, invoice_id=invoice_id, amount_cents=amount_cents, created_at=_now()))
+        return None

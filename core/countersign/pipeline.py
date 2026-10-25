@@ -308,21 +308,11 @@ def pay_proposal(store: Store, proposal_id: str) -> dict[str, Any]:
     company = store.rows("company")[0]
     payer, key = company["bank_account_ref"], f"cs:{proposal_id}"
     bank = nessie.client()
-    recovered = False
-    transfer = bank.find_transfer(payer, key)
-    if transfer is None:
-        try:
-            transfer = bank.transfer(payer, p["payee_account_ref"], int(p["amount_cents"]), key)
-        except TimeoutError:
-            transfer = bank.find_transfer(payer, key)  # did the bank take it before timing out?
-            recovered = transfer is not None
-            if transfer is None:
-                raise
-        except nessie.NessieError as e:
-            R.record_payment(store, proposal_id, "", "failed", str(e))
-            return {"status": "failed", "error": str(e)}
-    else:
-        recovered = True
+    try:
+        transfer, recovered = nessie.pay_once(bank, payer, p["payee_account_ref"], int(p["amount_cents"]), key)
+    except nessie.NessieError as e:
+        R.record_payment(store, proposal_id, "", "failed", str(e))
+        return {"status": "failed", "error": str(e)}
     _ok(R.record_payment(store, proposal_id, str(transfer["_id"]), "sent", ""), "record payment")
 
     wi = one(store, "work_item", id=p["work_item_id"]) or {}
