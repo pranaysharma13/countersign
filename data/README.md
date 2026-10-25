@@ -13,6 +13,8 @@ Everything here is fictional: Marlow & Finch Builders (general contractor), BayM
 | `seeds/baymix_opening.json`, `seeds/baymix_correction.json` | The primary scenario as replayable reducer calls (see below). Committed. | The web's local backend |
 | `seeds/queue_companions.json` | Fictional Oakview invoices beside BM-23104 (Cedar & Bolt, Northline, Harbor Pack, Valley Sand, Redline Haul, Peak Form). Does not change BM-23104. | The web's local backend |
 | `fixtures/companions/extractions/` | Labelled fixture extractions for those companion documents. | `AI_MODE=fixture` |
+| `seeds/judge_sandbox.json` | The judge page's sandbox: a fictional supplier (Judge Sandbox Supply), its verified payee, and a purchase with BayMix's quote terms (PO MF-PO-9001). Every `sneak_charge` becomes an invoice on it. Never touches BM-23104. | `scripts/load_supplier_seed.py` (after the opening state) |
+| `generated/sandbox/extractions/` | Extractions generated from a judge's inputs (`AI_MODE=fixture`), labelled `FIXTURE (generated)`. Ignored by git. | `AI_MODE=fixture` extraction |
 | `generated/` | Rendered PDFs and `.eml` files, v1 bills, runs. Ignored by git. | Humans, the file preview API |
 
 ## Seeds for the web's local backend

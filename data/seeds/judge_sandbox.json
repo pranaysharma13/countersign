@@ -1,0 +1,924 @@
+[
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier",
+    "args": {
+      "id": "sup_sandbox",
+      "name": "Judge Sandbox Supply",
+      "email_domain": "judge-sandbox.example",
+      "phone_on_file": "(510) 555-0199",
+      "crs_ref": "",
+      "status": "active"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier_contact",
+    "args": {
+      "id": "ctc_sandbox_sam",
+      "supplier_id": "sup_sandbox",
+      "name": "Sam Ortiz",
+      "email": "sam.ortiz@judge-sandbox.example",
+      "phone": "(510) 555-0199",
+      "title": "Sales Manager",
+      "pre_established": true
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier_contact",
+    "args": {
+      "id": "ctc_sandbox_ar",
+      "supplier_id": "sup_sandbox",
+      "name": "Judge Sandbox Accounts Receivable",
+      "email": "ar@judge-sandbox.example",
+      "phone": "(510) 555-0198",
+      "title": "Accounts Receivable",
+      "pre_established": true
+    }
+  },
+  {
+    "role": "admin",
+    "reducer": "add_payee_profile",
+    "args": {
+      "id": "sup_sandbox:v1",
+      "supplier_id": "sup_sandbox",
+      "version": 1,
+      "account_ref": "acct_sandbox_v1",
+      "last4": "0042",
+      "bank_name": "Sandbox Test Bank",
+      "requested_via": "seed"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_48f36263",
+      "kind": "seed",
+      "filename": "JudgeSandbox_Quote_JSQ-0001.pdf",
+      "sha256": "48f36263c9f1bc3537df25bab90acfb0b94b19035457776d569213016b570762",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_js_quote",
+      "kind": "quote",
+      "source_file_id": "src_48f36263",
+      "sha256": "48f36263c9f1bc3537df25bab90acfb0b94b19035457776d569213016b570762",
+      "filename": "JudgeSandbox_Quote_JSQ-0001.pdf",
+      "pages": 2
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l1",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Judge Sandbox Supply"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l2",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "Ready-mix concrete - 1 Sandbox Way, Newark, CA 94560 - (510) 555-0199"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l3",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "QUOTATION JSQ-0001"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l4",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "Quote date: 2026-09-29"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l5",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Customer: Marlow & Finch Builders, attn. Jordan Pike (Purchasing)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l6",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l8",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Product: Ready-mix concrete, 4,000 psi, 3/4 in. aggregate, mix JS-40-34"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l9",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "Maximum quantity: 500 cubic yards (cy), delivered to the project"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l10",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Unit price: $165.00 per cubic yard, delivered"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l11",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l12",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "Extended maximum: 500 cy x $165.00 = $82,500.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l13",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Deposit: $10,000.00 due before the first pour, applied once against invoices under this quote"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l14",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "Payment terms: Net 30 days from invoice date"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l15",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 15,
+      "line_end": 15,
+      "text": "Not included: weekend or after-hours delivery, truck waiting time (see Term 2), fuel surcharge (Term 3)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l17",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "This quote incorporates the Judge Sandbox Supply Terms and Conditions of Sale on page 2."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l19",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 19,
+      "line_end": 19,
+      "text": "Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-01"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l20",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 20,
+      "line_end": 20,
+      "text": "Issued for Judge Sandbox Supply: Sam Ortiz, Sales Manager"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p1_l22",
+      "document_id": "doc_js_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 22,
+      "line_end": 22,
+      "text": "Judge sandbox: fictional documents for the judge page. Nothing on this purchase is paid from that page."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l1",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "TERMS AND CONDITIONS OF SALE (part of Quote JSQ-0001)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l3",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "1. Price changes. Quoted prices are fixed for the validity period. Any price change requires"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l4",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "mutual written agreement of buyer and seller before the affected deliveries."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l6",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "2. Additional charges. Charges not listed in this quote, including weekend or after-hours delivery"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l7",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 7,
+      "line_end": 7,
+      "text": "and truck waiting time, apply only when both parties agree to them in writing before the work."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l9",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "3. Fuel surcharge. For deliveries in a week when the weekly California on-highway diesel price"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l10",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "index published by the U.S. Energy Information Administration is above $5.25 per gallon, seller"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l11",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "may add $0.40 per cubic yard for each full $0.10 per gallon above $5.25. The index for the week"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l12",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "of delivery applies. No surcharge applies at or below $5.25 per gallon."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l14",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "4. Quantity. Deliveries above the maximum quantity require a written change."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l16",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "5. Deposit. A deposit is applied once, only against invoices under this quote."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l18",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "6. Payment instructions. Seller will not change its payment instructions by email alone. Buyer"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_js_quote_p2_l19",
+      "document_id": "doc_js_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 19,
+      "line_end": 19,
+      "text": "will confirm any change by calling seller at the phone number on this quote."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_7c915957",
+      "kind": "seed",
+      "filename": "MarlowFinch_PO_MF-PO-9001.pdf",
+      "sha256": "7c9159572b1f90bb223fa495d5eccf6823299d6dce7c084244d7e40fb3124271",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_mf_po_9001",
+      "kind": "po",
+      "source_file_id": "src_7c915957",
+      "sha256": "7c9159572b1f90bb223fa495d5eccf6823299d6dce7c084244d7e40fb3124271",
+      "filename": "MarlowFinch_PO_MF-PO-9001.pdf",
+      "pages": 1
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l1",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Marlow & Finch Builders"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l2",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "General contractor - Fremont, CA - purchasing@marlowfinch.example"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l3",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "PURCHASE ORDER MF-PO-9001"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l4",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "PO date: 2026-10-01"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l5",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Supplier: Judge Sandbox Supply, 1 Sandbox Way, Newark, CA 94560"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l6",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l8",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Line  Description                                   Qty      Unit  Unit price    Amount"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l9",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "1     Ready-mix concrete 4,000 psi, mix JS-40-34    500.000  cy    $165.00       $82,500.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l11",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "PO total, not to exceed: $82,500.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l12",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "Terms: Judge Sandbox Quote JSQ-0001 and its Terms and Conditions of Sale. Deposit $10,000.00 per the quote."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l13",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Price fixed for deliveries through 2026-10-31. Any change needs written agreement and approval"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l14",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "by Marlow & Finch purchasing."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l15",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 15,
+      "line_end": 15,
+      "text": "Issued by: Jordan Pike, Purchasing, Marlow & Finch Builders"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l17",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "SUPPLIER ACKNOWLEDGMENT"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l18",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "Judge Sandbox Supply acknowledges and accepts purchase order MF-PO-9001 on the terms of Quote JSQ-0001."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l19",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 19,
+      "line_end": 19,
+      "text": "Acknowledged by: Sam Ortiz, Sales Manager, Judge Sandbox Supply    Date: 2026-10-01"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_9001_p1_l21",
+      "document_id": "doc_mf_po_9001",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 21,
+      "line_end": 21,
+      "text": "Judge sandbox: fictional documents for the judge page. Nothing on this purchase is paid from that page."
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_js_quote_4e9250cb",
+      "document_id": "doc_js_quote",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_js_quote\",\"document_kind\":\"quote\",\"fields\":{\"buyer_accepted_on\":{\"fragments\":[\"frag_js_quote_p1_l19\"],\"quote\":\"Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing Date: 2026-10-01\",\"value\":\"2026-10-01\"},\"incorporates_terms\":{\"fragments\":[\"frag_js_quote_p1_l17\"],\"quote\":\"This quote incorporates the Judge Sandbox Supply Terms and Conditions of Sale on page 2.\",\"value\":true},\"product\":{\"fragments\":[\"frag_js_quote_p1_l8\"],\"quote\":\"Product: Ready-mix concrete, 4,000 psi, 3/4 in. aggregate, mix JS-40-34\",\"value\":\"Ready-mix concrete, 4,000 psi, 3/4 in. aggregate, mix JS-40-34\"},\"project_name\":{\"fragments\":[\"frag_js_quote_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex\",\"value\":\"Oakview Lane Fourplex\"},\"quote_date\":{\"fragments\":[\"frag_js_quote_p1_l4\"],\"quote\":\"Quote date: 2026-09-29\",\"value\":\"2026-09-29\"},\"quote_number\":{\"fragments\":[\"frag_js_quote_p1_l3\"],\"quote\":\"QUOTATION JSQ-0001\",\"value\":\"JSQ-0001\"},\"supplier_name\":{\"fragments\":[\"frag_js_quote_p1_l1\"],\"quote\":\"Judge Sandbox Supply\",\"value\":\"Judge Sandbox Supply\"},\"unit\":{\"fragments\":[\"frag_js_quote_p1_l9\"],\"quote\":\"500 cubic yards (cy)\",\"value\":\"cy\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call (Judge sandbox: BayMix's labelled extraction with the names swapped)\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\",\"terms\":[{\"amount_cents\":16500,\"code\":\"unit_price\",\"effective_from\":\"2026-10-01\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_js_quote_p1_l10\",\"frag_js_quote_p1_l11\"],\"label\":\"Unit price, delivered\",\"quantity_milli\":0,\"quote\":\"Unit price: $165.00 per cubic yard, delivered Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31\",\"scope\":{\"unit\":\"cy\"}},{\"amount_cents\":0,\"code\":\"max_quantity\",\"effective_from\":\"2026-10-01\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_js_quote_p1_l9\"],\"label\":\"Maximum quantity\",\"quantity_milli\":500000,\"quote\":\"Maximum quantity: 500 cubic yards (cy), delivered to the project\",\"scope\":{\"unit\":\"cy\"}},{\"amount_cents\":0,\"code\":\"valid_through\",\"effective_from\":\"2026-10-01\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_js_quote_p1_l11\"],\"label\":\"Price validity\",\"quantity_milli\":0,\"quote\":\"Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31\",\"scope\":{}},{\"amount_cents\":1000000,\"code\":\"deposit\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_js_quote_p1_l13\",\"frag_js_quote_p2_l16\"],\"label\":\"Deposit, applied once\",\"quantity_milli\":0,\"quote\":\"Deposit: $10,000.00 due before the first pour, applied once against invoices under this quote\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"payment_terms\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_js_quote_p1_l14\"],\"label\":\"Net 30\",\"quantity_milli\":0,\"quote\":\"Payment terms: Net 30 days from invoice date\",\"scope\":{\"net_days\":30}},{\"amount_cents\":0,\"code\":\"price_change_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_js_quote_p2_l3\",\"frag_js_quote_p2_l4\"],\"label\":\"Price changes need mutual written agreement\",\"quantity_milli\":0,\"quote\":\"Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"extra_charge_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_js_quote_p2_l6\",\"frag_js_quote_p2_l7\"],\"label\":\"Extra charges only when agreed in writing first\",\"quantity_milli\":0,\"quote\":\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"fuel_surcharge_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_js_quote_p2_l9\",\"frag_js_quote_p2_l10\",\"frag_js_quote_p2_l11\",\"frag_js_quote_p2_l12\"],\"label\":\"Fuel surcharge tied to the weekly diesel index\",\"quantity_milli\":0,\"quote\":\"For deliveries in a week when the weekly California on-highway diesel price index published by the U.S. Energy Information Administration is above $5.25 per gallon, seller may add $0.40 per cubic yard for each full $0.10 per gallon above $5.25. The index for the week of delivery applies. No surcharge applies at or below $5.25 per gallon.\",\"scope\":{\"base_price_cents_per_gallon\":525,\"index\":\"EIA weekly California on-highway diesel price\",\"index_week\":\"week of delivery\",\"step_cents_per_gallon\":10,\"surcharge_cents_per_unit_per_step\":40,\"unit\":\"cy\"}}]}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_mf_po_9001_4018ddcf",
+      "document_id": "doc_mf_po_9001",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_mf_po_9001\",\"document_kind\":\"po\",\"fields\":{\"incorporates_quote\":{\"fragments\":[\"frag_mf_po_9001_p1_l12\"],\"quote\":\"Terms: Judge Sandbox Quote JSQ-0001 and its Terms and Conditions of Sale.\",\"value\":\"JSQ-0001\"},\"not_to_exceed_cents\":{\"fragments\":[\"frag_mf_po_9001_p1_l11\"],\"quote\":\"PO total, not to exceed: $82,500.00\",\"value\":8250000},\"po_date\":{\"fragments\":[\"frag_mf_po_9001_p1_l4\"],\"quote\":\"PO date: 2026-10-01\",\"value\":\"2026-10-01\"},\"po_number\":{\"fragments\":[\"frag_mf_po_9001_p1_l3\"],\"quote\":\"PURCHASE ORDER MF-PO-9001\",\"value\":\"MF-PO-9001\"},\"project_name\":{\"fragments\":[\"frag_mf_po_9001_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex\",\"value\":\"Oakview Lane Fourplex\"},\"supplier_acknowledged_on\":{\"fragments\":[\"frag_mf_po_9001_p1_l18\",\"frag_mf_po_9001_p1_l19\"],\"quote\":\"Judge Sandbox Supply acknowledges and accepts purchase order MF-PO-9001 on the terms of Quote JSQ-0001. Acknowledged by: Sam Ortiz, Sales Manager, Judge Sandbox Supply Date: 2026-10-01\",\"value\":\"2026-10-01\"},\"supplier_name\":{\"fragments\":[\"frag_mf_po_9001_p1_l5\"],\"quote\":\"Supplier: Judge Sandbox Supply\",\"value\":\"Judge Sandbox Supply\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call (Judge sandbox: BayMix's labelled extraction with the names swapped)\",\"lines\":[{\"amount_cents\":8250000,\"description\":\"Ready-mix concrete 4,000 psi, mix JS-40-34\",\"fragments\":[\"frag_mf_po_9001_p1_l9\"],\"kind\":\"material\",\"quantity_milli\":500000,\"quote\":\"1 Ready-mix concrete 4,000 psi, mix JS-40-34 500.000 cy $165.00 $82,500.00\",\"unit\":\"cy\",\"unit_price_cents\":16500}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "upsert_purchase",
+    "args": {
+      "id": "pur_sandbox_oak",
+      "supplier_id": "sup_sandbox",
+      "project_id": "prj_oak",
+      "description": "Ready-mix concrete, 4,000 psi, 3/4 in. aggregate, mix JS-40-34",
+      "unit": "cy",
+      "po_number": "MF-PO-9001",
+      "quote_document_id": "doc_js_quote",
+      "po_document_id": "doc_mf_po_9001",
+      "status": "open"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_sandbox_oak_unit_price",
+      "purchase_id": "pur_sandbox_oak",
+      "code": "unit_price",
+      "label": "Unit price, delivered",
+      "amount_cents": 16500,
+      "quantity_milli": 0,
+      "text": "Unit price: $165.00 per cubic yard, delivered Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31",
+      "scope_json": "{\"unit\":\"cy\"}",
+      "effective_from": "2026-10-01",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_js_quote_p1_l10\",\"frag_js_quote_p1_l11\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_sandbox_oak_max_quantity",
+      "purchase_id": "pur_sandbox_oak",
+      "code": "max_quantity",
+      "label": "Maximum quantity",
+      "amount_cents": 0,
+      "quantity_milli": 500000,
+      "text": "Maximum quantity: 500 cubic yards (cy), delivered to the project",
+      "scope_json": "{\"unit\":\"cy\"}",
+      "effective_from": "2026-10-01",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_js_quote_p1_l9\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_sandbox_oak_valid_through",
+      "purchase_id": "pur_sandbox_oak",
+      "code": "valid_through",
+      "label": "Price validity",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31",
+      "scope_json": "{}",
+      "effective_from": "2026-10-01",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_js_quote_p1_l11\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_sandbox_oak_deposit",
+      "purchase_id": "pur_sandbox_oak",
+      "code": "deposit",
+      "label": "Deposit, applied once",
+      "amount_cents": 1000000,
+      "quantity_milli": 0,
+      "text": "Deposit: $10,000.00 due before the first pour, applied once against invoices under this quote",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_js_quote_p1_l13\",\"frag_js_quote_p2_l16\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_sandbox_oak_payment_terms",
+      "purchase_id": "pur_sandbox_oak",
+      "code": "payment_terms",
+      "label": "Net 30",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Payment terms: Net 30 days from invoice date",
+      "scope_json": "{\"net_days\":30}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_js_quote_p1_l14\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_sandbox_oak_price_change_rule",
+      "purchase_id": "pur_sandbox_oak",
+      "code": "price_change_rule",
+      "label": "Price changes need mutual written agreement",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Any price change requires mutual written agreement of buyer and seller before the affected deliveries.",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_js_quote_p2_l3\",\"frag_js_quote_p2_l4\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_sandbox_oak_extra_charge_rule",
+      "purchase_id": "pur_sandbox_oak",
+      "code": "extra_charge_rule",
+      "label": "Extra charges only when agreed in writing first",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_js_quote_p2_l6\",\"frag_js_quote_p2_l7\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_sandbox_oak_fuel_surcharge_rule",
+      "purchase_id": "pur_sandbox_oak",
+      "code": "fuel_surcharge_rule",
+      "label": "Fuel surcharge tied to the weekly diesel index",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "For deliveries in a week when the weekly California on-highway diesel price index published by the U.S. Energy Information Administration is above $5.25 per gallon, seller may add $0.40 per cubic yard for each full $0.10 per gallon above $5.25. The index for the week of delivery applies. No surcharge applies at or below $5.25 per gallon.",
+      "scope_json": "{\"base_price_cents_per_gallon\":525,\"index\":\"EIA weekly California on-highway diesel price\",\"index_week\":\"week of delivery\",\"step_cents_per_gallon\":10,\"surcharge_cents_per_unit_per_step\":40,\"unit\":\"cy\"}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_js_quote_p2_l9\",\"frag_js_quote_p2_l10\",\"frag_js_quote_p2_l11\",\"frag_js_quote_p2_l12\"]",
+      "version": 1
+    }
+  }
+]
