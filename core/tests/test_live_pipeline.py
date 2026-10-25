@@ -56,6 +56,7 @@ def live_answer(ext, schema):
             "fragments": c["fragments"]} for c in ext.get("change_requests", [])],
             "acceptances": [{k: a[k] for k in ("ref", "supplier_acceptance", "quote", "fragments")} for a in ext.get("acceptances", [])],
             "internal_approval_claims": [{k: a[k] for k in ("ref", "quote", "fragments")} for a in ext.get("internal_approval_claims", [])],
+            "payee_change_requests": ext.get("payee_change_requests", []),
             "instructions_found": ext.get("instructions_found", [])}
     f = dict(ext["fields"])
     if schema is live_extract.QUOTE:

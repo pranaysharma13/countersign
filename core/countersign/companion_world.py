@@ -56,7 +56,8 @@ COMPANION_CONTACTS = (
 
 CEDAR_PAYEE = PayeeProfile(CEDAR.id, 1, "acct_cedar_v1", "5531", "Redwood Merchant Bank", "seed")
 NORTHLINE_PAYEE_V1 = PayeeProfile(NORTHLINE.id, 1, "acct_northline_v1", "4188", "Ridge Credit Union", "seed")
-NORTHLINE_PAYEE_V2 = PayeeProfile(NORTHLINE.id, 2, "acct_northline_v2", "7703", "Harbor Wire Bank", "email")
+# Requested by doc_em_nl_bank_1 and recorded by the pipeline (supplier_pipeline.record_payee_changes), never seeded.
+NORTHLINE_PAYEE_V2 = PayeeProfile(NORTHLINE.id, 2, "requested_northline_7703", "7703", "Harbor Wire Bank", "email")
 HARBOR_PAYEE = PayeeProfile(HARBOR.id, 1, "acct_harbor_v1", "6144", "Bay Crate Bank", "seed")
 VALLEY_PAYEE = PayeeProfile(VALLEY.id, 1, "acct_valley_v1", "3382", "Delta Aggregate Bank", "seed")
 REDLINE_PAYEE = PayeeProfile(REDLINE.id, 1, "acct_redline_v1", "9021", "Switchback Credit Union", "seed")
