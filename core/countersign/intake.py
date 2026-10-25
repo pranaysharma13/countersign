@@ -24,9 +24,9 @@ from .store import Result, Store
 from .supplier_docs import file_bytes
 from .supplier_seed import seed_document
 from .companion_world import COMPANION_DOCS
-from .supplier_world import PRIMARY_DOCS, SourceDoc
+from .supplier_world import PRIMARY_DOCS, VARIANT_DOCS, SourceDoc
 
-ALL_DOCS = PRIMARY_DOCS + COMPANION_DOCS
+ALL_DOCS = PRIMARY_DOCS + COMPANION_DOCS + VARIANT_DOCS
 
 MAX_BYTES = 15 * 1024 * 1024
 MAX_PAGES = 50

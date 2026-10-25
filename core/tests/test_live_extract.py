@@ -63,7 +63,7 @@ WEEKEND_ANSWER = {
         "effective_from": "2026-10-10", "classification": "proposed", "supplier_acceptance": "Proposed", "missing_reason": "",
         "quote": "We can do it for a flat weekend delivery charge of $1,200.00 for that pour.",
         "fragments": ["frag_em_weekend_1_p0_l4", "frag_em_weekend_1_p0_l5"]}],
-    "acceptances": [], "internal_approval_claims": [], "instructions_found": []}
+    "acceptances": [], "internal_approval_claims": [], "payee_change_requests": [], "instructions_found": []}
 
 
 @pytest.fixture(autouse=True)

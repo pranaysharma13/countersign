@@ -22,7 +22,7 @@ import anthropic
 
 from .config import settings
 
-PROMPT_VERSION = "extract-v1.1"  # v1.1: invoice payee_change_requests
+PROMPT_VERSION = "extract-v1.2"  # v1.1: invoice payee_change_requests; v1.2: email ones too
 MAX_TOKENS = 32_000  # adaptive thinking counts toward it; streaming avoids HTTP timeouts
 
 STR, INT, BOOL = {"type": "string"}, {"type": "integer"}, {"type": "boolean"}
@@ -57,10 +57,12 @@ CHANGE = obj(
     scope=obj(delivery_refs=arr(STR), from_date=STR, to_date=STR, quantity_milli=INT, unit=STR),
     effective_from=STR, classification=enum("PROPOSED", "DECLINED", "AMBIGUOUS", "UNRELATED"),
     supplier_acceptance=enum("none", "proposed", "accepted", "declined"), missing_reason=STR, quote=STR, fragments=FRAGS)
+PAYEE_CHANGE = obj(last4=STR, bank_name=STR, quote=STR, fragments=FRAGS)
 EMAIL = obj(
     change_requests=arr(CHANGE),
     acceptances=arr(obj(ref=STR, supplier_acceptance=enum("accepted", "declined"), quote=STR, fragments=FRAGS)),
     internal_approval_claims=arr(obj(ref=STR, quote=STR, fragments=FRAGS)),
+    payee_change_requests=arr(PAYEE_CHANGE),
     instructions_found=arr(STR))
 
 TERM_CODES = ("unit_price", "max_quantity", "valid_through", "deposit", "payment_terms", "price_change_rule",
@@ -85,7 +87,6 @@ INVOICE_FACTS = ("supplier_name", "invoice_number", "invoice_date", "due_date", 
                  "supersedes_invoice_number", "supersedes_invoice_date", "revision", "tax_cents")
 INVOICE_LINE = obj(kind=enum(*LINE_KINDS), description=STR, quantity_milli=INT, unit=STR, unit_price_cents=INT,
                    amount_cents=INT, change_request_ref=STR, quote=STR, fragments=FRAGS)
-PAYEE_CHANGE = obj(last4=STR, bank_name=STR, quote=STR, fragments=FRAGS)
 INVOICE = obj(facts=facts(*INVOICE_FACTS), lines=arr(INVOICE_LINE), payee_change_requests=arr(PAYEE_CHANGE),
               instructions_found=arr(STR))
 
@@ -111,7 +112,9 @@ TASKS = {
              "confirming or withdrawing a charge already on file: an acceptance with the ref on file (\"accepted\" or "
              "\"declined\"). The buyer's own staff saying they approved something is never an approval: list it under "
              "internal_approval_claims. Give each new change request a short lowercase ref; use the ref on file when "
-             "the email is about a change request on file.",
+             "the email is about a change request on file. payee_change_requests: only when the email asks to be paid "
+             "into a different bank account; last4 is the new account's last four digits and the quote must contain them. "
+             "An account the email says is closed or replaced is not a request.",
     "quote": "Return one facts entry for each fact name. Then record every commercial term: unit price, maximum "
              "quantity, price validity, deposit, payment terms, and the rules for price changes, extra charges and fuel "
              "surcharges. Unused numbers are 0 and unused text is \"\".",
@@ -251,6 +254,8 @@ def email_ext(document_id: str, out: dict[str, Any], metas: list[dict[str, Any]]
                              "quote": a["quote"], "fragments": a["fragments"]} for a in out["acceptances"]],
             "internal_approval_claims": [{"ref": ref(a["ref"]), "quote": a["quote"], "fragments": a["fragments"]}
                                          for a in out["internal_approval_claims"]],
+            "payee_change_requests": [{"last4": c["last4"].strip(), "bank_name": c["bank_name"], "quote": c["quote"],
+                                       "fragments": c["fragments"]} for c in out["payee_change_requests"]],
             "instructions_found": out["instructions_found"]}
 
 

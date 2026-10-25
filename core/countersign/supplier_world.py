@@ -319,3 +319,33 @@ INVOICE_R2 = SourceDoc("doc_bm_inv_23104_r2", "invoice", "BayMix_Invoice_BM-2310
 
 PRIMARY_DOCS: tuple[SourceDoc, ...] = (QUOTE, PO, WEEKEND_1, WEEKEND_2, WEEKEND_3, WAITING_1, INVOICE_R1, REPLY_1, INVOICE_R2)
 DOCS_BY_ID = {d.id: d for d in PRIMARY_DOCS}
+
+# SPEC §8 scoped-amendment variant (not part of the primary scenario): BayMix offers $172.00 per cubic yard
+# for the later pours only. One email scopes it by quantity, the other only by date.
+HEMIX_SUBJECT = "High-early mix for the last Oakview pours"
+SCOPED_QTY_1 = _email("doc_em_scoped_qty_1", EmailMeta(
+    "em_scoped_qty_1", "thr_hemix_qty", "rosa.delgado@baymix-supply.example", MF, HEMIX_SUBJECT,
+    "2026-10-16T10:02:00-07:00", "2026-10-16T10:10:00-07:00"), (
+    "Jordan,",
+    "",
+    "For the last Oakview pours, from Monday, October 19, we'll switch to high-early mix BM-40-34-HE.",
+    "Price for those pours: $172.00 per cubic yard, for the final 120 cy only.",
+    "The first 380 cy stay at the quoted $165.00 per cubic yard.",
+    "BayMix agrees to these terms; please approve them on your side.",
+    "",
+    "Rosa Delgado",
+    "Sales Manager, BayMix Supply",
+))
+SCOPED_DATE_1 = _email("doc_em_scoped_date_1", EmailMeta(
+    "em_scoped_date_1", "thr_hemix_date", "rosa.delgado@baymix-supply.example", MF, HEMIX_SUBJECT,
+    "2026-10-16T10:02:00-07:00", "2026-10-16T10:10:00-07:00"), (
+    "Jordan,",
+    "",
+    "For the Oakview pours from Monday, October 19 onward, we'll switch to high-early mix BM-40-34-HE.",
+    "Price for those pours: $172.00 per cubic yard.",
+    "BayMix agrees to this price; please approve it on your side.",
+    "",
+    "Rosa Delgado",
+    "Sales Manager, BayMix Supply",
+))
+VARIANT_DOCS: tuple[SourceDoc, ...] = (SCOPED_QTY_1, SCOPED_DATE_1)

@@ -223,7 +223,9 @@ def nl_bank_email() -> dict[str, Any]:
         "subject": _field(NL_BANK_1, "Updated remittance account for invoice NL-441",
                           "Please remit invoice NL-441"),
         "requested_last4": _field(NL_BANK_1, "7703", "account ending 7703"),
-    }, change_requests=[], acceptances=[], internal_approval_claims=[])
+    }, change_requests=[], acceptances=[], internal_approval_claims=[],
+        payee_change_requests=[{"last4": "7703", "bank_name": "Harbor Wire Bank",
+                                **{k: v for k, v in _field(NL_BANK_1, None, "account ending 7703").items() if k != "value"}}])
 
 
 def _agreed_terms(doc: SourceDoc, unit: str, unit_cents: int, qty_milli: int, price_needle: str,

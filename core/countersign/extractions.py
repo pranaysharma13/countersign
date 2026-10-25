@@ -26,6 +26,7 @@ FIXTURE_DIR = DATA_DIR / "fixtures" / "baymix_primary" / "extractions"
 FIXTURE_DIRS = (
     FIXTURE_DIR,
     DATA_DIR / "fixtures" / "companions" / "extractions",
+    DATA_DIR / "fixtures" / "baymix_variants" / "extractions",  # SPEC §8 variants (variant_fixtures.py)
 )
 
 

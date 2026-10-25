@@ -15,7 +15,7 @@ from .companion_world import (CEDAR_DOCS, CEDAR_INVOICE, CEDAR_INVOICE_ID, CEDAR
                               CEDAR_QUOTE, COMPANION_CONTACTS, COMPANION_PAYEES, COMPANION_SUPPLIERS, HARBOR_DOCS,
                               HARBOR_INVOICE_ID, HARBOR_PURCHASE_ID, HP_INVOICE, HP_PO, HP_QTY_MILLI, HP_QUOTE,
                               INJECT_TEXT, NL_BANK_1, NL_INVOICE, NL_PO, NL_QTY_MILLI, NL_QUOTE, NORTHLINE_DOCS,
-                              NORTHLINE_INVOICE_ID, NORTHLINE_PAYEE_V2, NORTHLINE_PURCHASE_ID, PEAK, PEAK_DOCS,
+                              NORTHLINE, NORTHLINE_INVOICE_ID, NORTHLINE_PAYEE_V2, NORTHLINE_PURCHASE_ID, PEAK, PEAK_DOCS,
                               PEAK_INVOICE_ID, PEAK_PURCHASE_ID, PF_INVOICE, PF_PO, PF_QTY_MILLI, PF_QUOTE,
                               REDLINE_DOCS, REDLINE_INVOICE_ID, REDLINE_PURCHASE_ID, RH_INVOICE, RH_PO, RH_QTY_MILLI,
                               RH_QUOTE, VALLEY_DOCS, VALLEY_INVOICE_ID, VALLEY_PURCHASE_ID, VS_INVOICE, VS_PO,
@@ -26,7 +26,7 @@ from .fake_store import FakeStore
 from .ids import hold_id
 from .money import fmt
 from .supplier_docs import fragments
-from .supplier_pipeline import propose_payment
+from .supplier_pipeline import propose_payment, record_payee_changes
 from .supplier_seed import RecordingStore, seed_bytes, seed_document, seed_setup
 
 # crs_test_business_02 in integrations.crs._MOCK — keep the seed free of mock vs live source labels
@@ -93,11 +93,9 @@ def record_northline(store) -> None:
                            "Tags matched the footing schedule")
     if not res.ok:
         raise RuntimeError(f"northline receipt: {res.outcome} {res.message}")
-    p = NORTHLINE_PAYEE_V2
-    res = R.add_payee_profile(store, "agent", p.id, p.supplier_id, p.version, p.account_ref, p.last4, p.bank_name,
-                              p.requested_via)
-    if not res.ok:
-        raise RuntimeError(f"northline payee v2: {res.outcome} {res.message}")
+    # the bank-change email itself asks for the new account, as the pipeline reads it (SPEC §8)
+    if record_payee_changes(store, _fx(NL_BANK_1.id), NORTHLINE.id) != [NORTHLINE_PAYEE_V2.id]:
+        raise RuntimeError(f"northline: expected the email to request {NORTHLINE_PAYEE_V2.id}")
     bundle = bundle_from_store(store, invoice_id)
     assessment = assess(bundle)
     record(store, assessment)  # hold only; do not propose while the payee change is pending

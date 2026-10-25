@@ -1,0 +1,43 @@
+{
+  "document_id": "doc_em_scoped_qty_1",
+  "document_kind": "email",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {},
+  "change_requests": [
+    {
+      "ref": "baymix_hemix_final120",
+      "kind": "price_change",
+      "description": "High-early mix BM-40-34-HE at $172.00/cy for the final 120 cy, pours from Oct 19",
+      "amount_cents": 0,
+      "rate_cents": 17200,
+      "rate_unit": "cy",
+      "scope": {
+        "quantity_milli": 120000,
+        "unit": "cy",
+        "from": "2026-10-19"
+      },
+      "effective_from": "2026-10-19",
+      "classification": "PROPOSED",
+      "supplier_acceptance": "proposed",
+      "quote": "Price for those pours: $172.00 per cubic yard, for the final 120 cy only.",
+      "fragments": [
+        "frag_em_scoped_qty_1_p0_l4"
+      ]
+    }
+  ],
+  "acceptances": [
+    {
+      "ref": "baymix_hemix_final120",
+      "supplier_acceptance": "accepted",
+      "quote": "BayMix agrees to these terms; please approve them on your side.",
+      "fragments": [
+        "frag_em_scoped_qty_1_p0_l6"
+      ]
+    }
+  ],
+  "internal_approval_claims": [],
+  "payee_change_requests": []
+}
