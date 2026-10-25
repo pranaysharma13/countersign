@@ -82,6 +82,7 @@ class InvoiceBundle:
     others: list[dict[str, Any]] = field(default_factory=list)  # same supplier: {"invoice","revision","lines","document"}
     authorities: list[dict[str, Any]] = field(default_factory=list)  # who may decide changes, and up to what amount
     decisions: list[dict[str, Any]] = field(default_factory=list)  # active settlement decisions on this revision (§9.9)
+    delivery_period: dict[str, str] | None = None  # {"from", "to"} from the revision's validated reading, if it says
 
 
 @dataclass
@@ -160,6 +161,30 @@ def _frags(row: dict[str, Any]) -> list[str]:
 # ---------------------------------------------------------------- line by line
 
 
+def period_fit(period: dict[str, str] | None, scope: dict[str, Any]) -> str:
+    """How an amendment's date or delivery scope covers an invoice's deliveries: "all", "none" or "partial".
+    Unknown deliveries, or a scope by delivery reference that the invoice line can't show, are "partial"."""
+    start, end, refs = scope.get("from") or "", scope.get("to") or "", scope.get("delivery_refs") or []
+    if not start and not end:
+        return "partial" if refs else "all"
+    if not period or not period.get("from") or not period.get("to"):
+        return "partial"
+    if (start and period["to"] < start) or (end and period["from"] > end):
+        return "none"
+    return "all" if (not start or period["from"] >= start) and (not end or period["to"] <= end) and not refs else "partial"
+
+
+def _scope_text(scope: dict[str, Any]) -> str:
+    start, end, refs = scope.get("from") or "", scope.get("to") or "", scope.get("delivery_refs") or []
+    when = (f"deliveries from {start} to {end}" if start and end else f"deliveries from {start}" if start
+            else f"deliveries through {end}" if end else "")
+    return ", ".join(x for x in (when, f"deliveries {', '.join(refs)}" if refs else "") if x) or "its scope"
+
+
+def _period_text(period: dict[str, str] | None) -> str:
+    return f"{period['from']} to {period['to']}" if period and period.get("from") and period.get("to") else "on unstated dates"
+
+
 def _material_line(b: InvoiceBundle, l: dict[str, Any], r: LineResult) -> None:
     unit = (b.purchase or {}).get("unit", "")
     base = _accepted_term(b, "unit_price")
@@ -172,21 +197,46 @@ def _material_line(b: InvoiceBundle, l: dict[str, Any], r: LineResult) -> None:
         r.status, r.hold_code, r.pending_cents = "review", "CONTRACT_REVIEW", r.claimed_cents
         r.uncertainty = "No accepted unit price on the purchase."
         return
-    # Accepted price changes apply to their scoped quantity first; the rest stays at the quoted price.
-    remaining, allowed, parts = qty, 0, []
+    # Accepted price changes apply to their scoped quantity first; the rest stays at the quoted price. A change
+    # scoped to dates or deliveries applies only when the invoice's deliveries all fall inside that scope; when
+    # they only partly do, nobody knows how much was delivered inside it, so only the quoted price is authorised
+    # and the difference waits for allocation evidence (SPEC §8 scoped amendment).
+    remaining, allowed, parts, unallocated = qty, 0, [], []
     for cr in sorted(b.change_requests, key=lambda c: c["id"]):
         if cr["kind"] != "price_change" or not effective_classification(cr).startswith("AUTHORISED") or remaining <= 0:
             continue
-        scoped = _scope(cr).get("quantity_milli")
+        scope = _scope(cr)
+        fit = period_fit(b.delivery_period, scope)
+        if fit == "none":
+            continue
+        scoped = scope.get("quantity_milli")
+        if scoped is None and fit == "partial":
+            unallocated.append(cr)
+            continue
         take = remaining if scoped is None else min(remaining, int(scoped))
         allowed += take * int(cr["rate_cents"]) // 1000
         parts.append(f"{fmt_qty(take, unit)} x {fmt(int(cr['rate_cents']))} (amendment {cr['id']})")
         remaining -= take
-    allowed += remaining * int(base["amount_cents"]) // 1000
+    at_base = remaining * int(base["amount_cents"]) // 1000
+    top = max((int(c["rate_cents"]) for c in unallocated), default=0)
+    ceiling = allowed + (remaining * top // 1000 if top > int(base["amount_cents"]) else at_base)
+    allowed += at_base
     if remaining:
         parts.append(f"{fmt_qty(remaining, unit)} x {fmt(int(base['amount_cents']))} (accepted unit price)")
     r.fragment_ids += _frags(base)
     r.accepted_cents = min(r.claimed_cents, allowed)
+    if allowed < r.claimed_cents <= ceiling:  # within what the scoped price could allow: evidence, not a variance
+        cr = max(unallocated, key=lambda c: int(c["rate_cents"]))
+        r.pending_cents = r.claimed_cents - allowed
+        r.fragment_ids += _frags(cr)
+        r.status, r.classification, r.hold_code = "pending", "AUTHORISED_RATE_USAGE_MISSING", "USAGE_EVIDENCE_MISSING"
+        r.calculation = (f"Allowed {' + '.join(parts)} = {fmt(allowed)}; billed {fmt_qty(qty, unit)} x {fmt(price)} = "
+                         f"{fmt(r.claimed_cents)}; up to {fmt(r.pending_cents)} more if delivered inside the scope of {cr['id']}")
+        r.uncertainty = (f"The {fmt(int(cr['rate_cents']))} per {unit} price is agreed only for {_scope_text(_scope(cr))}; "
+                         f"this invoice covers deliveries {_period_text(b.delivery_period)}. Without delivery tickets "
+                         f"showing how much of the {fmt_qty(qty, unit)} was delivered inside that scope, only the quoted "
+                         "price is authorised.")
+        return
     r.variance_cents = max(r.claimed_cents - allowed, 0)
     r.calculation = (f"Allowed {' + '.join(parts)} = {fmt(allowed)}; billed {fmt_qty(qty, unit)} x {fmt(price)} = "
                      f"{fmt(r.claimed_cents)}" + (f"; difference {fmt(r.variance_cents)}" if r.variance_cents else ""))
@@ -354,7 +404,7 @@ def check_contract(b: InvoiceBundle, lines: list[LineResult]) -> tuple[CheckOutc
 
 def check_price_terms(b: InvoiceBundle, lines: list[LineResult]) -> tuple[CheckOutcome, list[HoldSpec]]:
     material = [r for r in lines if r.kind == "material"]
-    holds = _line_holds(material, {"PRICE_VARIANCE"})
+    holds = _line_holds(material, {"PRICE_VARIANCE", "USAGE_EVIDENCE_MISSING"})  # the latter: a scoped price, unallocated
     if holds:
         return CheckOutcome("price_terms", "fail", holds[0].reason, {"lines": [asdict(r) for r in material]}, "contract"), holds
     return CheckOutcome("price_terms", "pass", "Material billed at the accepted price.",
@@ -533,7 +583,13 @@ def input_digest(b: InvoiceBundle) -> dict[str, Any]:
                                                   "document_sha256": (o.get("document") or {}).get("sha256", "")})
                    for o in b.others},
         **({"settlement_decisions": rows(b.decisions)} if b.decisions else {}),
+        **({"delivery_period": dict(b.delivery_period or {})} if _date_scoped(b) else {}),  # only when it can matter
     }
+
+
+def _date_scoped(b: InvoiceBundle) -> bool:
+    return any(c["kind"] == "price_change" and any(_scope(c).get(k) for k in ("from", "to", "delivery_refs"))
+               for c in b.change_requests)
 
 
 def fingerprint(b: InvoiceBundle) -> str:
@@ -666,6 +722,21 @@ def active_decisions(store: Store, **filters: Any) -> list[dict[str, Any]]:
         raise
 
 
+def _delivery_period(store: Store, document_id: str) -> dict[str, str] | None:
+    """The delivery period the revision's latest validated reading cites, or None if it states none."""
+    runs = store.rows("extraction_run", document_id=document_id, status="ok")
+    if not runs:
+        return None
+    try:
+        ext = json.loads(max(runs, key=lambda r: (r["created_at"], r["id"]))["fields_json"] or "{}")
+    except json.JSONDecodeError:
+        return None
+    value = ((ext.get("fields") or {}).get("delivery_period") or {}).get("value")
+    if isinstance(value, dict) and isinstance(value.get("from"), str) and isinstance(value.get("to"), str):
+        return {"from": value["from"], "to": value["to"]}
+    return None
+
+
 def bundle_from_store(store: Store, invoice_id: str) -> InvoiceBundle:
     inv = one(store, "invoice", id=invoice_id)
     assert inv is not None, f"unknown invoice {invoice_id}"
@@ -691,7 +762,7 @@ def bundle_from_store(store: Store, invoice_id: str) -> InvoiceBundle:
         payee_profiles=_sorted(store.rows("payee_profile", supplier_id=inv["supplier_id"])),
         authorities=sorted(store.rows("authority"), key=lambda a: (a["role"], str(a["identity"]))),
         document=one(store, "document", id=rev["document_id"]), others=others,
-        decisions=active_decisions(store, revision_id=rev["id"]))
+        decisions=active_decisions(store, revision_id=rev["id"]), delivery_period=_delivery_period(store, rev["document_id"]))
 
 
 def record(store: Store, a: Assessment, role: str = "agent") -> str:
