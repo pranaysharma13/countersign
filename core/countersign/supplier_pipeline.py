@@ -15,6 +15,7 @@ from typing import Any
 
 from . import live_extract
 from . import reducers as R
+from . import sandbox
 from .clarify import outbox_id, record_draft
 from .commercial import Assessment, InvoiceBundle, assess, bundle_from_store, record
 from .config import settings
@@ -99,7 +100,7 @@ def _on_file(store: Store, supplier_id: str | None = None) -> list[str]:
     purchases = {p["id"] for p in store.rows("purchase") if supplier_id is None or p["supplier_id"] == supplier_id}
     lines = []
     for cr in sorted(store.rows("change_request"), key=lambda c: c["id"]):
-        if cr["purchase_id"] in purchases:
+        if cr["purchase_id"] in purchases and cr["kind"] != "settlement":  # an owner's settlement is never linkable
             price = (f"flat {fmt(int(cr['amount_cents']))}" if int(cr["amount_cents"])
                      else f"{fmt(int(cr['rate_cents']))}/{cr['rate_unit']}" if int(cr["rate_cents"]) else "no amount stated")
             lines.append(f"{cr['id'].removeprefix('cr_')}: {cr['description']} | {price} | supplier "
@@ -138,7 +139,7 @@ def _live(store: Store, document_id: str) -> dict[str, Any]:
 
 def _extraction(store: Store, document_id: str) -> dict[str, Any] | None:
     if ai_mode() == "fixture":
-        return find_fixture(document_id)
+        return find_fixture(document_id) or sandbox.generated(document_id)
     return _live(store, document_id)
 
 
@@ -187,6 +188,30 @@ def _email(store: Store, ext: dict[str, Any]) -> dict[str, Any]:
             "acceptances": len(ext.get("acceptances", [])), "ignored_approval_claims": len(claims)}
 
 
+def _payee_changes(store: Store, ext: dict[str, Any], supplier_id: str) -> list[str]:
+    """A document asking to be paid into a different account becomes a pending payee profile. The module
+    then opens PAYEE_CHANGE_PENDING on the supplier's open invoices; only the owner can verify it, by
+    calling a contact already on file. The same account again, or the verified one, records nothing."""
+    added = []
+    doc = one(store, "document", id=ext["document_id"]) or {}
+    src = one(store, "source_file", id=doc.get("source_file_id", "")) or {}
+    via = "email" if doc.get("kind") == "email" or src.get("kind") == "email" else "portal"
+    for req in ext.get("payee_change_requests", []):
+        last4 = str(req["last4"])
+        profiles = store.rows("payee_profile", supplier_id=supplier_id)
+        if any(p["last4"] == last4 and p["status"] in {"verified", "pending"} for p in profiles):
+            continue
+        version = max((int(p["version"]) for p in profiles), default=0) + 1
+        profile_id = f"{supplier_id}:v{version}"
+        res = R.add_payee_profile(store, "agent", profile_id, supplier_id, version,
+                                  f"requested_{supplier_id.removeprefix('sup_')}_{last4}", last4,
+                                  str(req.get("bank_name") or ""), via)
+        if not res.ok:
+            raise RuntimeError(f"add_payee_profile {profile_id}: {res.outcome} {res.message}")
+        added.append(profile_id)
+    return added
+
+
 def _invoice(store: Store, ext: dict[str, Any], injected: list[str]) -> dict[str, Any]:
     po_number = values(ext).get("po_number")
     matches = [p for p in store.rows("purchase") if p["po_number"] == po_number] if po_number else []
@@ -200,6 +225,11 @@ def _invoice(store: Store, ext: dict[str, Any], injected: list[str]) -> dict[str
     _step(store, invoice_id, "plan", f"Read {ext['document_id']} ({ext.get('label', ext.get('mode', ''))}) and linked it "
           f"to PO {po_number}", {"revision_id": revision_id, "model": ext.get("model", "fixture"),
                                  "latency_ms": ext.get("latency_ms")})
+    for profile_id in _payee_changes(store, ext, matches[0]["supplier_id"]):
+        last4 = (one(store, "payee_profile", id=profile_id) or {}).get("last4", "????")
+        _step(store, invoice_id, "decision", f"The invoice asks to be paid into a new account ending {last4}; recorded it as "
+              "a pending payee change. The owner verifies it by calling a contact already on file.",
+              {"payee_profile_id": profile_id})
     if injected:  # data, never instructions: flag it and keep going
         R.open_hold(store, "agent", hold_id(revision_id, "PROMPT_INJECTION"), revision_id, "PROMPT_INJECTION", 0,
                     f"The invoice contains text aimed at an automated system, treated as data and ignored: \"{injected[0][:160]}\"",

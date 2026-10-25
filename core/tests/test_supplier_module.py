@@ -206,9 +206,14 @@ def test_agent_opens_holds_but_never_resolves_them(store):
     assert hold(store, REV1_ID, "PRICE_VARIANCE")["amount_cents"] == 350_000
     hid = hold_id(REV1_ID, "PRICE_VARIANCE")
     assert R.resolve_hold(store, "agent", hid, "looks fine").outcome == "denied" and denied_logged(store, "resolve_hold")
-    assert R.resolve_hold(store, "owner", hid, "  ").outcome == "invalid"
-    assert R.resolve_hold(store, "owner", hid, "BayMix agreed to a credit memo").ok
-    assert hold(store, REV1_ID, "PRICE_VARIANCE")["status"] == "resolved"
+    res = R.resolve_hold(store, "owner", hid, "BayMix agreed to a credit memo")  # a money hold: never by hand (§9.9)
+    assert res.outcome == "denied" and "corrected invoice" in res.message
+    assert hold(store, REV1_ID, "PRICE_VARIANCE")["status"] == "open"
+    assert open_(store, REV1_ID, "DUPLICATE_REVIEW").ok
+    dup = hold_id(REV1_ID, "DUPLICATE_REVIEW")
+    assert R.resolve_hold(store, "owner", dup, "  ").outcome == "invalid"
+    assert R.resolve_hold(store, "owner", dup, "Different pour, not a duplicate").ok
+    assert hold(store, REV1_ID, "DUPLICATE_REVIEW")["status"] == "resolved"
     assert open_(store, REV1_ID, "RECEIPT_NOT_VERIFIED").ok
     res = R.resolve_hold(store, "owner", hold_id(REV1_ID, "RECEIPT_NOT_VERIFIED"), "I'm sure it arrived")
     assert res.outcome == "denied" and "superintendent" in res.message

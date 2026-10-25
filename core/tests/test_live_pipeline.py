@@ -78,6 +78,7 @@ def live_answer(ext, schema):
         f[name] = {"value": sup["value"][part], "quote": sup["quote"], "fragments": sup["fragments"]} if sup["value"] else {"value": None}
     return {"facts": [_fact(n, f.get(n, {"value": None})) for n in live_extract.INVOICE_FACTS],
             "lines": [line(l, change_request_ref=l.get("links", {}).get("change_request_ref", "")) for l in ext["lines"]],
+            "payee_change_requests": ext.get("payee_change_requests", []),
             "instructions_found": ext.get("instructions_found", [])}
 
 

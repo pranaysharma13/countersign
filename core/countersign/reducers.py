@@ -1,7 +1,7 @@
-"""Typed wrappers for every reducer in docs/CONTRACT.md §4 and §9.4.
+"""Typed wrappers for every reducer in docs/CONTRACT.md §4, §9.4 and §9.9.
 
 This is the ONLY place that knows argument order. All other Python code calls these.
-`request_id` is added by the store. Keep in sync with CONTRACT.md (version v2.1).
+`request_id` is added by the store. Keep in sync with CONTRACT.md (version v2.2).
 """
 
 from __future__ import annotations
@@ -368,3 +368,13 @@ def reject_supplier_payment(s: Store, role: str, proposal_id: str, note: str = "
 
 def record_deposit_allocation(s: Store, id: str, deposit_id: str, invoice_id: str, amount_cents: int, role: str = "gateway") -> Result:
     return s.call(role, "record_deposit_allocation", id, deposit_id, invoice_id, amount_cents)
+
+
+# 9.9 Settlement decisions on disputed lines
+def decide_disputed_line(
+    s: Store, role: str, id: str, invoice_line_id: str, decision: str, amount_cents: int, expected_fingerprint: str,
+    to_contact_id: str, note: str,
+) -> Result:
+    """`accept_as_billed` or `pay_agreed_dispute_rest`, owner only. The module checks everything (CONTRACT §9.9)."""
+    return s.call(role, "decide_disputed_line", id, invoice_line_id, decision, amount_cents, expected_fingerprint,
+                  to_contact_id, note)

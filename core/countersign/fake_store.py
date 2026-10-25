@@ -1,4 +1,4 @@
-"""In-memory reference implementation of the SpacetimeDB module (docs/CONTRACT.md v2.1).
+"""In-memory reference implementation of the SpacetimeDB module (docs/CONTRACT.md v2.2).
 
 Used for Python tests and for running the pipeline before the real module is up
 (STORE_BACKEND=fake). It also documents, in runnable form, what the TypeScript
@@ -29,19 +29,21 @@ DOCUMENT_KINDS = {"quote", "terms", "po", "invoice", "email", "other"}
 DOC_STATUS_AFTER_RUN = {"ok": "extracted", "invalid": "needs_review", "failed": "failed"}  # as the module does
 TERM_CODES = {"unit_price", "max_quantity", "valid_through", "deposit", "payment_terms", "price_change_rule",
               "extra_charge_rule", "fuel_surcharge_rule"}
-CHANGE_KINDS = {"extra_charge", "price_change", "quantity_change"}
+CHANGE_KINDS = {"extra_charge", "price_change", "quantity_change"}  # `settlement` only from decide_disputed_line (§9.9)
 AUTHORISED = {"AUTHORISED_FIXED", "AUTHORISED_RATE_USAGE_MISSING"}
 CLASSIFICATIONS = AUTHORISED | {"PROPOSED", "DECLINED", "AMBIGUOUS", "UNRELATED"}
 SUPPLIER_ACCEPTANCE = {"none", "proposed", "accepted", "declined"}
 LINE_KINDS = {"material", "extra", "waiting", "fuel", "tax", "freight", "other"}
-COMMERCIAL_STATUSES = {"pending", "matches", "differences_under_review", "contract_review"}
-OWNER_RESOLVABLE_HOLDS = {"PRICE_VARIANCE", "PROPOSED_CHARGE", "USAGE_EVIDENCE_MISSING", "PO_CEILING", "DUPLICATE_REVIEW",
-                          "EXTRACTION_REVIEW", "CONTRACT_REVIEW", "PROMPT_INJECTION", "SUPPLIER_RISK"}
-HOLD_CODES = OWNER_RESOLVABLE_HOLDS | {"RECEIPT_NOT_VERIFIED", "PAYEE_CHANGE_PENDING", "APPROVAL_STALE"}
+COMMERCIAL_STATUSES = {"pending", "matches", "differences_under_review", "contract_review", "partially_disputed"}
+MONEY_HOLDS = {"PRICE_VARIANCE", "PROPOSED_CHARGE", "USAGE_EVIDENCE_MISSING", "PO_CEILING"}  # never resolve_hold (§9.9)
+OWNER_RESOLVABLE_HOLDS = {"DUPLICATE_REVIEW", "EXTRACTION_REVIEW", "CONTRACT_REVIEW", "PROMPT_INJECTION", "SUPPLIER_RISK"}
+HOLD_CODES = OWNER_RESOLVABLE_HOLDS | MONEY_HOLDS | {"RECEIPT_NOT_VERIFIED", "PAYEE_CHANGE_PENDING", "APPROVAL_STALE"}
+SETTLEMENT_DECISIONS = {"accept_as_billed", "pay_agreed_dispute_rest"}
 CARRIED_HOLDS = {"RECEIPT_NOT_VERIFIED", "PAYEE_CHANGE_PENDING", "SUPPLIER_RISK"}  # a correction can't clear these (§9.8)
 HOLD_PATHS = {"RECEIPT_NOT_VERIFIED": "the superintendent attests receipt",
               "PAYEE_CHANGE_PENDING": "the owner verifies the payee change through a contact on file",
-              "APPROVAL_STALE": "the owner approves the payment again"}
+              "APPROVAL_STALE": "the owner approves the payment again",
+              **{c: "a corrected invoice arrives, or the owner decides each disputed line in the app" for c in MONEY_HOLDS}}
 
 
 def _classify(cr: dict[str, Any]) -> str:
@@ -170,6 +172,8 @@ ALLOWED: dict[str, set[str] | None] = {
     "approve_supplier_payment": {"owner"},
     "reject_supplier_payment": {"owner"},
     "record_deposit_allocation": {"gateway"},
+    # v2.2 (CONTRACT §9.9)
+    "decide_disputed_line": {"owner"},
 }
 
 AUTO_INC = {"audit_log", "agent_step", "ledger_line"}
@@ -388,18 +392,48 @@ class FakeStore:
         alloc = int(ref.get("deposit_allocation_cents") or 0)
         if alloc > 0 and alloc > self._deposit_remaining(inv["purchase_id"]):
             reasons.append("deposit allocation exceeds the remaining deposit")
+        if self._unsent_notices(inv["id"]):  # never pay short before the supplier is told (§9.9)
+            reasons.append("notice to supplier not sent")
         return reasons
+
+    # -- settlement decisions (CONTRACT §9.9)
+    def _disputed_lines(self, revision_id: str) -> dict[str, dict[str, Any]]:
+        """Lines the latest assessment shows as disputed: a money hold_code and pending + variance > 0.
+        The module reads nothing else from details_json."""
+        a = self._latest_assessment(revision_id)
+        try:
+            details = json.loads((a or {}).get("details_json") or "{}")
+        except json.JSONDecodeError:
+            return {}
+        lines = details.get("lines") if isinstance(details, dict) else None
+        cents = lambda v: v if isinstance(v, int) and not isinstance(v, bool) else 0
+        return {str(l.get("line_id")): l for l in lines or [] if isinstance(l, dict) and l.get("hold_code") in MONEY_HOLDS
+                and cents(l.get("pending_cents")) + cents(l.get("variance_cents")) > 0}
+
+    def _active_decisions(self, **filters: Any) -> list[dict[str, Any]]:
+        return self.rows("settlement_decision", status="active", **filters)
+
+    def _unsent_notices(self, invoice_id: str) -> list[str]:
+        return [d["outbox_id"] for d in self._active_decisions(invoice_id=invoice_id)
+                if d["decision"] == "pay_agreed_dispute_rest" and (self._get("outbox", d["outbox_id"]) or {}).get("status") != "sent"]
 
     def _on_supplier_payment(self, rid: str, role: str, action: str, proposal_id: str, phase: str) -> None:
         ref = self._ref(self._get("proposal", proposal_id) or {})
         if ref is None:
             return
+        disputed = [d for d in self._active_decisions(invoice_id=ref["invoice_id"]) if d["decision"] == "pay_agreed_dispute_rest"]
+        if phase == "settled" and disputed:  # the agreed part is paid; the disputed rest stays open
+            phase = "partially_settled"
+            still_open = sum(int(d["amount_cents"]) for d in disputed)
         self._update(rid, role, action, "invoice", ref["invoice_id"], {
             "payment_status": phase, "updated_at": _now(),
-            "next_owner_role": "" if phase == "settled" else "owner" if phase == "failed" else "gateway",
-            "next_action": "Paid" if phase == "settled" else "Payment failed; review" if phase == "failed" else "Settling"})
+            "next_owner_role": "" if phase == "settled" else "purchasing" if phase == "partially_settled"
+            else "owner" if phase == "failed" else "gateway",
+            "next_action": "Paid" if phase == "settled"
+            else f"Agreed amount paid; {fmt(still_open)} still disputed: wait for a corrected invoice or an agreed credit"
+            if phase == "partially_settled" else "Payment failed; review" if phase == "failed" else "Settling"})
         ap = self._get("payment_approval", f"appr_{proposal_id}")
-        if phase == "settled" and ap is not None and ap["status"] == "active":
+        if phase in {"settled", "partially_settled"} and ap is not None and ap["status"] == "active":
             self._update(rid, role, action, "payment_approval", ap["id"], {"status": "used"})
 
     def _payee_status(self, supplier_id: str) -> str:
@@ -433,7 +467,7 @@ class FakeStore:
         ceiling = int(max(terms, key=lambda t: t["version"])["quantity_milli"])
         # Only paid-for quantity is used up: an unscoped price change could still reach an unpaid invoice.
         paid = sum(self._active_material_milli(inv, purchase["unit"]) for inv in self._t("invoice").values()
-                   if inv["purchase_id"] == purchase["id"] and inv["payment_status"] == "settled")
+                   if inv["purchase_id"] == purchase["id"] and inv["payment_status"] in {"settled", "partially_settled"})
         return max(ceiling - paid, 0)
 
     def _exposure(self, cr: dict[str, Any], purchase: dict[str, Any]) -> tuple[int | None, str]:
@@ -1080,11 +1114,14 @@ class FakeStore:
             note = f"superseded by revision {revision} ({id})"
             self._update(rid, role, "record_invoice_revision", "invoice_revision", supersedes_revision_id, {"status": "superseded"}, note)
             for h in list(self._t("hold").values()):
-                if h["revision_id"] == supersedes_revision_id and h["status"] == "open":
+                if h["revision_id"] == supersedes_revision_id and h["status"] in {"open", "disputed"}:
+                    was = h["status"]
                     self._update(rid, role, "record_invoice_revision", "hold", h["id"], {"status": "superseded", "resolution_note": note}, note)
-                    if h["code"] in CARRIED_HOLDS:
+                    if was == "open" and h["code"] in CARRIED_HOLDS:
                         self._module_hold(rid, role, "record_invoice_revision", id, h["code"], h["amount_cents"], h["reason"],
                                           h["evidence_json"])
+            for d in self._active_decisions(revision_id=supersedes_revision_id):  # the new revision is assessed from scratch
+                self._update(rid, role, "record_invoice_revision", "settlement_decision", d["id"], {"status": "superseded"}, note)
         self._update(rid, role, "record_invoice_revision", "invoice", invoice_id, {
             "active_revision_id": id, "commercial_status": "pending", "payment_status": "not_ready", "next_owner_role": "agent",
             "next_action": "Assess this revision against the purchase terms", "updated_at": _now()})
@@ -1169,9 +1206,9 @@ class FakeStore:
     def _r_resolve_hold(self, rid, role, id, note):
         h = self._get("hold", id)
         self._need(h is not None, "unknown hold")
-        self._need(h["status"] == "open", f"hold is {h['status']}")
         if h["code"] not in OWNER_RESOLVABLE_HOLDS:
             raise Denied(f"{h['code']} can't be resolved by hand; it clears when {HOLD_PATHS[h['code']]}", "hold", id)
+        self._need(h["status"] == "open", f"hold is {h['status']}")
         self._need(bool(note.strip()), "a note is required to resolve a hold")
         self._update(rid, role, "resolve_hold", "hold", id, {"status": "resolved", "resolved_by_role": role, "resolution_note": note,
                                                              "resolved_at_iso": time.strftime("%Y-%m-%dT%H:%M:%S")}, note)
@@ -1350,4 +1387,92 @@ class FakeStore:
         self._need(used + amount_cents <= d["amount_cents"], f"allocation would exceed the deposit: {used} + {amount_cents} > {d['amount_cents']}")
         self._upsert(rid, role, "record_deposit_allocation", "deposit_allocation", dict(
             id=id, deposit_id=deposit_id, invoice_id=invoice_id, amount_cents=amount_cents, created_at=_now()))
+        return None
+
+    # ------------------------------------------------------------------ 9.9 settlement decisions on disputed lines
+    def _r_decide_disputed_line(self, rid, role, id, invoice_line_id, decision, amount_cents, expected_fingerprint,
+                                to_contact_id, note):
+        if self._get("settlement_decision", id):
+            return ("duplicate", "decision exists")
+        action = "decide_disputed_line"
+        self._need(decision in SETTLEMENT_DECISIONS, f"bad decision {decision}")
+        self._need(isinstance(amount_cents, int) and not isinstance(amount_cents, bool) and amount_cents > 0,
+                   "amount_cents must be positive integer cents")
+        line = self._get("invoice_line", invoice_line_id)
+        self._need(line is not None, "unknown invoice line")
+        rev = self._get("invoice_revision", line["revision_id"])
+        inv = self._get("invoice", rev["invoice_id"])
+        self._need(rev["status"] == "active" and inv["active_revision_id"] == rev["id"],
+                   "the line isn't on its invoice's active revision")
+        latest = self._latest_assessment(rev["id"])
+        self._need(latest is not None, "the revision hasn't been assessed yet")
+        disputed = self._disputed_lines(rev["id"])
+        entry = disputed.get(invoice_line_id)
+        self._need(entry is not None, "the latest assessment doesn't show this line as disputed")
+        owed = int(entry["pending_cents"]) + int(entry["variance_cents"])
+        self._need(owed == amount_cents, f"the line's disputed amount is {fmt(owed)}, not {fmt(amount_cents)}")
+        self._need(not self._active_decisions(invoice_line_id=invoice_line_id), "this line already has an active decision")
+        self._need(bool(note.strip()), "a note is required")
+        contact = self._get("supplier_contact", to_contact_id) if to_contact_id else None
+        if decision == "pay_agreed_dispute_rest":
+            self._need(contact is not None and contact["supplier_id"] == inv["supplier_id"],
+                       "the notice goes to a contact of the invoice's supplier")
+        else:
+            self._need(to_contact_id == "", "accept_as_billed sends no notice; to_contact_id must be empty")
+        if expected_fingerprint != latest["fingerprint"]:
+            raise Denied("the assessment changed; review it again", "settlement_decision", id)
+        if decision == "accept_as_billed":  # commits money, so it's within the caller's authority
+            purchase = self._get("purchase", inv["purchase_id"]) or {}
+            auth = self._get("authority", role) or {"limit_cents": 0, "project_scope": ""}
+            if auth["project_scope"] not in {"*", purchase.get("project_id")}:
+                raise Denied(f"no authority on {purchase.get('project_id') or 'this purchase'}", "settlement_decision", id)
+            if amount_cents > auth["limit_cents"]:
+                raise Denied(f"{fmt(amount_cents)} is above your approval limit of {fmt(auth['limit_cents'])}",
+                             "settlement_decision", id)
+
+        cr_id = ob_id = ""
+        frags = line["source_fragment_ids_json"]
+        if decision == "accept_as_billed":
+            cr_id = f"cr_{id}"
+            self._upsert(rid, role, action, "change_request", dict(
+                id=cr_id, purchase_id=inv["purchase_id"], kind="settlement",
+                description=f"Settlement: {line['description']} accepted as billed", amount_cents=amount_cents, rate_cents=0,
+                rate_unit="", scope_json=dumps({"invoice_line_id": invoice_line_id, "settlement_decision_id": id}),
+                effective_from="", original_sent_at_iso="", ingested_at_iso="", classification="AUTHORISED_FIXED",
+                supplier_acceptance="accepted", supplier_acceptance_fragment_ids_json=frags,  # its own invoice line is its claim
+                requested_by_identity="", internal_status="approved", decided_by_identity=role, decided_by_role=role,
+                decision_note=note, source_fragment_ids_json=frags, created_at=_now()))
+        else:
+            ob_id = f"ob_{id}"
+            company = next(iter(self._t("company").values()), {}).get("name", "Accounts Payable")
+            body = (f"Hello {contact['name']},\n\n"
+                    f"On invoice {inv['invoice_number']} we don't agree with this line:\n"
+                    f"  {line['description']}: {fmt(amount_cents)} disputed.\n\n"
+                    "We're paying the agreed amount of the invoice now. The disputed amount stays open, and your "
+                    "original invoice stays on file.\n"
+                    "Please send a corrected invoice or an agreed credit memo for it.\n\n"
+                    f"{company}, Accounts Payable\n")  # the owner's note stays internal
+            self._upsert(rid, role, action, "outbox", dict(
+                id=ob_id, invoice_id=inv["id"], to_contact_id=to_contact_id, to_address=contact["email"],
+                subject=f"Invoice {inv['invoice_number']}: paying the agreed amount, {fmt(amount_cents)} disputed", body=body,
+                status="draft", simulated=True, created_by_role=role, approved_by_role="", delivery_ref="", created_at=_now()))
+        self._upsert(rid, role, action, "settlement_decision", dict(
+            id=id, invoice_id=inv["id"], revision_id=rev["id"], invoice_line_id=invoice_line_id, decision=decision,
+            amount_cents=amount_cents, assessment_fingerprint=latest["fingerprint"], change_request_id=cr_id, outbox_id=ob_id,
+            note=note, decided_by_identity=role, decided_by_role=role, status="active", created_at=_now()))
+
+        # A money hold closes once every disputed line it covers is decided. PO_CEILING covers no line, so only a
+        # correction clears it.
+        decided = {d["invoice_line_id"]: d for d in self._active_decisions(revision_id=rev["id"])}
+        for h in list(self._t("hold").values()):
+            if h["revision_id"] != rev["id"] or h["code"] not in MONEY_HOLDS or h["status"] != "open":
+                continue
+            covered = [lid for lid, l in disputed.items() if l["hold_code"] == h["code"]]
+            if not covered or any(lid not in decided for lid in covered):
+                continue
+            status = "resolved" if all(decided[lid]["decision"] == "accept_as_billed" for lid in covered) else "disputed"
+            self._update(rid, role, action, "hold", h["id"], {
+                "status": status, "resolved_by_role": role, "resolution_note": note,
+                "resolved_at_iso": time.strftime("%Y-%m-%dT%H:%M:%S")}, note)
+        self._enqueue(rid, role, f"job_reassess_{id}", "reassess_invoice", {"invoice_id": inv["id"]})
         return None
