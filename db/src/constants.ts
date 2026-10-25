@@ -1,15 +1,15 @@
 // Enum lists from docs/CONTRACT.md. The module validates every string enum against these.
 
-export const ROLES = ['admin', 'owner', 'bookkeeper', 'agent', 'gateway', 'sync'] as const;
+export const ROLES = ['admin', 'owner', 'bookkeeper', 'agent', 'gateway', 'sync', 'purchasing', 'receiver'] as const;
 export type Role = (typeof ROLES)[number] | 'public';
 
 export const SUB_STATUS = ['onboarding', 'active', 'blocked'];
 export const PROJECT_STATUS = ['active', 'closed'];
 export const LIEN_WAIVER_RULES = ['conditional_progress_each_bill', 'none'];
 export const SOURCE_KINDS = ['email', 'upload', 'scam_page', 'legit_page', 'scorecard', 'seed', 'contract'];
-export const LEDGER_REF_TYPES = ['bill', 'payment', 'seed'];
+export const LEDGER_REF_TYPES = ['bill', 'payment', 'seed', 'deposit', 'invoice'];
 
-export const WORK_KINDS = ['bill', 'bank_change', 'contract_onboarding'];
+export const WORK_KINDS = ['bill', 'bank_change', 'contract_onboarding', 'supplier_invoice'];
 export const ORIGINS = ['inbox', 'upload', 'scam_page', 'legit_page', 'scorecard', 'seed'];
 export const STEP_KINDS = ['plan', 'tool_call', 'tool_result', 'thought', 'decision', 'error'];
 export const CHECK_STATUS = ['pass', 'fail', 'warn', 'error', 'skipped'];
@@ -55,5 +55,14 @@ export const JOB_KINDS: Record<string, { enqueue_by: string[]; assignee: string 
   scorecard_run: { enqueue_by: ['owner', 'bookkeeper'], assignee: 'sync' },
   compromised_agent_demo: { enqueue_by: ['owner'], assignee: 'agent' },
   reset_demo: { enqueue_by: ['owner'], assignee: 'sync' },
+  // v2 (CONTRACT §9.5)
+  process_document: { enqueue_by: ['sync', 'owner', 'purchasing'], assignee: 'agent' },
+  reassess_invoice: { enqueue_by: ['sync', 'agent', 'owner'], assignee: 'agent' },
+  send_outbox: { enqueue_by: [], assignee: 'sync' },
+  pay_supplier: { enqueue_by: [], assignee: 'gateway' },
+  sneak_charge: { enqueue_by: ['*'], assignee: 'sync' },
+  due_scan: { enqueue_by: ['owner', 'sync'], assignee: 'sync' },
 };
+export const JOB_LEASE_MICROS = 5n * 60n * 1_000_000n; // a claimed job can be re-claimed after 5 minutes
 export const PUBLIC_QUEUED_LIMIT = 3;
+export const MAX_JOB_ATTEMPTS = 3;

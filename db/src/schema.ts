@@ -48,6 +48,10 @@ export const job = table({ name: 'job', public: true }, {
   error: t.string(),
   created_at: t.timestamp(),
   updated_at: t.timestamp(),
+  // v2 (CONTRACT §9.2): retries and leases
+  attempts: t.u32(),
+  next_attempt_at_iso: t.string(),
+  lease_expires_at_iso: t.string(),
 });
 
 export const config = table({ name: 'config', public: true }, {
@@ -317,6 +321,293 @@ export const score_case = table({ name: 'score_case', public: true }, {
   work_item_id: t.string(),
 });
 
+// ---------- §9 v2: supplier invoices ----------
+
+export const authority = table({ name: 'authority', public: true }, {
+  identity: t.identity().primaryKey(),
+  role: t.string(),
+  limit_cents: t.i64(),
+  project_scope: t.string(),
+});
+
+export const supplier = table({ name: 'supplier', public: true }, {
+  id: t.string().primaryKey(),
+  name: t.string(),
+  email_domain: t.string(),
+  phone_on_file: t.string(),
+  crs_ref: t.string(),
+  status: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const supplier_contact = table({ name: 'supplier_contact', public: true }, {
+  id: t.string().primaryKey(),
+  supplier_id: t.string().index('btree'),
+  name: t.string(),
+  email: t.string(),
+  phone: t.string(),
+  title: t.string(),
+  pre_established: t.bool(),
+});
+
+export const payee_profile = table({ name: 'payee_profile', public: true }, {
+  id: t.string().primaryKey(),
+  supplier_id: t.string().index('btree'),
+  version: t.u32(),
+  account_ref: t.string(),
+  last4: t.string(),
+  bank_name: t.string(),
+  status: t.string(),
+  requested_via: t.string(),
+  verified_by_role: t.string(),
+  verified_via_contact_id: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const document = table({ name: 'document', public: true }, {
+  id: t.string().primaryKey(),
+  kind: t.string(),
+  source_file_id: t.string(),
+  sha256: t.string(),
+  filename: t.string(),
+  pages: t.u32(),
+  status: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const source_fragment = table({ name: 'source_fragment', public: true }, {
+  id: t.string().primaryKey(),
+  document_id: t.string().index('btree'),
+  page: t.u32(),
+  email_message_id: t.string(),
+  line_start: t.u32(),
+  line_end: t.u32(),
+  text: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const email_message = table({ name: 'email_message', public: true }, {
+  id: t.string().primaryKey(),
+  thread_id: t.string().index('btree'),
+  document_id: t.string(),
+  from_address: t.string(),
+  to_addresses: t.string(),
+  subject: t.string(),
+  original_sent_at_iso: t.string(),
+  ingested_at_iso: t.string(),
+  body_fragment_id: t.string(),
+  from_known_contact: t.bool(),
+});
+
+export const extraction_run = table({ name: 'extraction_run', public: true }, {
+  id: t.string().primaryKey(),
+  document_id: t.string().index('btree'),
+  mode: t.string(),
+  model: t.string(),
+  prompt_version: t.string(),
+  status: t.string(),
+  error: t.string(),
+  fields_json: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const purchase = table({ name: 'purchase', public: true }, {
+  id: t.string().primaryKey(),
+  supplier_id: t.string(),
+  project_id: t.string(),
+  description: t.string(),
+  unit: t.string(),
+  currency: t.string(),
+  po_number: t.string(),
+  quote_document_id: t.string(),
+  po_document_id: t.string(),
+  status: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const term = table({ name: 'term', public: true }, {
+  id: t.string().primaryKey(),
+  purchase_id: t.string().index('btree'),
+  code: t.string(),
+  label: t.string(),
+  amount_cents: t.i64(),
+  quantity_milli: t.i64(),
+  text: t.string(),
+  scope_json: t.string(),
+  effective_from: t.string(),
+  effective_to: t.string(),
+  status: t.string(),
+  source_fragment_ids_json: t.string(),
+  version: t.u32(),
+});
+
+export const change_request = table({ name: 'change_request', public: true }, {
+  id: t.string().primaryKey(),
+  purchase_id: t.string().index('btree'),
+  kind: t.string(),
+  description: t.string(),
+  amount_cents: t.i64(),
+  rate_cents: t.i64(),
+  rate_unit: t.string(),
+  scope_json: t.string(),
+  effective_from: t.string(),
+  original_sent_at_iso: t.string(),
+  ingested_at_iso: t.string(),
+  classification: t.string(),
+  supplier_acceptance: t.string(),
+  supplier_acceptance_fragment_ids_json: t.string(),
+  requested_by_identity: t.string(),
+  internal_status: t.string(),
+  decided_by_identity: t.string(),
+  decided_by_role: t.string(),
+  decision_note: t.string(),
+  source_fragment_ids_json: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const invoice = table({ name: 'invoice', public: true }, {
+  id: t.string().primaryKey(),
+  supplier_id: t.string().index('btree'),
+  purchase_id: t.string(),
+  invoice_number: t.string(),
+  invoice_date: t.string(),
+  due_date: t.string(),
+  currency: t.string(),
+  active_revision_id: t.string(),
+  commercial_status: t.string(),
+  receipt_status: t.string(),
+  payee_status: t.string(),
+  approval_status: t.string(),
+  payment_status: t.string(),
+  next_owner_role: t.string(),
+  next_action: t.string(),
+  updated_at: t.timestamp(),
+});
+
+export const invoice_revision = table({ name: 'invoice_revision', public: true }, {
+  id: t.string().primaryKey(),
+  invoice_id: t.string().index('btree'),
+  revision: t.u32(),
+  document_id: t.string(),
+  gross_cents: t.i64(),
+  deposit_shown_cents: t.i64(),
+  balance_requested_cents: t.i64(),
+  supersedes_revision_id: t.string(),
+  status: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const invoice_line = table({ name: 'invoice_line', public: true }, {
+  id: t.string().primaryKey(),
+  revision_id: t.string().index('btree'),
+  kind: t.string(),
+  description: t.string(),
+  quantity_milli: t.i64(),
+  unit: t.string(),
+  unit_price_cents: t.i64(),
+  amount_cents: t.i64(),
+  linked_term_id: t.string(),
+  linked_change_request_id: t.string(),
+  source_fragment_ids_json: t.string(),
+});
+
+export const assessment = table({ name: 'assessment', public: true }, {
+  id: t.string().primaryKey(),
+  revision_id: t.string().index('btree'),
+  version: t.u32(),
+  fingerprint: t.string(),
+  policy_version: t.string(),
+  claimed_cents: t.i64(),
+  authorised_cents: t.i64(),
+  pending_cents: t.i64(),
+  variance_cents: t.i64(),
+  deposit_available_cents: t.i64(),
+  proposed_payment_cents: t.i64(),
+  commercial_status: t.string(),
+  summary: t.string(),
+  details_json: t.string(),
+  next_action: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const hold = table({ name: 'hold', public: true }, {
+  id: t.string().primaryKey(),
+  revision_id: t.string().index('btree'),
+  code: t.string(),
+  status: t.string(),
+  amount_cents: t.i64(),
+  reason: t.string(),
+  evidence_json: t.string(),
+  opened_by_role: t.string(),
+  resolved_by_role: t.string(),
+  resolution_note: t.string(),
+  created_at: t.timestamp(),
+  resolved_at_iso: t.string(),
+});
+
+export const receipt_attestation = table({ name: 'receipt_attestation', public: true }, {
+  id: t.string().primaryKey(),
+  invoice_id: t.string().index('btree'),
+  scope: t.string(),
+  quantity_milli: t.i64(),
+  unit: t.string(),
+  reason: t.string(),
+  label: t.string(),
+  attested_by_identity: t.string(),
+  attested_by_role: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const deposit = table({ name: 'deposit', public: true }, {
+  id: t.string().primaryKey(),
+  purchase_id: t.string(),
+  supplier_id: t.string(),
+  amount_cents: t.i64(),
+  status: t.string(),
+  transfer_ref: t.string(),
+  approved_by_role: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const deposit_allocation = table({ name: 'deposit_allocation', public: true }, {
+  id: t.string().primaryKey(),
+  deposit_id: t.string().index('btree'),
+  invoice_id: t.string(),
+  amount_cents: t.i64(),
+  created_at: t.timestamp(),
+});
+
+export const outbox = table({ name: 'outbox', public: true }, {
+  id: t.string().primaryKey(),
+  invoice_id: t.string(),
+  to_contact_id: t.string(),
+  to_address: t.string(),
+  subject: t.string(),
+  body: t.string(),
+  status: t.string(),
+  simulated: t.bool(),
+  created_by_role: t.string(),
+  approved_by_role: t.string(),
+  delivery_ref: t.string(),
+  created_at: t.timestamp(),
+});
+
+export const payment_approval = table({ name: 'payment_approval', public: true }, {
+  id: t.string().primaryKey(),
+  proposal_id: t.string().index('btree'),
+  invoice_id: t.string(),
+  revision_id: t.string(),
+  amount_cents: t.i64(),
+  deposit_allocation_cents: t.i64(),
+  payee_profile_id: t.string(),
+  assessment_fingerprint: t.string(),
+  policy_version: t.string(),
+  approved_by_identity: t.string(),
+  status: t.string(),
+  stale_reason: t.string(),
+  created_at: t.timestamp(),
+});
+
 const spacetimedb = schema(
   {
     actor, request_result, audit_log, job, config,
@@ -324,6 +615,9 @@ const spacetimedb = schema(
     bill, bill_line, bank_snapshot, ledger_line,
     work_item, agent_step, check_result, proposal, payment, bank_change,
     verification, policy, question, chat_message, score_run, score_case,
+    authority, supplier, supplier_contact, payee_profile, document, source_fragment, email_message,
+    extraction_run, purchase, term, change_request, invoice, invoice_revision, invoice_line,
+    assessment, hold, receipt_attestation, deposit, deposit_allocation, outbox, payment_approval,
   },
   { CASE_CONVERSION_POLICY: CaseConversionPolicy.None },
 );

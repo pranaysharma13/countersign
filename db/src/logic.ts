@@ -4,16 +4,17 @@ import { Identity } from 'spacetimedb';
 import type { Ctx } from './schema';
 import {
   ROLES, SUB_STATUS, PROJECT_STATUS, LIEN_WAIVER_RULES, SOURCE_KINDS, LEDGER_REF_TYPES,
-  WORK_KINDS, ORIGINS, STEP_KINDS, CHECK_STATUS, CHECK_SOURCES, CHECK_CODES, HARD_STOP_CHECKS,
+  WORK_KINDS, ORIGINS, STEP_KINDS, CHECK_STATUS, CHECK_SOURCES, HARD_STOP_CHECKS, JOB_LEASE_MICROS, MAX_JOB_ATTEMPTS,
   AGENT_TARGET_STATES, AGENT_SOURCE_STATES, PAYMENT_PROPOSE_FROM, HOLD_PROPOSE_FROM,
   JOB_KINDS, PUBLIC_QUEUED_LIMIT,
 } from './constants';
 import { handle, ok, invalid, deny, audit, oneOf, iso, json, type Call, type Result } from './request';
+import { recheckSupplierApproval, onSupplierPayment } from './logic_v2';
 
 const nonNeg = (v: bigint, f: string) => (v < 0n ? `${f} can't be negative` : null);
 const firstErr = (...errs: (string | null)[]) => errs.find(e => e) ?? null;
 
-function setItemState(c: Call, id: string, state: string, note = '') {
+export function setItemState(c: Call, id: string, state: string, note = '') {
   const wi = c.ctx.db.work_item.id.find(id);
   if (!wi) return;
   const after = { ...wi, state, updated_at: c.ctx.timestamp };
@@ -21,11 +22,12 @@ function setItemState(c: Call, id: string, state: string, note = '') {
   audit(c, 'work_item', id, { state: wi.state }, { state }, note);
 }
 
-function insertJob(c: Call, id: string, kind: string, payload: unknown) {
+export function insertJob(c: Call, id: string, kind: string, payload: unknown) {
   const row = {
     id, kind, assignee_role: JOB_KINDS[kind].assignee, payload_json: json(payload), status: 'queued',
     requested_by: c.sender_hex, claimed_by: '', result_json: '', error: '',
     created_at: c.ctx.timestamp, updated_at: c.ctx.timestamp,
+    attempts: 0, next_attempt_at_iso: '', lease_expires_at_iso: '',
   };
   c.ctx.db.job.insert(row);
   audit(c, 'job', id, null, row);
@@ -301,7 +303,7 @@ export function log_agent_step(ctx: Ctx, sender: Identity, request_id: string,
 export function record_check(ctx: Ctx, sender: Identity, request_id: string,
   work_item_id: string, check_code: string, status: string, summary: string, evidence_json: string, source: string): Result {
   return handle(ctx, sender, 'record_check', request_id, ['agent'], c => {
-    const err = firstErr(oneOf(check_code, CHECK_CODES, 'check_code'), oneOf(status, CHECK_STATUS, 'status'),
+    const err = firstErr(check_code.trim() ? null : 'check_code is required', oneOf(status, CHECK_STATUS, 'status'),
       oneOf(source, CHECK_SOURCES, 'source'));
     if (err) return invalid(err);
     if (!ctx.db.work_item.id.find(work_item_id)) return invalid(`work item ${work_item_id} not found`);
@@ -370,7 +372,7 @@ export function propose(ctx: Ctx, sender: Identity, request_id: string,
       }
     }
 
-    for (const p of ctx.db.proposal.work_item_id.filter(work_item_id)) {
+    for (const p of [...ctx.db.proposal.work_item_id.filter(work_item_id)]) {
       if (p.status === 'pending') {
         const after = { ...p, status: 'cancelled', decision_note: `superseded by ${id}` };
         ctx.db.proposal.id.update(after);
@@ -474,6 +476,7 @@ export function decide_proposal(ctx: Ctx, sender: Identity, request_id: string,
       return ok();
     }
 
+    if (p.kind === 'supplier_payment') return deny(c, 'supplier payments are approved with approve_supplier_payment', 'proposal', p.id);
     return invalid(`unknown proposal kind '${p.kind}'`);
   });
 }
@@ -495,12 +498,19 @@ export function cancel_proposal(ctx: Ctx, sender: Identity, request_id: string, 
 export function start_payment(ctx: Ctx, sender: Identity, request_id: string, proposal_id: string): Result {
   return handle(ctx, sender, 'start_payment', request_id, ['gateway'], c => {
     const p = ctx.db.proposal.id.find(proposal_id);
-    if (!p || p.kind !== 'payment') return invalid(`payment proposal ${proposal_id} not found`);
+    if (!p || (p.kind !== 'payment' && p.kind !== 'supplier_payment')) return invalid(`payment proposal ${proposal_id} not found`);
     if (p.status !== 'approved') return deny(c, `proposal is '${p.status}', not approved`, 'proposal', proposal_id);
-    const sub = ctx.db.sub.id.find(p.payee_sub_id);
-    if (!sub || sub.bank_account_ref !== p.payee_account_ref) {
-      return deny(c, "payee account no longer matches the account on file", 'proposal', proposal_id);
+    if (p.kind === 'supplier_payment') {
+      // §9.4: re-check every value the approval was bound to; a mismatch makes the approval stale.
+      const why = recheckSupplierApproval(c, proposal_id);
+      if (why) return deny(c, why, 'proposal', proposal_id);
+    } else {
+      const sub = ctx.db.sub.id.find(p.payee_sub_id);
+      if (!sub || sub.bank_account_ref !== p.payee_account_ref) {
+        return deny(c, "payee account no longer matches the account on file", 'proposal', proposal_id);
+      }
     }
+    if (p.kind === 'supplier_payment') onSupplierPayment(c, proposal_id, 'submitted');
     ctx.db.proposal.id.update({ ...p, status: 'executing' });
     audit(c, 'proposal', proposal_id, { status: p.status }, { status: 'executing' });
     setItemState(c, p.work_item_id, 'paying');
@@ -514,7 +524,7 @@ export function record_payment(ctx: Ctx, sender: Identity, request_id: string,
     const err = oneOf(status, ['sent', 'failed'], 'status');
     if (err) return invalid(err);
     const p = ctx.db.proposal.id.find(proposal_id);
-    if (!p || p.kind !== 'payment') return invalid(`payment proposal ${proposal_id} not found`);
+    if (!p || (p.kind !== 'payment' && p.kind !== 'supplier_payment')) return invalid(`payment proposal ${proposal_id} not found`);
     if (ctx.db.payment.id.find(proposal_id)) return { outcome: 'duplicate', message: 'payment already recorded for this proposal' };
     if (p.status !== 'approved' && p.status !== 'executing') {
       return deny(c, `proposal is '${p.status}', not approved`, 'proposal', proposal_id);
@@ -529,6 +539,7 @@ export function record_payment(ctx: Ctx, sender: Identity, request_id: string,
     ctx.db.proposal.id.update({ ...p, status: pstatus });
     audit(c, 'proposal', proposal_id, { status: p.status }, { status: pstatus });
     setItemState(c, p.work_item_id, status === 'sent' ? 'paid' : 'failed', error);
+    if (p.kind === 'supplier_payment') onSupplierPayment(c, proposal_id, status === 'sent' ? 'settled' : 'failed');
     return ok();
   });
   return r;
@@ -553,6 +564,7 @@ export function enqueue_job(ctx: Ctx, sender: Identity, request_id: string,
     const row = {
       id, kind, assignee_role: spec.assignee, payload_json, status: 'queued', requested_by: c.sender_hex,
       claimed_by: '', result_json: '', error: '', created_at: ctx.timestamp, updated_at: ctx.timestamp,
+      attempts: 0, next_attempt_at_iso: '', lease_expires_at_iso: '',
     };
     ctx.db.job.insert(row);
     audit(c, 'job', id, null, row);
@@ -565,9 +577,19 @@ export function claim_job(ctx: Ctx, sender: Identity, request_id: string, job_id
     const j = ctx.db.job.id.find(job_id);
     if (!j) return invalid(`job ${job_id} not found`);
     if (c.role !== j.assignee_role) return deny(c, `job ${job_id} is for '${j.assignee_role}'`, 'job', job_id);
-    if (j.status !== 'queued') return deny(c, `job ${job_id} is '${j.status}'`, 'job', job_id);
-    ctx.db.job.id.update({ ...j, status: 'claimed', claimed_by: c.sender_hex, updated_at: ctx.timestamp });
-    audit(c, 'job', job_id, { status: j.status }, { status: 'claimed' });
+    const nowMs = Number(ctx.timestamp.microsSinceUnixEpoch / 1000n);
+    const leaseExpired = j.status === 'claimed' && j.lease_expires_at_iso !== '' && Date.parse(j.lease_expires_at_iso) <= nowMs;
+    if (j.status !== 'queued' && !leaseExpired) return deny(c, `job ${job_id} is '${j.status}'`, 'job', job_id);
+    if (j.next_attempt_at_iso && Date.parse(j.next_attempt_at_iso) > nowMs) {
+      return deny(c, `job ${job_id} can't be retried before ${j.next_attempt_at_iso}`, 'job', job_id);
+    }
+    const lease = new Date(nowMs + Number(JOB_LEASE_MICROS / 1000n)).toISOString();
+    ctx.db.job.id.update({
+      ...j, status: 'claimed', claimed_by: c.sender_hex, updated_at: ctx.timestamp,
+      attempts: j.attempts + 1, lease_expires_at_iso: lease,
+    });
+    audit(c, 'job', job_id, { status: j.status, claimed_by: j.claimed_by }, { status: 'claimed', lease_expires_at_iso: lease },
+      leaseExpired ? 're-claimed after lease expired' : '');
     return ok();
   });
 }
@@ -580,9 +602,190 @@ export function finish_job(ctx: Ctx, sender: Identity, request_id: string,
     if (j.claimed_by !== c.sender_hex || j.status !== 'claimed') {
       return deny(c, 'only the claimer can finish a claimed job', 'job', job_id);
     }
-    const status = ok_ ? 'done' : 'failed';
-    ctx.db.job.id.update({ ...j, status, result_json, error, updated_at: ctx.timestamp });
-    audit(c, 'job', job_id, { status: j.status }, { status, result_json, error });
+    // A failed job is retried up to MAX_JOB_ATTEMPTS times with backoff (10s, 20s, 40s...).
+    const retry = !ok_ && j.attempts < MAX_JOB_ATTEMPTS;
+    const status = ok_ ? 'done' : retry ? 'queued' : 'failed';
+    const nowMs = Number(ctx.timestamp.microsSinceUnixEpoch / 1000n);
+    const next = retry ? new Date(nowMs + 10_000 * 2 ** (j.attempts - 1)).toISOString() : '';
+    ctx.db.job.id.update({
+      ...j, status, result_json, error, updated_at: ctx.timestamp, next_attempt_at_iso: next,
+      claimed_by: retry ? '' : j.claimed_by, lease_expires_at_iso: '',
+    });
+    audit(c, 'job', job_id, { status: j.status }, { status, result_json, error, next_attempt_at_iso: next });
+    return ok();
+  });
+}
+
+// ======================= 4.6 Bank changes (P1) =======================
+
+export function request_bank_change(ctx: Ctx, sender: Identity, request_id: string,
+  id: string, sub_id: string, new_account_ref: string, new_last4: string, new_owner_name: string, requested_via: string): Result {
+  return handle(ctx, sender, 'request_bank_change', request_id, ['sync', 'agent'], c => {
+    const err = oneOf(requested_via, ['email', 'phone', 'portal'], 'requested_via');
+    if (err) return invalid(err);
+    if (!ctx.db.sub.id.find(sub_id)) return invalid(`sub ${sub_id} not found`);
+    if (ctx.db.bank_change.id.find(id)) return { outcome: 'duplicate', message: 'bank change exists' };
+    const bc = { id, sub_id, new_account_ref, new_last4, new_owner_name, requested_via, status: 'pending', created_at: ctx.timestamp };
+    ctx.db.bank_change.insert(bc);
+    audit(c, 'bank_change', id, null, bc);
+    const wi = {
+      id: `wi_${id}`, kind: 'bank_change', entity_id: id, origin: 'inbox', state: 'held',
+      summary: `Bank change requested for ${sub_id}`, risk_level: 'high', created_at: ctx.timestamp, updated_at: ctx.timestamp,
+    };
+    if (!ctx.db.work_item.id.find(wi.id)) { ctx.db.work_item.insert(wi); audit(c, 'work_item', wi.id, null, wi); }
+    const p = {
+      id: `prop_${id}`, work_item_id: wi.id, kind: 'bank_change', amount_cents: 0n, payee_sub_id: sub_id,
+      payee_account_ref: new_account_ref, reason: 'Bank change requested; needs verification', evidence_json: '[]',
+      status: 'pending', proposed_by_role: c.role, proposed_by_identity: c.sender_hex, decided_by_role: '',
+      decided_by_identity: '', decision_note: '', created_at: ctx.timestamp, decided_at_iso: '',
+    };
+    if (!ctx.db.proposal.id.find(p.id)) { ctx.db.proposal.insert(p); audit(c, 'proposal', p.id, null, p); }
+    return ok();
+  });
+}
+
+export function record_verification(ctx: Ctx, sender: Identity, request_id: string,
+  id: string, bank_change_id: string, method: string, result: string, detail: string): Result {
+  return handle(ctx, sender, 'record_verification', request_id, ['agent'], c => {
+    const err = firstErr(oneOf(method, ['callback_phone_on_file', 'crs_idv'], 'method'), oneOf(result, ['pass', 'fail'], 'result'));
+    if (err) return invalid(err);
+    if (!ctx.db.bank_change.id.find(bank_change_id)) return invalid(`bank change ${bank_change_id} not found`);
+    const before = ctx.db.verification.id.find(id);
+    if (before) return { outcome: 'duplicate', message: 'verification exists' };
+    const row = { id, bank_change_id, method, result, detail, at: ctx.timestamp };
+    ctx.db.verification.insert(row);
+    audit(c, 'verification', id, null, row);
+    return ok();
+  });
+}
+
+// ======================= 4.7 Change orders (P1) =======================
+
+export function upsert_change_order(ctx: Ctx, sender: Identity, request_id: string,
+  id: string, contract_id: string, number: string, description: string, amount_cents: bigint): Result {
+  return handle(ctx, sender, 'upsert_change_order', request_id, ['sync', 'agent'], c => {
+    if (!ctx.db.contract.id.find(contract_id)) return invalid(`contract ${contract_id} not found`);
+    const before = ctx.db.change_order.id.find(id);
+    if (before && before.status !== 'pending') return deny(c, `change order ${id} is already ${before.status}`, 'change_order', id);
+    const row = { id, contract_id, number, description, amount_cents, status: 'pending', decided_by_role: '' };
+    if (before) ctx.db.change_order.id.update(row); else ctx.db.change_order.insert(row);
+    audit(c, 'change_order', id, before, row);
+    return ok();
+  });
+}
+
+export function decide_change_order(ctx: Ctx, sender: Identity, request_id: string, id: string, approve: boolean, note: string): Result {
+  return handle(ctx, sender, 'decide_change_order', request_id, ['owner'], c => {
+    const co = ctx.db.change_order.id.find(id);
+    if (!co) return invalid(`change order ${id} not found`);
+    const after = { ...co, status: approve ? 'approved' : 'rejected', decided_by_role: c.role };
+    ctx.db.change_order.id.update(after);
+    audit(c, 'change_order', id, { status: co.status }, { status: after.status }, note);
+    return ok();
+  });
+}
+
+// ======================= 4.8 Policies, questions, chat (P1) =======================
+
+export function propose_policy(ctx: Ctx, sender: Identity, request_id: string,
+  id: string, scope: string, sub_id: string, rule_code: string, params_json: string, description: string, evidence_json: string): Result {
+  return handle(ctx, sender, 'propose_policy', request_id, ['agent'], c => {
+    const err = oneOf(scope, ['sub', 'global'], 'scope');
+    if (err) return invalid(err);
+    const before = ctx.db.policy.id.find(id);
+    if (before && before.status !== 'proposed') return deny(c, `policy ${id} is already ${before.status}`, 'policy', id);
+    const row = { id, scope, sub_id, rule_code, params_json, description, evidence_json, status: 'proposed', proposed_by_role: c.role, decided_by_role: '' };
+    if (before) ctx.db.policy.id.update(row); else ctx.db.policy.insert(row);
+    audit(c, 'policy', id, before, row);
+    return ok();
+  });
+}
+
+export function decide_policy(ctx: Ctx, sender: Identity, request_id: string, id: string, approve: boolean, note: string): Result {
+  return handle(ctx, sender, 'decide_policy', request_id, ['bookkeeper'], c => {
+    const p = ctx.db.policy.id.find(id);
+    if (!p) return invalid(`policy ${id} not found`);
+    if (p.status !== 'proposed') return invalid(`policy ${id} is ${p.status}`);
+    const after = { ...p, status: approve ? 'approved' : 'rejected', decided_by_role: c.role };
+    ctx.db.policy.id.update(after);
+    audit(c, 'policy', id, { status: p.status }, { status: after.status }, note);
+    return ok();
+  });
+}
+
+export function ask_question(ctx: Ctx, sender: Identity, request_id: string,
+  id: string, work_item_id: string, to_role: string, text: string, options_json: string): Result {
+  return handle(ctx, sender, 'ask_question', request_id, ['agent'], c => {
+    const err = oneOf(to_role, ['owner', 'bookkeeper', 'purchasing', 'receiver'], 'to_role');
+    if (err) return invalid(err);
+    const wi = ctx.db.work_item.id.find(work_item_id);
+    if (!wi) return invalid(`work item ${work_item_id} not found`);
+    if (ctx.db.question.id.find(id)) return { outcome: 'duplicate', message: 'question exists' };
+    const row = { id, work_item_id, to_role, text, options_json, status: 'open', answer: '', answered_by_role: '' };
+    ctx.db.question.insert(row);
+    audit(c, 'question', id, null, row);
+    if (AGENT_SOURCE_STATES.includes(wi.state)) setItemState(c, work_item_id, 'needs_info', text);
+    return ok();
+  });
+}
+
+export function answer_question(ctx: Ctx, sender: Identity, request_id: string, id: string, answer: string): Result {
+  return handle(ctx, sender, 'answer_question', request_id, ['owner', 'bookkeeper', 'purchasing', 'receiver'], c => {
+    const q = ctx.db.question.id.find(id);
+    if (!q || q.status !== 'open') return invalid('no open question with that id');
+    if (q.to_role !== c.role) return deny(c, `question is for ${q.to_role}`, 'question', id);
+    ctx.db.question.id.update({ ...q, status: 'answered', answer, answered_by_role: c.role });
+    audit(c, 'question', id, { status: q.status }, { status: 'answered', answer });
+    insertJob(c, `job_resume_${id}`, 'resume_work_item', { work_item_id: q.work_item_id, question_id: id });
+    return ok();
+  });
+}
+
+export function ask_why(ctx: Ctx, sender: Identity, request_id: string, id: string, work_item_id: string, text: string): Result {
+  return handle(ctx, sender, 'ask_why', request_id, ['owner', 'bookkeeper'], c => {
+    if (!ctx.db.work_item.id.find(work_item_id)) return invalid(`work item ${work_item_id} not found`);
+    if (ctx.db.chat_message.id.find(id)) return { outcome: 'duplicate', message: 'message exists' };
+    const row = { id, work_item_id, author_role: c.role, text, citations_json: '[]', at: ctx.timestamp };
+    ctx.db.chat_message.insert(row);
+    audit(c, 'chat_message', id, null, row);
+    insertJob(c, `job_why_${id}`, 'answer_why', { work_item_id, message_id: id });
+    return ok();
+  });
+}
+
+export function post_chat_answer(ctx: Ctx, sender: Identity, request_id: string,
+  id: string, work_item_id: string, text: string, citations_json: string): Result {
+  return handle(ctx, sender, 'post_chat_answer', request_id, ['agent'], c => {
+    if (ctx.db.chat_message.id.find(id)) return { outcome: 'duplicate', message: 'message exists' };
+    const row = { id, work_item_id, author_role: 'agent', text, citations_json, at: ctx.timestamp };
+    ctx.db.chat_message.insert(row);
+    audit(c, 'chat_message', id, null, row);
+    return ok();
+  });
+}
+
+// ======================= 4.9 Scorecard (P1) =======================
+
+export function record_score_run(ctx: Ctx, sender: Identity, request_id: string, id: string, status: string, totals_json: string): Result {
+  return handle(ctx, sender, 'record_score_run', request_id, ['sync'], c => {
+    const err = oneOf(status, ['running', 'done'], 'status');
+    if (err) return invalid(err);
+    const before = ctx.db.score_run.id.find(id);
+    const row = { id, status, totals_json, started_at: before ? before.started_at : ctx.timestamp };
+    if (before) ctx.db.score_run.id.update(row); else ctx.db.score_run.insert(row);
+    audit(c, 'score_run', id, before, row);
+    return ok();
+  });
+}
+
+export function record_score_case(ctx: Ctx, sender: Identity, request_id: string,
+  id: string, run_id: string, attack_type: string, expected: string, actual: string, correct: boolean,
+  amount_cents: bigint, work_item_id: string): Result {
+  return handle(ctx, sender, 'record_score_case', request_id, ['sync'], c => {
+    const row = { id, run_id, attack_type, expected, actual, correct, amount_cents, work_item_id };
+    const before = ctx.db.score_case.id.find(id);
+    if (before) ctx.db.score_case.id.update(row); else ctx.db.score_case.insert(row);
+    audit(c, 'score_case', id, before, row);
     return ok();
   });
 }

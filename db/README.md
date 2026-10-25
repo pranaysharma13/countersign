@@ -11,21 +11,23 @@ The system of work: tables, roles, allowed state changes, separation of duties, 
 | `src/schema.ts` | Every table from CONTRACT §3 (names kept snake_case: `CaseConversionPolicy.None`) |
 | `src/constants.ts` | Enum lists, check codes, `HARD_STOP_CHECKS`, job kind permissions |
 | `src/request.ts` | The request pattern: duplicate check → role check → audit + `request_result`. Never throws on denial. |
-| `src/logic.ts` | Reducer bodies, `(ctx, sender, ...args)` so tests can act as any role |
+| `src/logic.ts` | v1 reducer bodies (§4), `(ctx, sender, ...args)` so tests can act as any role |
+| `src/logic_v2.ts` | v2 supplier-invoice reducer bodies (§9), incl. the six payment-eligibility rules |
 | `src/index.ts` | The reducers. **Parameter order = CONTRACT §4** (Python calls them positionally). |
-| `test/rules.test.ts` | Rule tests run in-process with `spacetimedb/server/test-utils` |
+| `test/rules.test.ts` | v1 rule tests (in-process, `spacetimedb/server/test-utils`) |
+| `test/v2.test.ts` | v2: the BayMix scenario end to end ($87,425 → $73,700, AP $0, cash out $83,700) + rule tests |
 
 ## Status
 
-- P0 reducers (§4.1–4.5): done and tested.
-- P1 (§4.6–4.9: bank changes, change orders, policies, questions, chat, scorecard): tables exist, reducers next.
+- **All 66 reducers in CONTRACT v2 exist** with the exact argument order (checked by script against the contract text).
+- v1 P0 + P1 and v2 §9 "A" and "B": done. 46 tests pass.
 
 ## Run
 
 ```bash
 cd db
 npm install
-npm test            # 22 rule tests, no server needed
+npm test            # 46 rule tests, no server needed
 npm run typecheck
 
 # Live (needs the spacetime CLI: https://spacetimedb.com/install)
@@ -63,3 +65,17 @@ These came out of "the AI can add holds, never remove them" and "fail safe". Pyt
 - `cancel_proposal`: the agent can only cancel payment proposals, never holds.
 - `decide_proposal` and `start_payment` re-check that the payee account still matches the account on file.
 - `create_work_item` with an existing id returns `ok` with message `already exists` (safe for re-syncs).
+
+## v2 behaviour Python should know (beyond CONTRACT §9)
+
+- `approve_supplier_payment` denial message = a **JSON array** of `blocked_reasons` strings. `APPROVAL_STALE` doesn't block the approval that clears it.
+- Approval id is `appr_<proposal_id>`; the pay job is `job_pay_<proposal_id>`; the send job is `job_send_<outbox_id>`.
+- A `supplier_payment` proposal stores `{invoice_id, revision_id, assessment_id, deposit_allocation_cents, payee_profile_id}` in `evidence_json`.
+- New revision: commercial holds on the old one → `superseded`; `RECEIPT_NOT_VERIFIED` and `PAYEE_CHANGE_PENDING` are **carried over** (id `<old hold id>~<new revision id>`). Work item goes back to `investigating`.
+- Module-created holds: `hold_<rev>_PAYEE_CHANGE_PENDING_<profile id>`, `hold_<rev>_APPROVAL_STALE_<approval id>`.
+- `decide_change_request`: owner without an `authority` row is unlimited; anyone else needs one (limit 0 otherwise). Rate charges need `scope_json.max_quantity_milli` (or `quantity_milli`); exposure = `amount_cents + ceil(rate_cents × qty / 1000)`.
+- `upsert_supplier` can't change `phone_on_file`; a `pre_established` contact can't be edited or created by promotion.
+- `record_email.from_known_contact` = exact (case-insensitive) match on a contact email. Lookalikes are false.
+- Jobs: `claim_job` sets a 5-minute lease and `attempts + 1`; an expired lease can be re-claimed. `finish_job(ok=false)` re-queues with backoff (10s, 20s…) until 3 attempts, then `failed`.
+- `post_journal.ref_type` also accepts `deposit` and `invoice`.
+- `decide_proposal` on a `supplier_payment` is denied (use `approve_supplier_payment`).
