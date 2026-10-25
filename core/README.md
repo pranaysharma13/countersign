@@ -13,7 +13,10 @@ brew install uv            # once
 cd core && uv sync && cd ..
 uv run --project core pytest core   # all offline, no keys needed
 uv run --project core python scripts/make_supplier_fixtures.py   # write the BayMix PDFs and .eml files to look at
+uv run --project core python scripts/check_extraction.py         # live Claude on the 9 documents, measured (costs ~14 API calls)
 ```
+
+`AI_MODE=fixture` (default) uses the labelled extractions in `data/fixtures/`; `AI_MODE=live` calls Claude (`ANTHROPIC_API_KEY` in the repo-root `.env`; `ANTHROPIC_MODEL` defaults to `claude-opus-5-5`, `EXTRACTION_EFFORT` to `medium`).
 
 ## The primary scenario (step A, done)
 
@@ -36,6 +39,17 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 4. **Outbox:** a person approves the draft (`approve_outbox`); `send_outbox` marks it sent with a `simulated-` delivery ref. Nothing leaves the laptop.
 5. **Failures:** the module retries a failed job (10 s, 20 s backoff, three attempts) and hands a dead worker's job to another after its 5-minute lease. Anything a person must look at ends with the document in `needs_review`, with the reason in an `invalid` extraction run: no labelled extraction, bad evidence, ambiguous linking, or retries run out (any document type; an invoice revision it backs also gets `EXTRACTION_REVIEW`). A failure never produces an approval. Handlers are idempotent, so a retried job never duplicates a record.
 
+## Live extraction (step C, done)
+
+- **Strict schemas** (`live_extract.py`, `output_config.format`): every property required, no `anyOf`, no field named reasoning/thinking/trace/rationale. Facts are one generic item in an array (`{name, found, value, quote, fragments, missing_reason}`), because separate objects per fact were rejected as "compiled grammar is too large". Code turns not-found into null and compares enums case-insensitively. Output takes the fixture shape, so the evidence check and recording are the same in both modes.
+- **Calls:** an email is one call, given the change requests on file. A PDF is two: classify, then that kind's schema; an invoice is given the change requests its lines may bill. Streaming, `max_tokens` 32k, effort `medium`, thinking at the model default, no fallbacks. Each run records the model that answered, latency and tokens.
+- **Order:** an invoice PDF waits for emails received before it, which may hold the changes it bills. A retry reuses the validated extraction instead of calling Claude again.
+- **Failures:** a refusal, a 4xx or a cut-off answer sends the document to review (no retry); timeouts, 429 and 5xx retry, then go to review. Never an approval.
+- **Prompt injection** (`injection.py`): fixed patterns over every fragment (a PDF's hidden text included) plus Claude's `instructions_found`. An invoice is still recorded and gets `PROMPT_INJECTION`; any other document goes to review. Never followed. The scan flags none of the 9 real documents.
+- **Clarifications** wait until nothing else from that supplier is still being read; the sweep drafts them afterwards.
+
+**Measured** (`scripts/check_extraction.py`, 2026-10-25, `claude-opus-5-5`, effort medium, no fallback): 27/27 labelled fields correct; all exact values reproduced ($87,425 claimed, $83,700 authorised, $3,500 variance, $225 pending; corrected $83,700, $73,700 proposed, no holds after receipt). Claude time per document: emails 3–7 s, PO 11 s, quote and invoices 19–22 s (classify about 3 s of that). One run; numbers will vary.
+
 ## Key files
 
 | File | What |
@@ -45,7 +59,10 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 | `countersign/commercial.py` | v2 deterministic assessment, holds, fingerprint, bill-posting gate |
 | `countersign/extractions.py` | v2 evidence validation and recording; fixture loader |
 | `countersign/intake.py` | v2 intake: bytes, SHA-256, document, fragments, email, `process_document` job |
-| `countersign/supplier_pipeline.py` | v2 job handlers: `process_document`, `reassess` (+ the stale sweep), `send_outbox`, give-up path |
+| `countersign/supplier_pipeline.py` | v2 job handlers: `process_document` (fixture or live), `reassess` (+ the stale sweep), `send_outbox`, give-up path |
+| `countersign/live_extract.py` | v2 live extraction: strict schemas, the Claude calls, live output to the fixture shape |
+| `countersign/injection.py` | Prompt-injection patterns over a document's fragments |
+| `countersign/extraction_score.py` | Labelled fields vs. the answer key (tests, `check_extraction.py`, scorecard only) |
 | `countersign/supplier_world.py`, `supplier_docs.py` | v2 fictional world, document rendering and fragments |
 | `countersign/supplier_ledger.py` | v2 journals |
 | `countersign/clarify.py` | v2 clarification to the supplier: deterministic template until step C |
@@ -94,7 +111,8 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 
 ## Known gaps (as of this commit)
 
-- Steps C–E: live Claude extraction (strict schema) and the Droid session, the web's upload/email intake endpoint and file preview for v2, version-bound approval and settlement, audit export.
+- Steps D–E: the web's upload/email intake endpoint and file preview for v2, version-bound approval and settlement, audit export.
+- The Droid session for v2 (planned next), the citation-backed "why?" explanation (a separate call that can't change amounts), and a small call that reads the fuel-surcharge parameters for the fuel variant.
 - Variants: scoped amendment, fuel surcharge (Apify diesel index), supplier risk (CRS), prompt injection on supplier documents, judge page.
 - Settlement decisions on disputed lines (`decide_disputed_line`, CONTRACT v2.2): next, now that step B's core works. Until then, money holds clear only through a corrected invoice.
 - CRS business-report mapping and the Apify Actors are still to come (`integrations/`).
