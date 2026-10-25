@@ -107,7 +107,7 @@ export default function SneakCharge() {
                 </>
               ) : my.r.reason ? <p className="muted" style={{ margin: 0 }}>{my.r.reason}</p>
               : <p className="muted" style={{ margin: 0 }}>
-                  {myJob.status === 'done' ? 'Checking it against the quote and purchase order…' : 'Reading the invoice (live AI read, a few seconds)…'}
+                  {myJob.status === 'done' ? 'Checking it against the quote and purchase order…' : 'Reading the invoice…'}
                 </p>}
           </section>
           <section className="sheet pad" aria-labelledby="tries">
