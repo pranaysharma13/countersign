@@ -1,0 +1,500 @@
+[
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_f932c625",
+      "kind": "seed",
+      "filename": "em_reply_1.eml",
+      "sha256": "f932c62509db8aabaa638fdffbea6fdd0f9434e1664e4a56731eb54fb1de3cf3",
+      "received_at_iso": "2026-10-24T09:10:00-07:00",
+      "from_address": "ar@baymix-supply.example",
+      "subject": "Re: Invoice BM-23104: 2 lines don't match what we agreed",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_em_reply_1",
+      "kind": "email",
+      "source_file_id": "src_f932c625",
+      "sha256": "f932c62509db8aabaa638fdffbea6fdd0f9434e1664e4a56731eb54fb1de3cf3",
+      "filename": "em_reply_1.eml",
+      "pages": 0
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_em_reply_1_p0_l1",
+      "document_id": "doc_em_reply_1",
+      "page": 0,
+      "email_message_id": "em_reply_1",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Hello,"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_em_reply_1_p0_l3",
+      "document_id": "doc_em_reply_1",
+      "page": 0,
+      "email_message_id": "em_reply_1",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "You're right: Quote BMQ-4417 fixes $165.00 per cubic yard through October 31. We've corrected"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_em_reply_1_p0_l4",
+      "document_id": "doc_em_reply_1",
+      "page": 0,
+      "email_message_id": "em_reply_1",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "the concrete to $165.00 per cubic yard and removed the truck waiting time charge."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_em_reply_1_p0_l6",
+      "document_id": "doc_em_reply_1",
+      "page": 0,
+      "email_message_id": "em_reply_1",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Corrected invoice BM-23104 (revision 2) is attached and replaces the October 23 invoice."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_em_reply_1_p0_l8",
+      "document_id": "doc_em_reply_1",
+      "page": 0,
+      "email_message_id": "em_reply_1",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "BayMix Accounts Receivable"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_em_reply_1_body",
+      "document_id": "doc_em_reply_1",
+      "page": 0,
+      "email_message_id": "em_reply_1",
+      "line_start": 1,
+      "line_end": 8,
+      "text": "Hello,\n\nYou're right: Quote BMQ-4417 fixes $165.00 per cubic yard through October 31. We've corrected\nthe concrete to $165.00 per cubic yard and removed the truck waiting time charge.\n\nCorrected invoice BM-23104 (revision 2) is attached and replaces the October 23 invoice.\n\nBayMix Accounts Receivable\n"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_email",
+    "args": {
+      "id": "em_reply_1",
+      "thread_id": "thr_bm23104",
+      "document_id": "doc_em_reply_1",
+      "from_address": "ar@baymix-supply.example",
+      "to_addresses": "ap@marlowfinch.example",
+      "subject": "Re: Invoice BM-23104: 2 lines don't match what we agreed",
+      "original_sent_at_iso": "2026-10-24T09:05:00-07:00",
+      "ingested_at_iso": "2026-10-24T09:10:00-07:00",
+      "body_fragment_id": "frag_em_reply_1_body"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_em_reply_1_2d335cc8",
+      "document_id": "doc_em_reply_1",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"acceptances\":[{\"fragments\":[\"frag_em_reply_1_p0_l4\"],\"note\":\"BayMix withdraws its own proposed waiting charge.\",\"quote\":\"removed the truck waiting time charge.\",\"ref\":\"baymix_waiting\",\"supplier_acceptance\":\"declined\"}],\"change_requests\":[],\"document_id\":\"doc_em_reply_1\",\"document_kind\":\"email\",\"email\":{\"message_id\":\"em_reply_1\",\"thread_id\":\"thr_bm23104\"},\"fields\":{\"agreed_unit_price_cents\":{\"fragments\":[\"frag_em_reply_1_p0_l3\",\"frag_em_reply_1_p0_l4\"],\"quote\":\"We've corrected the concrete to $165.00 per cubic yard\",\"value\":16500},\"corrected_invoice\":{\"fragments\":[\"frag_em_reply_1_p0_l6\"],\"quote\":\"Corrected invoice BM-23104 (revision 2) is attached and replaces the October 23 invoice.\",\"value\":{\"invoice_number\":\"BM-23104\",\"revision\":2}},\"invoice_number\":{\"fragments\":[\"frag_em_reply_1_p0_l6\"],\"quote\":\"Corrected invoice BM-23104 (revision 2)\",\"value\":\"BM-23104\"}},\"instructions_found\":[],\"internal_approval_claims\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_supplier_acceptance",
+    "args": {
+      "change_request_id": "cr_baymix_waiting",
+      "supplier_acceptance": "declined",
+      "fragment_ids_json": "[\"frag_em_reply_1_p0_l4\"]"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_473205ea",
+      "kind": "seed",
+      "filename": "BayMix_Invoice_BM-23104_rev2.pdf",
+      "sha256": "473205eae13c9870cf3b8b90f768cc9236cdf04a5dccd92cfb97178c35bb112a",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_bm_inv_23104_r2",
+      "kind": "invoice",
+      "source_file_id": "src_473205ea",
+      "sha256": "473205eae13c9870cf3b8b90f768cc9236cdf04a5dccd92cfb97178c35bb112a",
+      "filename": "BayMix_Invoice_BM-23104_rev2.pdf",
+      "pages": 1
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l1",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "BayMix Supply"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l2",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "Ready-mix concrete - 2200 Quarry Road, Newark, CA 94560 - ar@baymix-supply.example"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l3",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "CORRECTED INVOICE BM-23104 (REVISION 2)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l4",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "This corrected invoice supersedes invoice BM-23104 dated 2026-10-23."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l5",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Invoice date: 2026-10-23    Revision date: 2026-10-24"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l6",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Due date: 2026-11-22 (Net 30)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l7",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 7,
+      "line_end": 7,
+      "text": "Bill to: Marlow & Finch Builders, Accounts Payable"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l8",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Project: Oakview Lane Fourplex"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l9",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "Your PO: MF-PO-1031    Quote: BMQ-4417"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l11",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "Line  Description                                   Qty      Unit  Unit price    Amount"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l12",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "1     Ready-mix concrete 4,000 psi, mix BM-40-34    500.000  cy    $165.00       $82,500.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l13",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "2     Weekend delivery, Saturday Oct 10 pour        1.000    ea    $1,200.00     $1,200.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l15",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 15,
+      "line_end": 15,
+      "text": "Gross amount: $83,700.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l16",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "Less deposit received: $10,000.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l17",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "Balance due: $73,700.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l18",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "Changes from revision 1: unit price corrected to $165.00 per Quote BMQ-4417; waiting time removed."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l20",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 20,
+      "line_end": 20,
+      "text": "Deliveries: 2026-10-05 through 2026-10-22, Oakview Lane Fourplex."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l21",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 21,
+      "line_end": 21,
+      "text": "Remit to: BayMix Supply, Quarry Point Bank, account ending 2290"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_bm_inv_23104_r2_p1_l22",
+      "document_id": "doc_bm_inv_23104_r2",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 22,
+      "line_end": 22,
+      "text": "Questions about this invoice: ar@baymix-supply.example, (510) 555-0192"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_bm_inv_23104_r2_dd88d29d",
+      "document_id": "doc_bm_inv_23104_r2",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_bm_inv_23104_r2\",\"document_kind\":\"invoice\",\"fields\":{\"balance_requested_cents\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l17\"],\"quote\":\"Balance due: $73,700.00\",\"value\":7370000},\"currency\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l15\"],\"quote\":\"Gross amount: $83,700.00\",\"value\":\"USD\"},\"delivery_period\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l20\"],\"quote\":\"Deliveries: 2026-10-05 through 2026-10-22\",\"value\":{\"from\":\"2026-10-05\",\"to\":\"2026-10-22\"}},\"deposit_shown_cents\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l16\"],\"quote\":\"Less deposit received: $10,000.00\",\"value\":1000000},\"due_date\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l6\"],\"quote\":\"Due date: 2026-11-22 (Net 30)\",\"value\":\"2026-11-22\"},\"gross_cents\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l15\"],\"quote\":\"Gross amount: $83,700.00\",\"value\":8370000},\"invoice_date\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l5\"],\"quote\":\"Invoice date: 2026-10-23\",\"value\":\"2026-10-23\"},\"invoice_number\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l3\"],\"quote\":\"CORRECTED INVOICE BM-23104 (REVISION 2)\",\"value\":\"BM-23104\"},\"po_number\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l9\"],\"quote\":\"Your PO: MF-PO-1031\",\"value\":\"MF-PO-1031\"},\"remit_account_last4\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l21\"],\"quote\":\"account ending 2290\",\"value\":\"2290\"},\"revision\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l3\"],\"quote\":\"(REVISION 2)\",\"value\":2},\"supersedes\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l4\"],\"quote\":\"This corrected invoice supersedes invoice BM-23104 dated 2026-10-23.\",\"value\":{\"invoice_date\":\"2026-10-23\",\"invoice_number\":\"BM-23104\"}},\"supplier_name\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l1\"],\"quote\":\"BayMix Supply\",\"value\":\"BayMix Supply\"},\"tax_cents\":{\"missing_reason\":\"No tax line on this invoice; no tax rate is assumed.\",\"value\":null}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":8250000,\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragments\":[\"frag_bm_inv_23104_r2_p1_l12\"],\"kind\":\"material\",\"links\":{\"term_code\":\"unit_price\"},\"quantity_milli\":500000,\"quote\":\"1 Ready-mix concrete 4,000 psi, mix BM-40-34 500.000 cy $165.00 $82,500.00\",\"unit\":\"cy\",\"unit_price_cents\":16500},{\"amount_cents\":120000,\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragments\":[\"frag_bm_inv_23104_r2_p1_l13\"],\"kind\":\"extra\",\"links\":{\"change_request_ref\":\"baymix_weekend_oct10\"},\"quantity_milli\":1000,\"quote\":\"2 Weekend delivery, Saturday Oct 10 pour 1.000 ea $1,200.00 $1,200.00\",\"unit\":\"ea\",\"unit_price_cents\":120000}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_revision",
+    "args": {
+      "id": "rev_bm23104_r2",
+      "invoice_id": "inv_bm23104",
+      "revision": 2,
+      "document_id": "doc_bm_inv_23104_r2",
+      "gross_cents": 8370000,
+      "deposit_shown_cents": 1000000,
+      "balance_requested_cents": 7370000,
+      "supersedes_revision_id": "rev_bm23104_r1"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_line",
+    "args": {
+      "id": "ln_bm23104_r2_1",
+      "revision_id": "rev_bm23104_r2",
+      "kind": "material",
+      "description": "Ready-mix concrete 4,000 psi, mix BM-40-34",
+      "quantity_milli": 500000,
+      "unit": "cy",
+      "unit_price_cents": 16500,
+      "amount_cents": 8250000,
+      "linked_term_id": "term_baymix_oak_unit_price",
+      "linked_change_request_id": "",
+      "source_fragment_ids_json": "[\"frag_bm_inv_23104_r2_p1_l12\"]"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_line",
+    "args": {
+      "id": "ln_bm23104_r2_2",
+      "revision_id": "rev_bm23104_r2",
+      "kind": "extra",
+      "description": "Weekend delivery, Saturday Oct 10 pour",
+      "quantity_milli": 1000,
+      "unit": "ea",
+      "unit_price_cents": 120000,
+      "amount_cents": 120000,
+      "linked_term_id": "",
+      "linked_change_request_id": "cr_baymix_weekend_oct10",
+      "source_fragment_ids_json": "[\"frag_bm_inv_23104_r2_p1_l13\"]"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_assessment",
+    "args": {
+      "id": "asm_bm23104_r2_v1",
+      "revision_id": "rev_bm23104_r2",
+      "version": 1,
+      "fingerprint": "fp_1f487620ae27f4548a686a83af6f5a30",
+      "policy_version": "commercial-2026-10-24.1",
+      "claimed_cents": 8370000,
+      "authorised_cents": 8370000,
+      "pending_cents": 0,
+      "variance_cents": 0,
+      "deposit_available_cents": 1000000,
+      "proposed_payment_cents": 7370000,
+      "commercial_status": "matches",
+      "summary": "Claimed $83,700.00: $83,700.00 authorised, $0.00 price variance, $0.00 pending. Everything claimed is authorised; $73,700.00 proposed after the $10,000.00 deposit.",
+      "details_json": "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $83,700.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":8250000,\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $165.00 = $82,500.00\",\"claimed_cents\":8250000,\"classification\":\"\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l12\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r2_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Material billed at the accepted price.\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[{\"accepted_cents\":120000,\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l13\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r2_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Kept Weekend delivery, Saturday Oct 10 pour ($1,200.00): AUTHORISED_FIXED\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":500000,\"this_invoice_milli\":500000,\"unit\":\"cy\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"500 cy billed to date of 500 cy allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":1000000,\"shown_cents\":1000000},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"Deposit of $10,000.00 applied once.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"fail\",\"summary\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_baymix:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 2290 (sup_baymix:v1).\"}],\"clarification_points\":[],\"conditional_payment_cents\":7370000,\"deposit_applied_cents\":1000000,\"holds\":[{\"amount_cents\":0,\"code\":\"RECEIPT_NOT_VERIFIED\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"reason\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"}],\"lines\":[{\"accepted_cents\":8250000,\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $165.00 = $82,500.00\",\"claimed_cents\":8250000,\"classification\":\"\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l12\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r2_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":120000,\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l13\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r2_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":0}",
+      "next_action": "Superintendent: confirm what was received (manual attestation)."
+    }
+  }
+]

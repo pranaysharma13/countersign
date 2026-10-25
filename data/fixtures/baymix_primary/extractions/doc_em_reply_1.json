@@ -1,0 +1,22 @@
+{
+  "document_id": "doc_em_reply_1",
+  "document_kind": "email",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "email": {"message_id": "em_reply_1", "thread_id": "thr_bm23104"},
+  "fields": {
+    "invoice_number": {"value": "BM-23104", "quote": "Corrected invoice BM-23104 (revision 2)", "fragments": ["frag_em_reply_1_p0_l6"]},
+    "agreed_unit_price_cents": {"value": 16500, "quote": "We've corrected the concrete to $165.00 per cubic yard", "fragments": ["frag_em_reply_1_p0_l3", "frag_em_reply_1_p0_l4"]},
+    "corrected_invoice": {"value": {"invoice_number": "BM-23104", "revision": 2}, "quote": "Corrected invoice BM-23104 (revision 2) is attached and replaces the October 23 invoice.", "fragments": ["frag_em_reply_1_p0_l6"]}
+  },
+  "change_requests": [],
+  "acceptances": [
+    {"ref": "baymix_waiting", "supplier_acceptance": "declined",
+     "note": "BayMix withdraws its own proposed waiting charge.",
+     "quote": "removed the truck waiting time charge.",
+     "fragments": ["frag_em_reply_1_p0_l4"]}
+  ],
+  "internal_approval_claims": [],
+  "instructions_found": []
+}

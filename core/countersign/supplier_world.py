@@ -252,6 +252,21 @@ WAITING_1 = _email("doc_em_waiting_1", EmailMeta(
     "BayMix Dispatch",
 ))
 
+MF_AP = "ap@marlowfinch.example"
+CLARIFICATION_SUBJECT = "Invoice BM-23104: 2 lines don't match what we agreed"  # what clarify.py drafts for revision 1
+REPLY_1 = _email("doc_em_reply_1", EmailMeta(
+    "em_reply_1", "thr_bm23104", "ar@baymix-supply.example", MF_AP, f"Re: {CLARIFICATION_SUBJECT}",
+    "2026-10-24T09:05:00-07:00", "2026-10-24T09:10:00-07:00"), (
+    "Hello,",
+    "",
+    "You're right: Quote BMQ-4417 fixes $165.00 per cubic yard through October 31. We've corrected",
+    "the concrete to $165.00 per cubic yard and removed the truck waiting time charge.",
+    "",
+    "Corrected invoice BM-23104 (revision 2) is attached and replaces the October 23 invoice.",
+    "",
+    "BayMix Accounts Receivable",
+))
+
 _INVOICE_HEAD = (
     "# BayMix Supply",
     "Ready-mix concrete - 2200 Quarry Road, Newark, CA 94560 - ar@baymix-supply.example",
@@ -302,5 +317,5 @@ INVOICE_R2 = SourceDoc("doc_bm_inv_23104_r2", "invoice", "BayMix_Invoice_BM-2310
     ) + _INVOICE_FOOT,
 ))
 
-PRIMARY_DOCS: tuple[SourceDoc, ...] = (QUOTE, PO, WEEKEND_1, WEEKEND_2, WEEKEND_3, WAITING_1, INVOICE_R1, INVOICE_R2)
+PRIMARY_DOCS: tuple[SourceDoc, ...] = (QUOTE, PO, WEEKEND_1, WEEKEND_2, WEEKEND_3, WAITING_1, INVOICE_R1, REPLY_1, INVOICE_R2)
 DOCS_BY_ID = {d.id: d for d in PRIMARY_DOCS}

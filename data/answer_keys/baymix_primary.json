@@ -12,6 +12,8 @@
                             "lines": [{"kind": "material", "quantity_milli": 500000, "unit": "cy", "unit_price_cents": 17200, "amount_cents": 8600000},
                                       {"kind": "extra", "quantity_milli": 1000, "unit": "ea", "unit_price_cents": 120000, "amount_cents": 120000},
                                       {"kind": "waiting", "quantity_milli": 90000, "unit": "min", "unit_price_cents": 250, "amount_cents": 22500}]},
+    "doc_em_reply_1": {"agreed_unit_price_cents": 16500, "waiting_charge": "withdrawn",
+                       "corrected_invoice": {"invoice_number": "BM-23104", "revision": 2}},
     "doc_bm_inv_23104_r2": {"invoice_number": "BM-23104", "supersedes": "BM-23104", "gross_cents": 8370000,
                             "deposit_shown_cents": 1000000, "balance_requested_cents": 7370000,
                             "lines": [{"kind": "material", "quantity_milli": 500000, "unit": "cy", "unit_price_cents": 16500, "amount_cents": 8250000},
@@ -21,7 +23,8 @@
     "cr_baymix_weekend_oct10": {"classification": "AUTHORISED_FIXED", "amount_cents": 120000, "supplier_acceptance": "accepted",
                                 "approved_in_app_by": "purchasing"},
     "cr_baymix_waiting": {"classification": "PROPOSED", "supplier_acceptance": "proposed", "rate_cents": null,
-                          "rate_missing_reason": "no rate or usage stated"}
+                          "rate_missing_reason": "no rate or usage stated",
+                          "after_reply": {"classification": "DECLINED", "supplier_acceptance": "declined"}}
   },
   "revision_1": {
     "claimed_cents": 8742500, "balance_requested_cents": 7742500,
@@ -31,6 +34,9 @@
     "holds": {"PRICE_VARIANCE": 350000, "PROPOSED_CHARGE": 22500, "RECEIPT_NOT_VERIFIED": 0},
     "lines": {"material": "variance", "extra": "accepted", "waiting": "pending"}
   },
+  "clarification": {"outbox_id": "ob_bm23104_r1_clarify", "to_contact_id": "ctc_baymix_ar", "status": "draft", "simulated": true,
+                    "subject": "Invoice BM-23104: 2 lines don't match what we agreed", "disputed_lines": 2,
+                    "asks_for": "a corrected invoice or an agreed credit memo", "under_review_cents": 372500},
   "revision_2": {
     "claimed_cents": 8370000, "balance_requested_cents": 7370000,
     "authorised_cents": 8370000, "variance_cents": 0, "pending_cents": 0, "under_review_cents": 0,

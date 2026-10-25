@@ -33,8 +33,10 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 | `countersign/fake_store.py` | Runnable Python copy of the module's rules, for tests; the TypeScript module mirrors it |
 | `countersign/commercial.py` | v2 deterministic assessment, holds, fingerprint, bill-posting gate |
 | `countersign/extractions.py` | v2 evidence validation and recording; fixture loader |
-| `countersign/supplier_world.py`, `supplier_docs.py`, `supplier_seed.py` | v2 fictional world, document rendering and fragments, seeding |
+| `countersign/supplier_world.py`, `supplier_docs.py` | v2 fictional world, document rendering and fragments |
 | `countersign/supplier_ledger.py` | v2 journals |
+| `countersign/clarify.py` | v2 clarification to the supplier: deterministic template until step C |
+| `countersign/supplier_seed.py` | v2 seeding, plus `RecordingStore` / `export_seeds` / `replay` for `data/seeds/` (`scripts/export_supplier_seed.py`; see `data/README.md`) |
 | `countersign/money.py` | Integer cents and integer-thousandth quantities; exact extension |
 | `countersign/checks.py`, `decide.py` | v1 deterministic checks and decision rules |
 | `countersign/agent.py` | v1 Droid agent, scripted agent, compromised-agent demo, "why?" chat |
@@ -44,9 +46,9 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 
 ## Module reference coverage (CONTRACT §9.4)
 
-Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions. Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
+Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions, `draft_outbox`. Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
 
-Not yet: clarification outbox, payment proposal/approval/settlement for supplier payments, deposit allocation, the new job kinds and worker leases.
+Not yet: `approve_outbox` / `mark_outbox`, payment proposal/approval/settlement for supplier payments, deposit allocation, the new job kinds and worker leases.
 
 ## Run against the SpacetimeDB module (v1 today)
 
@@ -69,5 +71,5 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 
 - Steps B–E: intake jobs and worker retries/leases, live Claude extraction (strict schema), outbox, version-bound approval and settlement, audit export.
 - Variants: scoped amendment, fuel surcharge (Apify diesel index), supplier risk (CRS), prompt injection on supplier documents, judge page.
-- Reassessment after an owner resolves a commercial hold by hand: the assessment still reports the variance; how that becomes payable is decided in step B/E.
+- Settlement decisions on disputed lines (`decide_disputed_line`, CONTRACT v2.2 proposal on `docs/contract-v2.2`): built after step B's core works. Until then, money holds clear only through a corrected invoice.
 - CRS business-report mapping and the Apify Actors are still to come (`integrations/`).
