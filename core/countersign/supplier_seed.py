@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -123,8 +124,15 @@ class RecordingStore:
         return calls
 
 
-def replay(store: Store, calls: list[dict[str, Any]], identities: dict[str, str] | None = None) -> list[Result]:
-    """Load a seed into a store. `identities` maps role -> identity for the placeholders (default: role names)."""
+def fixed_request_id(id_seed: str, n: int) -> str:
+    """The same UUID for the same call of the same seed, so loading it again is all duplicates."""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"countersign-seed:{id_seed}:{n}"))
+
+
+def replay(store: Store, calls: list[dict[str, Any]], identities: dict[str, str] | None = None,
+           id_seed: str | None = None) -> list[Result]:
+    """Load a seed into a store. `identities` maps role -> identity for the placeholders (default: role names).
+    With `id_seed`, every call gets a fixed request id (safe to run twice); otherwise fresh ones."""
     ids = identities or {}
 
     def resolve(value: Any) -> Any:
@@ -133,8 +141,9 @@ def replay(store: Store, calls: list[dict[str, Any]], identities: dict[str, str]
             return ids.get(role, role)
         return value
 
-    return [store.call(c["role"], c["reducer"], *(resolve(c["args"][n]) for n in reducer_params(c["reducer"])))
-            for c in calls]
+    return [store.call(c["role"], c["reducer"], *(resolve(c["args"][n]) for n in reducer_params(c["reducer"])),
+                       request_id=fixed_request_id(id_seed, i) if id_seed else None)
+            for i, c in enumerate(calls)]
 
 
 def export_seeds() -> dict[str, list[dict[str, Any]]]:
