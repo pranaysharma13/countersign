@@ -55,7 +55,7 @@ function importSummary(r: ImportResult): string {
   const fresh = docs.filter(d => d.new).length;
   const skipped = (r.skipped || []).map(s => `${s.filename} (${s.reason})`);
   const head = docs.length && !fresh ? 'Already imported: nothing changed.'
-    : `Imported ${fresh} document${fresh === 1 ? '' : 's'}; Countersign is reading ${fresh === 1 ? 'it' : 'them'}.`;
+    : `Imported ${fresh} document${fresh === 1 ? '' : 's'}; Clerk is reading ${fresh === 1 ? 'it' : 'them'}.`;
   return skipped.length ? `${head} Skipped: ${skipped.join('; ')}.` : head;
 }
 

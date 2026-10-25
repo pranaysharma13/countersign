@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { call, newId, type CallResult, type Row, type Tables } from '@/lib/client';
-import { day, HOLD_LABEL, qty, ROLE_LABEL, safeQuote, when } from '@/lib/format';
+import { day, HOLD_LABEL, plainTerms, qty, ROLE_LABEL, safeQuote, when } from '@/lib/format';
 
 type Tone = 'ok' | 'hold' | 'stop' | 'idle' | 'act';
 const STATUS: Record<string, Record<string, [string, Tone]>> = {
@@ -38,7 +38,7 @@ export function StatusStrip({ inv }: { inv: Row }) {
 export function HoldChips({ holds }: { holds: Row[] }) {
   if (!holds.length) return <span className="muted small">Nothing blocking</span>;
   return <>{holds.map(h => (
-    <span key={h.id} className={`chip ${['PAYEE_CHANGE_PENDING', 'PROMPT_INJECTION'].includes(h.code) ? 'stop' : ''}`} title={h.reason}>
+    <span key={h.id} className={`chip ${['PAYEE_CHANGE_PENDING', 'PROMPT_INJECTION'].includes(h.code) ? 'stop' : ''}`} title={plainTerms(String(h.reason ?? ''))}>
       {HOLD_LABEL[h.code] ?? h.code}
     </span>
   ))}</>;

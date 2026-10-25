@@ -44,13 +44,13 @@ export async function POST(req: NextRequest) {
     });
   } catch {
     return NextResponse.json({
-      message: "The Countersign API isn't running. Start it: uv run --project core uvicorn countersign.api:app --port 8000",
+      message: "The Clerk API isn't running. Start it: uv run --project core uvicorn countersign.api:app --port 8000",
     }, { status: 502 });
   }
   const body = await r.json().catch(() => ({})) as { detail?: unknown };
   if (!r.ok) {
     const detail = typeof body.detail === 'string' ? body.detail : `HTTP ${r.status}`;
-    return NextResponse.json({ message: `Countersign couldn't import it: ${detail}` }, { status: r.status === 503 ? 503 : 502 });
+    return NextResponse.json({ message: `Clerk couldn't import it: ${detail}` }, { status: r.status === 503 ? 503 : 502 });
   }
   return NextResponse.json(body);
 }

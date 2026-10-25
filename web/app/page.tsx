@@ -8,7 +8,7 @@ import { money, HOLD_LABEL, daysUntil, isSandbox } from '@/lib/format';
 const MONEY_HOLD = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING'];
 const SEVERITY = ['PROMPT_INJECTION', 'PAYEE_CHANGE_PENDING', 'PO_CEILING', 'PROPOSED_CHARGE', 'PRICE_VARIANCE', 'DUPLICATE_REVIEW'];
 const CATCH_COPY: Record<string, string> = {
-  PROMPT_INJECTION: 'A line in the invoice told the checker to approve it. Countersign ignored it and stopped the bill.',
+  PROMPT_INJECTION: 'A line in the invoice told the checker to approve it. Clerk ignored it and stopped the bill.',
   PAYEE_CHANGE_PENDING: 'The supplier asked to be paid into a new account. Nothing moves until someone calls a number on file.',
   PO_CEILING: 'The invoice bills more than the purchase order allows. The extra waits for a corrected invoice.',
   PROPOSED_CHARGE: 'A charge that was never agreed in writing. It is held, not paid.',
@@ -43,7 +43,7 @@ export default function Landing() {
   return (
     <div className="cover">
       <header className="cover-top">
-        <div className="mark">Countersign</div>
+        <div className="mark">Clerk</div>
         <div className="inbox-on"><span className="dot ok" /> ap@marlowfinch.example</div>
       </header>
 
