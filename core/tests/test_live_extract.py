@@ -115,13 +115,17 @@ def test_a_ref_on_file_is_kept_and_not_found_facts_become_null():
     ext = L.read_email(WEEKEND_1.id, {}, frags(WEEKEND_1), on_file=["baymix_weekend_oct10: Weekend delivery"],
                        ref_prefix="baymix")
     assert ext["acceptances"][0]["ref"] == "baymix_weekend_oct10" and ext["acceptances"][0]["supplier_acceptance"] == "accepted"
-    facts = L._facts({"quote_date": {"found": False, "value": "", "quote": "", "fragments": [], "missing_reason": "no date"}})
-    assert facts == {"quote_date": {"value": None, "missing_reason": "no date"}}
+    facts = L._facts([{"name": "QUOTE_DATE", "found": False, "value": "", "quote": "", "fragments": [], "missing_reason": "no date"},
+                      {"name": "incorporates_terms", "found": True, "value": "True", "quote": "q", "fragments": ["f"],
+                       "missing_reason": ""}], ("quote_date", "incorporates_terms", "unit"))
+    assert facts["quote_date"] == {"value": None, "missing_reason": "no date"}
+    assert facts["incorporates_terms"]["value"] is True
+    assert facts["unit"] == {"value": None, "missing_reason": "not stated in the document"}  # not returned at all
 
 
 def test_a_pdf_takes_two_calls_classify_then_its_kind():
-    quote_answer = {"fields": {k: {"found": True, "value": v, "quote": q, "fragments": [f]} | {"missing_reason": ""}
-                               for k, v, q, f in [("supplier_name", "BayMix Supply", "BayMix Supply", "frag_bm_quote_p1_l1")]},
+    quote_answer = {"facts": [{"name": "supplier_name", "found": True, "value": "BayMix Supply", "quote": "BayMix Supply",
+                               "fragments": ["frag_bm_quote_p1_l1"], "missing_reason": ""}],
                     "terms": [], "instructions_found": []}
     fake = FakeClient({"document_kind": "QUOTE", "title_quote": "QUOTATION BMQ-4417", "fragments": ["frag_bm_quote_p1_l3"]}, quote_answer)
     L.set_client(fake)

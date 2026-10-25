@@ -253,6 +253,7 @@ _INJECTION = [
     re.compile(r"(approve|pay)[^.\n]{0,25}(immediately|without (review|verification))", re.I),
     re.compile(r"(system|assistant) (prompt|instructions?)", re.I),
 ]
+INJECTION_PATTERNS = _INJECTION  # also used on supplier documents (injection.py)
 
 
 def fake_owner_instruction(ctx: CheckContext) -> CheckOutcome:

@@ -92,8 +92,10 @@ def document_fragments(store: Store, document_id: str) -> dict[str, str]:
     return {f["id"]: f["text"] for f in store.rows("source_fragment", document_id=document_id)}
 
 
-def record_run(store: Store, ext: dict[str, Any], problems: list[str], model: str = "fixture") -> Result:
+def record_run(store: Store, ext: dict[str, Any], problems: list[str]) -> Result:
+    """The run says who read the document: `fixture`, or the model that actually answered (not the one asked for)."""
     run_id = f"run_{ext['document_id'].removeprefix('doc_')}_{sha8(dumps(ext))}"
+    model = ext.get("model") or ("fixture" if ext.get("mode") == "fixture" else "unknown")
     return R.record_extraction_run(store, run_id, ext["document_id"], ext.get("mode", "live"), model,
                                    ext.get("prompt_version", ""), "invalid" if problems else "ok", "; ".join(problems), ext)
 

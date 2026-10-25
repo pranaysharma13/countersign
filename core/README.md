@@ -13,7 +13,10 @@ brew install uv            # once
 cd core && uv sync && cd ..
 uv run --project core pytest core   # all offline, no keys needed
 uv run --project core python scripts/make_supplier_fixtures.py   # write the BayMix PDFs and .eml files to look at
+uv run --project core python scripts/check_extraction.py         # live Claude on the 9 documents, measured (costs ~14 API calls)
 ```
+
+`AI_MODE=fixture` (default) uses the labelled extractions in `data/fixtures/`; `AI_MODE=live` calls Claude (`ANTHROPIC_API_KEY` in the repo-root `.env`; `ANTHROPIC_MODEL` defaults to `claude-opus-5-5`, `EXTRACTION_EFFORT` to `medium`).
 
 ## The primary scenario (step A, done)
 
@@ -36,6 +39,28 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 4. **Outbox:** a person approves the draft (`approve_outbox`); `send_outbox` marks it sent with a `simulated-` delivery ref. Nothing leaves the laptop.
 5. **Failures:** the module retries a failed job (10 s, 20 s backoff, three attempts) and hands a dead worker's job to another after its 5-minute lease. Anything a person must look at ends with the document in `needs_review`, with the reason in an `invalid` extraction run: no labelled extraction, bad evidence, ambiguous linking, or retries run out (any document type; an invoice revision it backs also gets `EXTRACTION_REVIEW`). A failure never produces an approval. Handlers are idempotent, so a retried job never duplicates a record.
 
+## Live extraction (step C, done)
+
+- **Strict schemas** (`live_extract.py`, `output_config.format`): every property required, no `anyOf`, no field named reasoning/thinking/trace/rationale. Facts are one generic item in an array (`{name, found, value, quote, fragments, missing_reason}`), because separate objects per fact were rejected as "compiled grammar is too large". Code turns not-found into null and compares enums case-insensitively. Output takes the fixture shape, so the evidence check and recording are the same in both modes.
+- **Calls:** an email is one call, given the change requests on file. A PDF is two: classify, then that kind's schema; an invoice is given the change requests its lines may bill. Streaming, `max_tokens` 32k, effort `medium`, thinking at the model default, no fallbacks. Each run records the model that answered, latency and tokens.
+- **Order:** an invoice PDF waits for emails received before it, which may hold the changes it bills. A retry reuses the validated extraction instead of calling Claude again.
+- **Failures:** a refusal, a 4xx or a cut-off answer sends the document to review (no retry); timeouts, 429 and 5xx retry, then go to review. Never an approval.
+- **Prompt injection** (`injection.py`): fixed patterns over every fragment (a PDF's hidden text included) plus Claude's `instructions_found`. An invoice is still recorded and gets `PROMPT_INJECTION`; any other document goes to review. Never followed. The scan flags none of the 9 real documents.
+- **Clarifications** wait until nothing else from that supplier is still being read; the sweep drafts them afterwards.
+
+**Measured** (`scripts/check_extraction.py`, 2026-10-25, `claude-opus-5-5`, effort medium, no fallback): 27/27 labelled fields correct; all exact values reproduced ($87,425 claimed, $83,700 authorised, $3,500 variance, $225 pending; corrected $83,700, $73,700 proposed, no holds after receipt). Claude time per document: emails 3–7 s, PO 11 s, quote and invoices 19–22 s (classify about 3 s of that). One run; numbers will vary.
+
+## Payment and settlement (step E, done)
+
+1. **Proposal from the assessment** (`supplier_pipeline.propose_payment`): whenever a recorded assessment proposes more than $0 and the supplier has a verified payee, the agent proposes exactly that amount, with the deposit it applies, to the verified account. One proposal per assessment; the module denies any other amount and cancels older pending ones.
+2. **Owner approval** (in the app): `approve_supplier_payment` with the fingerprint of the assessment the owner saw. The module checks the six eligibility rules (active revision, no open holds, receipt attested, verified payee, latest fingerprint and amount, deposit fits). If any fails, approval is denied with the reasons.
+3. **Gateway** (`supplier_gateway.pay_supplier`, the `pay_supplier` job):
+   - **Before paying:** it recomputes the fingerprint from the current rows. If an input changed since approval, it doesn't pay; it logs the changed inputs on the invoice timeline, and the sweep then reassesses, which makes the approval stale. If no input changed but the fingerprint differs, it prints `FINGERPRINT MISMATCH with the module` and doesn't pay.
+   - **Paying:** `start_payment` (the module re-checks everything and marks the approval stale on any mismatch), then one Nessie transfer per idempotency key (`nessie.pay_once`, which survives a timeout after the bank accepted it).
+   - **Afterwards:** `record_payment`, the deposit allocation, and the §9.6 journals (bill at the authorised amount, deposit applied, settlement). A retry after a crash finds the payment already recorded and finishes the bookkeeping exactly once.
+   - **Simulated** throughout ("Nessie sandbox (simulated)").
+4. **Result** (tested): $73,700 settled to the account ending 2290, AP $0, prepayment $0, $83,700 cash out including the deposit, one transfer, approval `used`.
+
 ## Key files
 
 | File | What |
@@ -45,9 +70,14 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 | `countersign/commercial.py` | v2 deterministic assessment, holds, fingerprint, bill-posting gate |
 | `countersign/extractions.py` | v2 evidence validation and recording; fixture loader |
 | `countersign/intake.py` | v2 intake: bytes, SHA-256, document, fragments, email, `process_document` job |
-| `countersign/supplier_pipeline.py` | v2 job handlers: `process_document`, `reassess` (+ the stale sweep), `send_outbox`, give-up path |
+| `countersign/supplier_pipeline.py` | v2 job handlers: `process_document` (fixture or live), `reassess` (+ the stale sweep), `send_outbox`, give-up path |
+| `countersign/live_extract.py` | v2 live extraction: strict schemas, the Claude calls, live output to the fixture shape |
+| `countersign/injection.py` | Prompt-injection patterns over a document's fragments |
+| `countersign/extraction_score.py` | Labelled fields vs. the answer key (tests, `check_extraction.py`, scorecard only) |
 | `countersign/supplier_world.py`, `supplier_docs.py` | v2 fictional world, document rendering and fragments |
 | `countersign/supplier_ledger.py` | v2 journals |
+| `countersign/supplier_agent.py` | v2 Droid agent: the nine tools, the draft validator, the session and its scripted fallback |
+| `countersign/supplier_gateway.py` | v2 gateway: fingerprint re-check, start_payment, Nessie (simulated), deposit allocation, journals |
 | `countersign/clarify.py` | v2 clarification to the supplier: deterministic template until step C |
 | `countersign/supplier_seed.py` | v2 seeding, plus `RecordingStore` / `export_seeds` / `replay` for `data/seeds/` (`scripts/export_supplier_seed.py`; see `data/README.md`) |
 | `countersign/money.py` | Integer cents and integer-thousandth quantities; exact extension |
@@ -59,9 +89,9 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 
 ## Module reference coverage (CONTRACT §9.4)
 
-Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions, the outbox (`draft_outbox`, `approve_outbox`, `mark_outbox`), and the job rules (attempts, leases, backoff, §9.5 kinds). Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
+Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions, the outbox (`draft_outbox`, `approve_outbox`, `mark_outbox`), supplier payments (`propose_supplier_payment`, `approve_supplier_payment`, `reject_supplier_payment`, `start_payment` re-check, `record_payment`, `record_deposit_allocation`, with the module's `makeStale`), and the job rules (attempts, leases, backoff, §9.5 kinds). Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
 
-Not yet: payment proposal/approval/settlement for supplier payments, deposit allocation, and CONTRACT v2.2 (`decide_disputed_line`, `resolve_hold` refusing money holds).
+Not yet: CONTRACT v2.2 (`decide_disputed_line`, `resolve_hold` refusing money holds).
 
 ## Run against the SpacetimeDB module
 
@@ -90,11 +120,21 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 ## Where Droid runs (for the Factory judges)
 
 - **v1 today:** every `process_bill` job starts a Droid session (`countersign/agent.py`, `run_droid`) limited to five tools we wrote (`read_bill`, `list_checks`, `run_check`, `get_sub_history`, `file_proposal`). Built-in file and shell tools are removed with `restrict_tools`. The database refuses approve/pay calls from the `agent` role. Every step goes to `agent_step`. If Droid errors, the scripted agent finishes with the same tools and holds.
-- **v2:** `process_document` jobs run today as deterministic handlers on labelled fixtures (step B). Step C puts a Droid session behind them, with the supplier-invoice tools from the brief (`get_invoice_bundle`, `get_term_version`, `get_source_fragment`, `get_authority_policy`, `list_open_holds`, `run_check`, `open_hold`, `draft_clarification`, `propose_supplier_payment`).
+- **v2:** one Droid session per invoice revision, inside that invoice's `process_document` job (`countersign/supplier_agent.py`, `AGENT_MODE=droid`).
+  - **What runs first:** code records the deterministic assessment and holds before Droid starts, so the numbers are on screen.
+  - **Droid's tools:** only the brief's nine (`get_invoice_bundle`, `get_term_version`, `get_source_fragment`, `get_authority_policy`, `list_open_holds`, `run_check`, `open_hold`, `draft_clarification`, `propose_supplier_payment`); built-in tools are removed with `restrict_tools`, and no tool exposes `origin`.
+  - **Holds:** `open_hold` only takes amountless codes (`PROMPT_INJECTION`, `SUPPLIER_RISK`, `DUPLICATE_REVIEW`, `EXTRACTION_REVIEW`) with a cited fragment.
+  - **Payment:** `propose_supplier_payment` takes no amount.
+  - **Drafts:** Droid writes the clarification body, and code validates it before saving. It rejects amounts that aren't in the assessment, a missing disputed line or ask, short-pay wording, bank/payment/remittance details, links, email addresses, phone numbers, and any text a document tried to instruct us with. Code sets the recipient and subject.
+  - **Timeline:** every step goes to `agent_step`.
+  - **Fallback:** if Droid is unavailable, fails (a failed run is never mistaken for one that chose to do nothing), or passes its 120 s limit, or ends without a needed draft or proposal, the scripted rules finish, and the timeline says so.
+  - **Timing:** two Claude calls (~25 s) plus at most ~140 s of Droid keeps the job well inside the 5-minute lease.
+  - **Real run:** `scripts/try_droid.py` runs one real session on invoice BM-23104 revision 1. It needs the `droid` CLI and `FACTORY_API_KEY`.
 
 ## Known gaps (as of this commit)
 
-- Steps C–E: live Claude extraction (strict schema) and the Droid session, the web's upload/email intake endpoint and file preview for v2, version-bound approval and settlement, audit export.
+- Step D (web side): the upload/email intake endpoint and file preview for v2. Audit export.
+- A first real Droid run (needs `FACTORY_API_KEY`), the citation-backed "why?" explanation (a separate call that can't change amounts), and a small call that reads the fuel-surcharge parameters for the fuel variant.
 - Variants: scoped amendment, fuel surcharge (Apify diesel index), supplier risk (CRS), prompt injection on supplier documents, judge page.
 - Settlement decisions on disputed lines (`decide_disputed_line`, CONTRACT v2.2): next, now that step B's core works. Until then, money holds clear only through a corrected invoice.
 - CRS business-report mapping and the Apify Actors are still to come (`integrations/`).
