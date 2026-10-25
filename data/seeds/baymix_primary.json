@@ -1,0 +1,2679 @@
+{
+ "format": "countersign-seed/1",
+ "scenario": "baymix_primary",
+ "generated_by": "uv run --project core python scripts/export_supplier_seed.py",
+ "note": "All fictional. Extractions are labelled fixtures (AI_MODE=fixture); deposit and payments are simulated.",
+ "conventions": {
+  "calls": "Replay in order. args are positional in CONTRACT order without request_id; use the given request_id so loading twice is a no-op. Every call returned ok when generated.",
+  "i64": "Args whose names end in _cents or _milli (db/src/reducer_args.ts) are i64: convert to BigInt.",
+  "identity": "'{{identity:<role>}}' stands for the hex identity of that role's actor.",
+  "roles_needed": [
+   "admin",
+   "agent",
+   "purchasing",
+   "receiver",
+   "sync"
+  ],
+  "documents": "File bytes for the source viewer, base64; sha256 matches record_document."
+ },
+ "documents": [
+  {
+   "id": "doc_bm_quote",
+   "kind": "quote",
+   "filename": "BayMix_Quote_BMQ-4417.pdf",
+   "stage": "purchase",
+   "content_type": "application/pdf",
+   "sha256": "4b612bdc89c9b82e6341d778c2325bed9b531de45349bf88e888e48697dac144",
+   "source_file_id": "src_4b612bdc",
+   "base64": "JVBERi0xLjMKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgKG9wZW5zb3VyY2UpCjEgMCBvYmoKPDwKL0YxIDIgMCBSIC9GMiAzIDAgUgo+PgplbmRvYmoKMiAwIG9iago8PAovQmFzZUZvbnQgL0hlbHZldGljYSAvRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZyAvTmFtZSAvRjEgL1N1YnR5cGUgL1R5cGUxIC9UeXBlIC9Gb250Cj4+CmVuZG9iagozIDAgb2JqCjw8Ci9CYXNlRm9udCAvSGVsdmV0aWNhLUJvbGQgL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcgL05hbWUgL0YyIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udAo+PgplbmRvYmoKNCAwIG9iago8PAovQ29udGVudHMgOSAwIFIgL01lZGlhQm94IFsgMCAwIDYxMiA3OTIgXSAvUGFyZW50IDggMCBSIC9SZXNvdXJjZXMgPDwKL0ZvbnQgMSAwIFIgL1Byb2NTZXQgWyAvUERGIC9UZXh0IC9JbWFnZUIgL0ltYWdlQyAvSW1hZ2VJIF0KPj4gL1JvdGF0ZSAwIC9UcmFucyA8PAoKPj4gCiAgL1R5cGUgL1BhZ2UKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL0NvbnRlbnRzIDEwIDAgUiAvTWVkaWFCb3ggWyAwIDAgNjEyIDc5MiBdIC9QYXJlbnQgOCAwIFIgL1Jlc291cmNlcyA8PAovRm9udCAxIDAgUiAvUHJvY1NldCBbIC9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUkgXQo+PiAvUm90YXRlIDAgL1RyYW5zIDw8Cgo+PiAKICAvVHlwZSAvUGFnZQo+PgplbmRvYmoKNiAwIG9iago8PAovUGFnZU1vZGUgL1VzZU5vbmUgL1BhZ2VzIDggMCBSIC9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iago3IDAgb2JqCjw8Ci9BdXRob3IgKGFub255bW91cykgL0NyZWF0aW9uRGF0ZSAoRDoyMDAwMDEwMTAwMDAwMCswMCcwMCcpIC9DcmVhdG9yIChhbm9ueW1vdXMpIC9LZXl3b3JkcyAoKSAvTW9kRGF0ZSAoRDoyMDAwMDEwMTAwMDAwMCswMCcwMCcpIC9Qcm9kdWNlciAoUmVwb3J0TGFiIFBERiBMaWJyYXJ5IC0gXChvcGVuc291cmNlXCkpIAogIC9TdWJqZWN0ICh1bnNwZWNpZmllZCkgL1RpdGxlIChCYXlNaXggUXVvdGUgQk1RLTQ0MTcpIC9UcmFwcGVkIC9GYWxzZQo+PgplbmRvYmoKOCAwIG9iago8PAovQ291bnQgMiAvS2lkcyBbIDQgMCBSIDUgMCBSIF0gL1R5cGUgL1BhZ2VzCj4+CmVuZG9iago5IDAgb2JqCjw8Ci9GaWx0ZXIgWyAvQVNDSUk4NURlY29kZSAvRmxhdGVEZWNvZGUgXSAvTGVuZ3RoIDEwMjIKPj4Kc3RyZWFtCkdhdCUhOTk3T2EnXSZAMmMybzBPO2M7VmZxTitmUUIsSEokRjwyITpaU0A8a1JPMyRZU1NAXWFcXUgrNkA2YzZDPDJrJV5jZjpVRGJNXmQ7RmU8QEsvLyxcLkA6MjleMi07Z0VPYVAkJGpBZ0VsSzE0VmxsdV5ESCFgPWNRNUZwL0IibDprV1pdWVFAV04uTGUvcyhITm8mJFxaX243TVo6JlwmMU11IzMkImpcKnJUTHUxNTtfPikkJGZDXEA0T2RYJSMrbFhWKjhIRTdmL2o0PVFeRVAqbSpVazhoYVloOl1LZDAiWS9mXGtHN0xGJUZYMlBTbDQ1MCI9a28zY3BqLzkzLTZNXG9aITlIJUBFPjxVImleIkpXKVlAck9EdWNkbjMnIVpddCpJVDgoV1knSzxBcyE8P151OS8kPHMkYHVFZ1QxPlFEQmI8LUhsMzhpQVInRSMlVWBfNSsxU0tNaz1DUm9AUk9sYmBxQFBpPm5wWWJkTEkyQWtnaS9bOHRVdEZdQDAqUTVtWGZHXEgqKGdiJ2pFT2BlXEMlJElWLzcvLylWJklKZT8hT2I/XFpIYWtdZGYlYiIpY1JdK0MtaW8/QmFfJTwkMT5oXyV1SmtkYHU9UlhkP2hFNWA/blchaU8lSCJqKmwoNU41UFhoVnNsJUcuIWtLQEF1UV9FZk1ocSc8Pmc/a3IkL1RSKGN0LzlXaWxxWWRnZFFFJiNqbygvPGhkQTBibW9HUktDbD1jUjxXTyU4Li1fQU1fJz1hPjUnIVlKYC1uXjRpPi0kWENgNj10byxDcyVLUypmX29HVk89PyxTODpLIVpxblFQU21tRmNYdW5tMmBNZGdeVzVaLm4nRWU7KSVAOGhfZ08qZEFZYTIhb1wvWj1RKlhaUFJpbyw1Q1lEcyw2YCplYEJwYFMrOFlTWSknOWslIzk9ZztKUDlSYU1DOC5mbykvMUs9MiFDXUtLdSkrOWhAdV1rWVgwLjw1bXRzXitDYCJKRD04WFs5ZW1WNW45VT0nZVdOYCJSW2RcbDA+cmxFI0JjSDwkLyInc0EyQT4/RUY8cFttXWJtJmRjLGVCN0N1ME4mNGhVJ3ImNCoyPjMlQm5HMHVmUV0iODxoRGplWmNVNiRBXkNxMiQkLjg/TzJmOiQoR0FpXmg3UzBWQD1QKEcyYUJxWCZQX0svIWA2Y0ZuRjU4ZCo/Uy4xWzNSQVFeYXI/VjtQaUBgRFdYYjUqIiJoaCc3TW5iYUxkOFshXCw1PmhGaCVUViciQnBgK0UqUzxLX19eQ3JnJ3IkUjhcOUVYMmY3TWNrQzwlbTF1RnEwSCVbPS4iJWhAU2VrUTFHJD08WjZXI2RfaH4+ZW5kc3RyZWFtCmVuZG9iagoxMCAwIG9iago8PAovRmlsdGVyIFsgL0FTQ0lJODVEZWNvZGUgL0ZsYXRlRGVjb2RlIF0gL0xlbmd0aCA5ODcKPj4Kc3RyZWFtCkdhdCUhOWxIZFwmQUBnPmJiOWY4ZVpxRl84V1dnQFYrUFVZRFYvL0gjIytNJUNoaT00cjszJD5jcFsvNixucFlvI1EzR2tIMU08V2EnW2MtPVVmPjZec0RsWEplNChISyNpaW1IJV0xPGlxPl9GIWsxRGNfU15nVioiYl1GI1QqLC8lOzNmSmZAJ3IsZjY7MzJdWThfYCpoTHQmR2VTc1hwIz9EOWM1TlBoVnVnOy0xKXQyJz84JiclPU0xMnM2aDFKRisoJ2cpPldHKCw+USxTZyVnS2hiSyw2KnAlVSRwN1FGQzFNRnErdUtbX09fVDZAQGNeVGVyLiJfaUBfQChUKWg+Q1M+YlpZJT8zTDRlKVBBSW9yQ2k0LWU/RFxLImAlZWxZdGg/NDE4USJMY2pOZjNHb0A7cWw6JDldal5tV2whTVQsO25vIVooZy5vWi1SXEFHL3QxJVJgbzUpMkMkL29FXCgzPU0uRWhNbTAoI2ZEYTVjU1EiVUohODslZDJJI3JMZlxCSEZsJGI6c1NrTzBDaVUzPFVsPltOZj5sPzh1VDokKjNdIiNtNztCVWNdUVNmcElTMTg3Nk9laGdBMzkmYURoVTMqQGktJzJzSDIzVytiVUlfR1M4PF5qXW1aRTBMVjtKMWQyT2IvZ0FmZmAzPzlyQEwwLFVqc3BkNzdPUThyNXNKZHJHcThHRXNrS2ZsLz09TVNKc1tjTyonT1EvdVlUUUFhcj9EMFVRJmkvWEJkK0Ikbzxhcyt0YzY8NV0yQkpxRmZAcGNWLF9GWCxnNVVOYUt1RGo1SVlrMTxXUzI+T05QLiJta0pOVGNRJylyOSNxJERYOCFESiosMFAkZW90QUZqLVlHPVApMEFSSDFXTlghNj1IcFAqWFZgaG43LDM3LFptZktqWic0YmxWcT9gZWBcXCxbRihrczxBW0BRPGVudFxdPitqTjQ2O2FdSWhRTSRRL11iclYyMkY1OFY6MStfOzJwbUlGVjspYnMiUjVDRTB0Y1lxXk9GP3BmJi5PWWlVdCoiRk4vX0pXPSclJk8lVGliazsxPmtMKTExO2dZRCc/QE9UYTs0ZkA0Nj1vPkBSJ0teMWVkJ2UpaFdIczYtVkcsSnFTXU06WDZuRUQjK2skJFpsWUNkTGE6NFpvSWc7P1FlUCdSWV9AZ1tLamtFTEBURkFZQCo8KExSVF9xI1tMcGlHOV07Z0FFWCJjUVFgOVMtSWZFIjZzLFBaOjJzKE9zL1dJSyg8YmFha25mMTFvUmErXEFvZ0smS2N0JiFoaFVeYidLR21yJHVcLSp+PmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDExCjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDA2MSAwMDAwMCBuIAowMDAwMDAwMTAyIDAwMDAwIG4gCjAwMDAwMDAyMDkgMDAwMDAgbiAKMDAwMDAwMDMyMSAwMDAwMCBuIAowMDAwMDAwNTE0IDAwMDAwIG4gCjAwMDAwMDA3MDggMDAwMDAgbiAKMDAwMDAwMDc3NiAwMDAwMCBuIAowMDAwMDAxMDUwIDAwMDAwIG4gCjAwMDAwMDExMTUgMDAwMDAgbiAKMDAwMDAwMjIyOCAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9JRCAKWzxlOTk2MzMxODgzNjExMmZiNzdjY2YyYWRmYmIwMThmNj48ZTk5NjMzMTg4MzYxMTJmYjc3Y2NmMmFkZmJiMDE4ZjY+XQolIFJlcG9ydExhYiBnZW5lcmF0ZWQgUERGIGRvY3VtZW50IC0tIGRpZ2VzdCAob3BlbnNvdXJjZSkKCi9JbmZvIDcgMCBSCi9Sb290IDYgMCBSCi9TaXplIDExCj4+CnN0YXJ0eHJlZgozMzA2CiUlRU9GCg=="
+  },
+  {
+   "id": "doc_mf_po_1031",
+   "kind": "po",
+   "filename": "MarlowFinch_PO_MF-PO-1031.pdf",
+   "stage": "purchase",
+   "content_type": "application/pdf",
+   "sha256": "6b554be1e0861ffbfc105e54429f7be1115bdc3f1eca9dbfc45fe730b12a2cdc",
+   "source_file_id": "src_6b554be1",
+   "base64": "JVBERi0xLjMKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgKG9wZW5zb3VyY2UpCjEgMCBvYmoKPDwKL0YxIDIgMCBSIC9GMiAzIDAgUiAvRjMgNCAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL0Jhc2VGb250IC9IZWx2ZXRpY2EgL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcgL05hbWUgL0YxIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udAo+PgplbmRvYmoKMyAwIG9iago8PAovQmFzZUZvbnQgL0hlbHZldGljYS1Cb2xkIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMiAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0Jhc2VGb250IC9Db3VyaWVyIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMyAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL0NvbnRlbnRzIDkgMCBSIC9NZWRpYUJveCBbIDAgMCA2MTIgNzkyIF0gL1BhcmVudCA4IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9QYWdlTW9kZSAvVXNlTm9uZSAvUGFnZXMgOCAwIFIgL1R5cGUgL0NhdGFsb2cKPj4KZW5kb2JqCjcgMCBvYmoKPDwKL0F1dGhvciAoYW5vbnltb3VzKSAvQ3JlYXRpb25EYXRlIChEOjIwMDAwMTAxMDAwMDAwKzAwJzAwJykgL0NyZWF0b3IgKGFub255bW91cykgL0tleXdvcmRzICgpIC9Nb2REYXRlIChEOjIwMDAwMTAxMDAwMDAwKzAwJzAwJykgL1Byb2R1Y2VyIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSBcKG9wZW5zb3VyY2VcKSkgCiAgL1N1YmplY3QgKHVuc3BlY2lmaWVkKSAvVGl0bGUgKE1hcmxvd0ZpbmNoIFBPIE1GLVBPLTEwMzEpIC9UcmFwcGVkIC9GYWxzZQo+PgplbmRvYmoKOCAwIG9iago8PAovQ291bnQgMSAvS2lkcyBbIDUgMCBSIF0gL1R5cGUgL1BhZ2VzCj4+CmVuZG9iago5IDAgb2JqCjw8Ci9GaWx0ZXIgWyAvQVNDSUk4NURlY29kZSAvRmxhdGVEZWNvZGUgXSAvTGVuZ3RoIDk0NAo+PgpzdHJlYW0KR2F0VTE/I3VIIidSZkdSXC4+ISZnSGl0K1ReZiIxVkoubisyOkxedD5dZ180Vjk5TUVodE1gJDhaJW1hL14/JzpBTmY0KlMzOFFGa2Y6aG1RaVFjRW45KVsiXFpmPD5vNSJyJ0BpLWdfUF03TSw/Y0xqYC4nIT5xJXBFa29WWi50M0J1NSJvW2RYa3U2QT9IQ2pXXV5dQjppVy4hNlsjQzQ5aCx1UzdCOzdra0duTidoWnQ8TC86STpIImBGcyMpa0FjWydsWGJWLGB1TUU1T0lUZkFEYVNJVDpAQVxEcC4haihpQlpLcENIPEsmSkI8NXMpJFRCNld0SHBbMkpyZSttQjJMV1FKTFJsNllfQTlIJyVLKF1kcyQ1IzVMIVM7O25fSjIoJ18+SWVdKDN1QGchZCtgb0hwODMpLWorZig+aDx1UjJXbjk0QEJPaWNfJHQ6bUlPbEZdbDFvbS9TKClNPydrbThqVSQ5QFc1PF1EL19PKnVMT2lmTz1IWThJXzgwaypXZFgiKllmO3FcW2dPQC09YFw6WHVuVyFlI15dOl07TXByIllpVmkpbmxqalZOO09IYUBDKFhuZWxSIipKanJbS0FObCxCUnApSkBiRF48aF1kVixULCtGJzI+IiVZNFY1bldRWylQNURrSEdzZFpFVTtbMktPbm03L0ZgJTk9XkRuXWYvZGBINCEyNW4zXC9FJl9kYShNMUB0al4kUEIvWnMrJVNrJEBJW2thXEhsZ2JuVXVKUyhvbmFPMHNNXSNfXjxtZ2YxSFE4ayxQQjw8ZDFBJFFjJzsnMjJDcUYxPlVRZEE8VDQnSyk2ZV9YQFFQWSs4azY6PTpbX10rUjJhP3EhTnNANFwhSCRkOGxfWCpoVEAqUDNaKVRlI2smYFpgcT5PdWVpRDxYV0Q2IWFmYF0iSm1RKmkrXTRBJzk/cWxqVy9KYV5QPm4pR2RhXk1qWWkxP3MjUz5EV3E6YnRKS0lLUz5mJy9zVSc3azpcRmw8Yi9PK145J2BGNlooTyo0PXBtVVFSZ10pT1RyQT5XK1hzViZVQV9mLFM5O19pPWlFYTc6OCNgcE83VmIsIkxrZC5OVW9MRysjWk47PGpfVnElPGAjYThQZDJPKV1wKipxIygqSzQ7PGpgbzNPRig3MS83bjJmL3VyM1dUVDQkL0dVM2xwIVNKTmRsX20sa1peSiJtSDorcTtdYClXWlYpQy9fKlFhQjV1Qi0iMz06MC8iKj1ZRmFvfj5lbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCAxMAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwNjEgMDAwMDAgbiAKMDAwMDAwMDExMiAwMDAwMCBuIAowMDAwMDAwMjE5IDAwMDAwIG4gCjAwMDAwMDAzMzEgMDAwMDAgbiAKMDAwMDAwMDQzNiAwMDAwMCBuIAowMDAwMDAwNjI5IDAwMDAwIG4gCjAwMDAwMDA2OTcgMDAwMDAgbiAKMDAwMDAwMDk3NSAwMDAwMCBuIAowMDAwMDAxMDM0IDAwMDAwIG4gCnRyYWlsZXIKPDwKL0lEIApbPDE2YTE3NzI0ZDc0ZmVkNjk5MmE3NmMxM2RlMDJiMTBmPjwxNmExNzcyNGQ3NGZlZDY5OTJhNzZjMTNkZTAyYjEwZj5dCiUgUmVwb3J0TGFiIGdlbmVyYXRlZCBQREYgZG9jdW1lbnQgLS0gZGlnZXN0IChvcGVuc291cmNlKQoKL0luZm8gNyAwIFIKL1Jvb3QgNiAwIFIKL1NpemUgMTAKPj4Kc3RhcnR4cmVmCjIwNjgKJSVFT0YK"
+  },
+  {
+   "id": "doc_em_weekend_1",
+   "kind": "email",
+   "filename": "em_weekend_1.eml",
+   "stage": "purchase",
+   "content_type": "message/rfc822",
+   "sha256": "a654dcbec93da8b66d8d992e2f1e57cb6e2d2de5436e1222fcba0218b4386c4e",
+   "source_file_id": "src_a654dcbe",
+   "base64": "TWVzc2FnZS1JRDogPGVtX3dlZWtlbmRfMUBjb3VudGVyc2lnbi5leGFtcGxlPgpGcm9tOiByb3NhLmRlbGdhZG9AYmF5bWl4LXN1cHBseS5leGFtcGxlClRvOiBqb3JkYW4ucGlrZUBtYXJsb3dmaW5jaC5leGFtcGxlClN1YmplY3Q6IFNhdHVyZGF5IE9jdCAxMCBwb3VyIC0gd2Vla2VuZCBkZWxpdmVyeSBjaGFyZ2UKRGF0ZTogVGh1LCAwOCBPY3QgMjAyNiAwOToxMjowMCAtMDcwMApYLUNvdW50ZXJzaWduLVRocmVhZDogdGhyX3dlZWtlbmQKQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluOyBjaGFyc2V0PSJ1dGYtOCIKQ29udGVudC1UcmFuc2Zlci1FbmNvZGluZzogcXVvdGVkLXByaW50YWJsZQpNSU1FLVZlcnNpb246IDEuMAoKSGkgSm9yZGFuLAoKR3Jhbml0ZSBMaW5lIGFza2VkIHVzIHRvIGRlbGl2ZXIgdGhlIE9ha3ZpZXcgZm91bmRhdGlvbiBwb3VyIG9uIFNhdHVyZGF5LCBPY3Q9Cm9iZXIgMTAuCldlZWtlbmQgZGVsaXZlcnkgaXMgbm90IGluY2x1ZGVkIGluIFF1b3RlIEJNUS00NDE3LiBXZSBjYW4gZG8gaXQgZm9yIGEgZmxhdCB3PQplZWtlbmQKZGVsaXZlcnkgY2hhcmdlIG9mICQxLDIwMC4wMCBmb3IgdGhhdCBwb3VyLgoKUGxlYXNlIGNvbmZpcm0gaW4gd3JpdGluZyBpZiB5b3Ugd2FudCB1cyB0byBnbyBhaGVhZC4KClJvc2EgRGVsZ2FkbwpTYWxlcyBNYW5hZ2VyLCBCYXlNaXggU3VwcGx5Cg=="
+  },
+  {
+   "id": "doc_em_weekend_2",
+   "kind": "email",
+   "filename": "em_weekend_2.eml",
+   "stage": "purchase",
+   "content_type": "message/rfc822",
+   "sha256": "6777ed173563a3ec4f70966f61affbb2ca93e6f3ce8a861373aa7b96c502799d",
+   "source_file_id": "src_6777ed17",
+   "base64": "TWVzc2FnZS1JRDogPGVtX3dlZWtlbmRfMkBjb3VudGVyc2lnbi5leGFtcGxlPgpGcm9tOiBqb3JkYW4ucGlrZUBtYXJsb3dmaW5jaC5leGFtcGxlClRvOiByb3NhLmRlbGdhZG9AYmF5bWl4LXN1cHBseS5leGFtcGxlClN1YmplY3Q6IFJlOiBTYXR1cmRheSBPY3QgMTAgcG91ciAtIHdlZWtlbmQgZGVsaXZlcnkgY2hhcmdlCkRhdGU6IFRodSwgMDggT2N0IDIwMjYgMTQ6NDA6MDAgLTA3MDAKWC1Db3VudGVyc2lnbi1UaHJlYWQ6IHRocl93ZWVrZW5kCkNvbnRlbnQtVHlwZTogdGV4dC9wbGFpbjsgY2hhcnNldD0idXRmLTgiCkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IHF1b3RlZC1wcmludGFibGUKTUlNRS1WZXJzaW9uOiAxLjAKCkhpIFJvc2EsCgpZZXMsIHBsZWFzZSBnbyBhaGVhZCB3aXRoIHRoZSBTYXR1cmRheSwgT2N0b2JlciAxMCBwb3VyIGF0IHRoZSBmbGF0ICQxLDIwMC4wMD0KIHdlZWtlbmQgY2hhcmdlLgpJJ3ZlIGFwcHJvdmVkIGl0IG9uIG91ciBzaWRlLgoKSm9yZGFuIFBpa2UKUHVyY2hhc2luZywgTWFybG93ICYgRmluY2ggQnVpbGRlcnMK"
+  },
+  {
+   "id": "doc_em_weekend_3",
+   "kind": "email",
+   "filename": "em_weekend_3.eml",
+   "stage": "purchase",
+   "content_type": "message/rfc822",
+   "sha256": "a9b8cc5dbcfa37d0b3f6e513778536e4e0019282c2e5f3ecee2105e764b011cf",
+   "source_file_id": "src_a9b8cc5d",
+   "base64": "TWVzc2FnZS1JRDogPGVtX3dlZWtlbmRfM0Bjb3VudGVyc2lnbi5leGFtcGxlPgpGcm9tOiByb3NhLmRlbGdhZG9AYmF5bWl4LXN1cHBseS5leGFtcGxlClRvOiBqb3JkYW4ucGlrZUBtYXJsb3dmaW5jaC5leGFtcGxlClN1YmplY3Q6IFJlOiBTYXR1cmRheSBPY3QgMTAgcG91ciAtIHdlZWtlbmQgZGVsaXZlcnkgY2hhcmdlCkRhdGU6IFRodSwgMDggT2N0IDIwMjYgMTU6MDU6MDAgLTA3MDAKWC1Db3VudGVyc2lnbi1UaHJlYWQ6IHRocl93ZWVrZW5kCkNvbnRlbnQtVHlwZTogdGV4dC9wbGFpbjsgY2hhcnNldD0idXRmLTgiCkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IHF1b3RlZC1wcmludGFibGUKTUlNRS1WZXJzaW9uOiAxLjAKCkpvcmRhbiwKCkNvbmZpcm1lZDogZmxhdCB3ZWVrZW5kIGRlbGl2ZXJ5IGNoYXJnZSBvZiAkMSwyMDAuMDAgZm9yIHRoZSBTYXR1cmRheSwgT2N0b2JlPQpyIDEwIHBvdXIuCkZpcnN0IHRydWNrIG9uIHNpdGUgYXQgNzowMCBBTS4KClJvc2EK"
+  },
+  {
+   "id": "doc_em_waiting_1",
+   "kind": "email",
+   "filename": "em_waiting_1.eml",
+   "stage": "purchase",
+   "content_type": "message/rfc822",
+   "sha256": "58a341006d2e5b963c6d7f6125ccf94b5705a5662e72877b352c0dc19144460c",
+   "source_file_id": "src_58a34100",
+   "base64": "TWVzc2FnZS1JRDogPGVtX3dhaXRpbmdfMUBjb3VudGVyc2lnbi5leGFtcGxlPgpGcm9tOiBkaXNwYXRjaEBiYXltaXgtc3VwcGx5LmV4YW1wbGUKVG86IGpvcmRhbi5waWtlQG1hcmxvd2ZpbmNoLmV4YW1wbGUKU3ViamVjdDogT2FrdmlldyBwb3VycyAtIHNpdGUgYWNjZXNzCkRhdGU6IFdlZCwgMTQgT2N0IDIwMjYgMDc6MzE6MDAgLTA3MDAKWC1Db3VudGVyc2lnbi1UaHJlYWQ6IHRocl93YWl0aW5nCkNvbnRlbnQtVHlwZTogdGV4dC9wbGFpbjsgY2hhcnNldD0idXRmLTgiCkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IHF1b3RlZC1wcmludGFibGUKTUlNRS1WZXJzaW9uOiAxLjAKCkpvcmRhbiwKCkhlYWRzIHVwIGZvciB0aGUgcmVtYWluaW5nIE9ha3ZpZXcgcG91cnM6IHRydWNrcyB3ZXJlIGhlbGQgYXQgdGhlIGdhdGUgb24gTW9uPQpkYXkgd2hpbGUgdGhlCnB1bXAgd2FzIHNldCB1cC4gV2FpdGluZyBjaGFyZ2VzIG1heSBhcHBseSBpZiB0cnVja3MgYXJlIGhlbGQgb24gc2l0ZS4KCkJheU1peCBEaXNwYXRjaAo="
+  },
+  {
+   "id": "doc_bm_inv_23104_r1",
+   "kind": "invoice",
+   "filename": "BayMix_Invoice_BM-23104.pdf",
+   "stage": "invoice_r1",
+   "content_type": "application/pdf",
+   "sha256": "059dfd85353a2b0d1b787fd663ef192ccd1566f51c88d0412eec5b6593453aec",
+   "source_file_id": "src_059dfd85",
+   "base64": "JVBERi0xLjMKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgKG9wZW5zb3VyY2UpCjEgMCBvYmoKPDwKL0YxIDIgMCBSIC9GMiAzIDAgUiAvRjMgNCAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL0Jhc2VGb250IC9IZWx2ZXRpY2EgL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcgL05hbWUgL0YxIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udAo+PgplbmRvYmoKMyAwIG9iago8PAovQmFzZUZvbnQgL0hlbHZldGljYS1Cb2xkIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMiAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0Jhc2VGb250IC9Db3VyaWVyIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMyAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL0NvbnRlbnRzIDkgMCBSIC9NZWRpYUJveCBbIDAgMCA2MTIgNzkyIF0gL1BhcmVudCA4IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9QYWdlTW9kZSAvVXNlTm9uZSAvUGFnZXMgOCAwIFIgL1R5cGUgL0NhdGFsb2cKPj4KZW5kb2JqCjcgMCBvYmoKPDwKL0F1dGhvciAoYW5vbnltb3VzKSAvQ3JlYXRpb25EYXRlIChEOjIwMDAwMTAxMDAwMDAwKzAwJzAwJykgL0NyZWF0b3IgKGFub255bW91cykgL0tleXdvcmRzICgpIC9Nb2REYXRlIChEOjIwMDAwMTAxMDAwMDAwKzAwJzAwJykgL1Byb2R1Y2VyIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSBcKG9wZW5zb3VyY2VcKSkgCiAgL1N1YmplY3QgKHVuc3BlY2lmaWVkKSAvVGl0bGUgKEJheU1peCBJbnZvaWNlIEJNLTIzMTA0KSAvVHJhcHBlZCAvRmFsc2UKPj4KZW5kb2JqCjggMCBvYmoKPDwKL0NvdW50IDEgL0tpZHMgWyA1IDAgUiBdIC9UeXBlIC9QYWdlcwo+PgplbmRvYmoKOSAwIG9iago8PAovRmlsdGVyIFsgL0FTQ0lJODVEZWNvZGUgL0ZsYXRlRGVjb2RlIF0gL0xlbmd0aCA5MjQKPj4Kc3RyZWFtCkdhdD0pPyNRMmQnUmZHUlwuQCE6OjtDW3UrbG0/M2dKIWxxLT5CZVxQUFg5amY9MnVTJG9JKSdtbTgvXTglTCpnLFNbRU9uYVg8NWs+RUd0VVwtRUYhcV4tcEQqV1ktUi9JM1I9OldRMEUmQl9WaXNbPz5qNSJSOjI/O001TypNTUQ+SmIpXVBVI2kmRz1AcmlqVmM6NkAubl9xNkddaWtNIk0mX2k9NCM1J09iXS4mTGc5MTVnKkRhJCZmR3RkbUBfUl9KTEpgIilkMGxrXzAkUmtNU0dXLTI8VkxoXUc3Qy8nWTBYQConNGk5SSdBKSRfRTEqQUYrJ1MqRyFzLmdROHRbcSksbiNcOlhfJEEyWWFaVHVWMzBETW8ybi1SdDJoTUhvayomYSNPSCtSJFh0XU02bWVuSjcrUU41PkpXTlFmM2NwTGFeNTQwMSQwTUJeLSoqZlBjNE9xaUBxSlZvKD9vRXVDZjtKLTMoIz0yOCtHbTRwWk1NSTYxaFJhVHFTJVUuMEgnMUpNSzxcTkAvJUw4KkxhPEltNj1cdFwlYFk+XmlWanIkOVpEPTNKTjRUWFdiaSkmVkY9Qi9YP1cvQk5eTE1TcGJtNEdoWCVJTilWZjhbNT8oL2YvbkdmM1EwJ1FRQEsyX1dqbmQ8TD1RUmRgZVdoXClTMWdxNSpeUWRbKDlUaEZtJ288QDYxRmxMUjUxRm1VUkUzNGcucTt1LWNFIzMrZk1BX1c1bCIpWzJ0bUE+SFBpWiZbXj8lYGlSMlYvYGY9PStiVlVLY1ZnKTZna2lcalRkWD1oakczblA8TzY7YTIoOE1TZiFHaWRvNy9jPDgkTSFUNkw1VipWTWVnXy8icHR1NT0yTj1ucGc/KFJwOUE7WClgRU9gUTtfdF9caDpJQnFLIkpoKCVdRjo5azlyL1Y+LCxoRDpcXiY2VU4+VGdaW21WRmNNL2RrWyNQcSUwNUtxNHQqPVRvJE8ocWFlWWpUK3VVQzNvNyxIU1NpNSlRWVRrVFI7TT5SRTYuMycuM0BZVmEoMzItWUhTTW5nPXMnKy0wRCtHXUppIXRCS09LYjsvcVY7MSVsUWtbUVpyKj0sTEcxNVEmYEM+RyNVUVpjWT41bDQ2STsnXXBrSVtJK2FCOl0kUTIwJGJ0TTRLPWc9S19rJFsiMFoxXElHTiIoIkFnLGdrP3RvOyF1P3ExVUMkTD5LYFdZJSEpYTB0RXJ+PmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDEwCjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDA2MSAwMDAwMCBuIAowMDAwMDAwMTEyIDAwMDAwIG4gCjAwMDAwMDAyMTkgMDAwMDAgbiAKMDAwMDAwMDMzMSAwMDAwMCBuIAowMDAwMDAwNDM2IDAwMDAwIG4gCjAwMDAwMDA2MjkgMDAwMDAgbiAKMDAwMDAwMDY5NyAwMDAwMCBuIAowMDAwMDAwOTczIDAwMDAwIG4gCjAwMDAwMDEwMzIgMDAwMDAgbiAKdHJhaWxlcgo8PAovSUQgCls8ODRhZDdjMzMxNjM0ZWY3NTg5MWJjNTVmODkzZmI2ZWI+PDg0YWQ3YzMzMTYzNGVmNzU4OTFiYzU1Zjg5M2ZiNmViPl0KJSBSZXBvcnRMYWIgZ2VuZXJhdGVkIFBERiBkb2N1bWVudCAtLSBkaWdlc3QgKG9wZW5zb3VyY2UpCgovSW5mbyA3IDAgUgovUm9vdCA2IDAgUgovU2l6ZSAxMAo+PgpzdGFydHhyZWYKMjA0NgolJUVPRgo="
+  },
+  {
+   "id": "doc_bm_inv_23104_r2",
+   "kind": "invoice",
+   "filename": "BayMix_Invoice_BM-23104_rev2.pdf",
+   "stage": "correction_r2",
+   "content_type": "application/pdf",
+   "sha256": "473205eae13c9870cf3b8b90f768cc9236cdf04a5dccd92cfb97178c35bb112a",
+   "source_file_id": "src_473205ea",
+   "base64": "JVBERi0xLjMKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgKG9wZW5zb3VyY2UpCjEgMCBvYmoKPDwKL0YxIDIgMCBSIC9GMiAzIDAgUiAvRjMgNCAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL0Jhc2VGb250IC9IZWx2ZXRpY2EgL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcgL05hbWUgL0YxIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udAo+PgplbmRvYmoKMyAwIG9iago8PAovQmFzZUZvbnQgL0hlbHZldGljYS1Cb2xkIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMiAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0Jhc2VGb250IC9Db3VyaWVyIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMyAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL0NvbnRlbnRzIDkgMCBSIC9NZWRpYUJveCBbIDAgMCA2MTIgNzkyIF0gL1BhcmVudCA4IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9QYWdlTW9kZSAvVXNlTm9uZSAvUGFnZXMgOCAwIFIgL1R5cGUgL0NhdGFsb2cKPj4KZW5kb2JqCjcgMCBvYmoKPDwKL0F1dGhvciAoYW5vbnltb3VzKSAvQ3JlYXRpb25EYXRlIChEOjIwMDAwMTAxMDAwMDAwKzAwJzAwJykgL0NyZWF0b3IgKGFub255bW91cykgL0tleXdvcmRzICgpIC9Nb2REYXRlIChEOjIwMDAwMTAxMDAwMDAwKzAwJzAwJykgL1Byb2R1Y2VyIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSBcKG9wZW5zb3VyY2VcKSkgCiAgL1N1YmplY3QgKHVuc3BlY2lmaWVkKSAvVGl0bGUgKEJheU1peCBJbnZvaWNlIEJNLTIzMTA0IHJldjIpIC9UcmFwcGVkIC9GYWxzZQo+PgplbmRvYmoKOCAwIG9iago8PAovQ291bnQgMSAvS2lkcyBbIDUgMCBSIF0gL1R5cGUgL1BhZ2VzCj4+CmVuZG9iago5IDAgb2JqCjw8Ci9GaWx0ZXIgWyAvQVNDSUk4NURlY29kZSAvRmxhdGVEZWNvZGUgXSAvTGVuZ3RoIDEwMTIKPj4Kc3RyZWFtCkdhdD0qZ01XYz8mOk8iS2JYOGRRPS0waTctJ3MmNVZHMS1TUlZUNjhYamUuJ2dyKydGT2InPitySmgyRz87YWRbLDlcYydiYUZtWmolcGxuVVcjKkghNGp1XUVEOyE+UW90TG4pX1Q/UFRKbnFdanIlIiFRdURBKEJhTl8uY3QoQipJTV1oJ1FmZUpIIWs2aXRbRVFzKnAmcV9qMiUjJVwhQ0Bdc15fIV0mUjBrInRHKGBEO00/PkcuIUIpVyQjWVsiVkZVaD9oNk9TV1hfdEM+PlFQXCJsNGVMWFZZKCZWKCo1QWtFSmpWbzxuN10zRG4kdWdxWmxuQ3JPRiwoRC9cYFFQM0xXXWlRYT5OYG9TN1hjcmFjVk8iLk08OFw4WnBVbUc3R1Jxa0c9PXF0ITJIcCYuby9AXl9AKVZRLiQwO0EiTT5mMUg1SzBFbi1gJlczQlVXXkRRc1hDUiJbMkMxPzczJm5LTjxQKVVJKXAkO1Q4QUhxcENSSV4uXk9QSmgqNnIsLFw/InQ1LXUoUG1Qb1BZcSotK0ZePWg+PD0+VjcxIio+aWIvPCNiVDpmLm1nT2QqOlcsYCdSWEgmSGpTQWRmZFpRazc4WTduUlg3VE0uM1I6Jy9sbG4sUT4/QUBLU1BPKDMkQjJORkk1cChtZDMubVFYKmluSGEzR1tgOVVEWzZtWS0tQ0hVbWxPRzhNbGRGcEJIajxnYVlEZlxtYzxkUCRzLEJGQEUkXlo0Yj5pOlxxdDY+UHE9YHJIL0NYMSRkUkgjUC9nPTZDLDpOQGZqLCtPWmNfYm48SnBWczM4LjNYKE1WZl9nai1uTD4rViIjVUpxRF0qb3Q/KiovQjJDXj1rYSpNZC40MVhaTkJIciZDMk8xK1ZbU1soLThxX1FEXixcR24tU2w3MyNFdFNzPXFHOEhCKzJWLkhvYCNKPj1DPCQuXTFtRkMpdCxtaig4ajtsSW5aJ3JdVlo8QGI/IUNPK2kjcldNLTg3N2AsNjtxP05JZ2UwNTJeRGMkZkdJODlnLSc5b2JMTEldPGtSQVwqOFUqXVdzSDglZWpNVF1tMWQrO2Q4XFolNVRlaE1UbUArRktGTzlJTjk/O0Y4MEQkMTBealgiZTg4NldcXz89OU1JXkBgYC5OMCo8QW40TlM8SStRNGxjJVk1LSdhZiNoKGBYcFpEQ11XbWMhaUE9VllrKHNiZ2dbNlF1S1MpYkgmKzVSTztDQEVKXk02UlVrakZiVTpKaVVsb1VUM3FNPV9zZWRIUEVTJ3BSNV8uZzFERUUxXyMpZ2xbTCc4IUU6W2dIZjRbJyxOYSZ1Wk82TkI2QGtAIy41KlJBfj5lbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCAxMAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwNjEgMDAwMDAgbiAKMDAwMDAwMDExMiAwMDAwMCBuIAowMDAwMDAwMjE5IDAwMDAwIG4gCjAwMDAwMDAzMzEgMDAwMDAgbiAKMDAwMDAwMDQzNiAwMDAwMCBuIAowMDAwMDAwNjI5IDAwMDAwIG4gCjAwMDAwMDA2OTcgMDAwMDAgbiAKMDAwMDAwMDk3OCAwMDAwMCBuIAowMDAwMDAxMDM3IDAwMDAwIG4gCnRyYWlsZXIKPDwKL0lEIApbPDk1ZDcwNjE4NjcxNTE0ODk1MzJkMDU2OWZlMDI0ZDJjPjw5NWQ3MDYxODY3MTUxNDg5NTMyZDA1NjlmZTAyNGQyYz5dCiUgUmVwb3J0TGFiIGdlbmVyYXRlZCBQREYgZG9jdW1lbnQgLS0gZGlnZXN0IChvcGVuc291cmNlKQoKL0luZm8gNyAwIFIKL1Jvb3QgNiAwIFIKL1NpemUgMTAKPj4Kc3RhcnR4cmVmCjIxNDAKJSVFT0YK"
+  }
+ ],
+ "stages": [
+  {
+   "name": "people",
+   "description": "Authority limits, project, supplier, contacts on file, verified payee.",
+   "calls": [
+    {
+     "request_id": "seed-baymix-0001",
+     "role": "admin",
+     "reducer": "set_authority",
+     "args": [
+      "{{identity:owner}}",
+      "owner",
+      25000000,
+      "*"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0002",
+     "role": "admin",
+     "reducer": "set_authority",
+     "args": [
+      "{{identity:purchasing}}",
+      "purchasing",
+      200000,
+      "*"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0003",
+     "role": "admin",
+     "reducer": "set_authority",
+     "args": [
+      "{{identity:receiver}}",
+      "receiver",
+      0,
+      "*"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0004",
+     "role": "admin",
+     "reducer": "set_authority",
+     "args": [
+      "{{identity:bookkeeper}}",
+      "bookkeeper",
+      0,
+      "*"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0005",
+     "role": "sync",
+     "reducer": "upsert_project",
+     "args": [
+      "prj_oak",
+      "Oakview Lane Fourplex",
+      "1418 Oakview Ln, Fremont, CA",
+      "active"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0006",
+     "role": "sync",
+     "reducer": "upsert_supplier",
+     "args": [
+      "sup_baymix",
+      "BayMix Supply",
+      "baymix-supply.example",
+      "(510) 555-0191",
+      "crs_test_business_09",
+      "active"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0007",
+     "role": "sync",
+     "reducer": "upsert_supplier_contact",
+     "args": [
+      "ctc_baymix_rosa",
+      "sup_baymix",
+      "Rosa Delgado",
+      "rosa.delgado@baymix-supply.example",
+      "(510) 555-0191",
+      "Sales Manager",
+      true
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0008",
+     "role": "sync",
+     "reducer": "upsert_supplier_contact",
+     "args": [
+      "ctc_baymix_ar",
+      "sup_baymix",
+      "BayMix Accounts Receivable",
+      "ar@baymix-supply.example",
+      "(510) 555-0192",
+      "Accounts Receivable",
+      true
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0009",
+     "role": "sync",
+     "reducer": "upsert_supplier_contact",
+     "args": [
+      "ctc_baymix_dispatch",
+      "sup_baymix",
+      "BayMix Dispatch",
+      "dispatch@baymix-supply.example",
+      "(510) 555-0193",
+      "Dispatch",
+      true
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0010",
+     "role": "admin",
+     "reducer": "add_payee_profile",
+     "args": [
+      "sup_baymix:v1",
+      "sup_baymix",
+      1,
+      "acct_baymix_v1",
+      "2290",
+      "Quarry Point Bank",
+      "seed"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "purchase",
+   "description": "Quote, PO and email threads (fixture extractions); weekend charge approved in the app; $10,000 deposit settled (simulated).",
+   "calls": [
+    {
+     "request_id": "seed-baymix-0011",
+     "role": "sync",
+     "reducer": "record_source_file",
+     "args": [
+      "src_4b612bdc",
+      "seed",
+      "BayMix_Quote_BMQ-4417.pdf",
+      "4b612bdc89c9b82e6341d778c2325bed9b531de45349bf88e888e48697dac144",
+      "",
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0012",
+     "role": "sync",
+     "reducer": "record_document",
+     "args": [
+      "doc_bm_quote",
+      "quote",
+      "src_4b612bdc",
+      "4b612bdc89c9b82e6341d778c2325bed9b531de45349bf88e888e48697dac144",
+      "BayMix_Quote_BMQ-4417.pdf",
+      2
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0013",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l1",
+      "doc_bm_quote",
+      1,
+      "",
+      1,
+      1,
+      "BayMix Supply"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0014",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l2",
+      "doc_bm_quote",
+      1,
+      "",
+      2,
+      2,
+      "Ready-mix concrete - 2200 Quarry Road, Newark, CA 94560 - (510) 555-0191"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0015",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l3",
+      "doc_bm_quote",
+      1,
+      "",
+      3,
+      3,
+      "QUOTATION BMQ-4417"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0016",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l4",
+      "doc_bm_quote",
+      1,
+      "",
+      4,
+      4,
+      "Quote date: 2026-09-29"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0017",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l5",
+      "doc_bm_quote",
+      1,
+      "",
+      5,
+      5,
+      "Customer: Marlow & Finch Builders, attn. Jordan Pike (Purchasing)"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0018",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l6",
+      "doc_bm_quote",
+      1,
+      "",
+      6,
+      6,
+      "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0019",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l8",
+      "doc_bm_quote",
+      1,
+      "",
+      8,
+      8,
+      "Product: Ready-mix concrete, 4,000 psi, 3/4 in. aggregate, mix BM-40-34"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0020",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l9",
+      "doc_bm_quote",
+      1,
+      "",
+      9,
+      9,
+      "Maximum quantity: 500 cubic yards (cy), delivered to the project"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0021",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l10",
+      "doc_bm_quote",
+      1,
+      "",
+      10,
+      10,
+      "Unit price: $165.00 per cubic yard, delivered"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0022",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l11",
+      "doc_bm_quote",
+      1,
+      "",
+      11,
+      11,
+      "Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0023",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l12",
+      "doc_bm_quote",
+      1,
+      "",
+      12,
+      12,
+      "Extended maximum: 500 cy x $165.00 = $82,500.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0024",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l13",
+      "doc_bm_quote",
+      1,
+      "",
+      13,
+      13,
+      "Deposit: $10,000.00 due before the first pour, applied once against invoices under this quote"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0025",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l14",
+      "doc_bm_quote",
+      1,
+      "",
+      14,
+      14,
+      "Payment terms: Net 30 days from invoice date"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0026",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l15",
+      "doc_bm_quote",
+      1,
+      "",
+      15,
+      15,
+      "Not included: weekend or after-hours delivery, truck waiting time (see Term 2), fuel surcharge (Term 3)"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0027",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l17",
+      "doc_bm_quote",
+      1,
+      "",
+      17,
+      17,
+      "This quote incorporates the BayMix Supply Terms and Conditions of Sale on page 2."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0028",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l19",
+      "doc_bm_quote",
+      1,
+      "",
+      19,
+      19,
+      "Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-01"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0029",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p1_l20",
+      "doc_bm_quote",
+      1,
+      "",
+      20,
+      20,
+      "Issued for BayMix Supply: Rosa Delgado, Sales Manager"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0030",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l1",
+      "doc_bm_quote",
+      2,
+      "",
+      1,
+      1,
+      "TERMS AND CONDITIONS OF SALE (part of Quote BMQ-4417)"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0031",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l3",
+      "doc_bm_quote",
+      2,
+      "",
+      3,
+      3,
+      "1. Price changes. Quoted prices are fixed for the validity period. Any price change requires"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0032",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l4",
+      "doc_bm_quote",
+      2,
+      "",
+      4,
+      4,
+      "mutual written agreement of buyer and seller before the affected deliveries."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0033",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l6",
+      "doc_bm_quote",
+      2,
+      "",
+      6,
+      6,
+      "2. Additional charges. Charges not listed in this quote, including weekend or after-hours delivery"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0034",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l7",
+      "doc_bm_quote",
+      2,
+      "",
+      7,
+      7,
+      "and truck waiting time, apply only when both parties agree to them in writing before the work."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0035",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l9",
+      "doc_bm_quote",
+      2,
+      "",
+      9,
+      9,
+      "3. Fuel surcharge. For deliveries in a week when the weekly California on-highway diesel price"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0036",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l10",
+      "doc_bm_quote",
+      2,
+      "",
+      10,
+      10,
+      "index published by the U.S. Energy Information Administration is above $5.25 per gallon, seller"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0037",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l11",
+      "doc_bm_quote",
+      2,
+      "",
+      11,
+      11,
+      "may add $0.40 per cubic yard for each full $0.10 per gallon above $5.25. The index for the week"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0038",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l12",
+      "doc_bm_quote",
+      2,
+      "",
+      12,
+      12,
+      "of delivery applies. No surcharge applies at or below $5.25 per gallon."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0039",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l14",
+      "doc_bm_quote",
+      2,
+      "",
+      14,
+      14,
+      "4. Quantity. Deliveries above the maximum quantity require a written change."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0040",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l16",
+      "doc_bm_quote",
+      2,
+      "",
+      16,
+      16,
+      "5. Deposit. A deposit is applied once, only against invoices under this quote."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0041",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l18",
+      "doc_bm_quote",
+      2,
+      "",
+      18,
+      18,
+      "6. Payment instructions. Seller will not change its payment instructions by email alone. Buyer"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0042",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_quote_p2_l19",
+      "doc_bm_quote",
+      2,
+      "",
+      19,
+      19,
+      "will confirm any change by calling seller at the phone number on this quote."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0043",
+     "role": "sync",
+     "reducer": "record_source_file",
+     "args": [
+      "src_6b554be1",
+      "seed",
+      "MarlowFinch_PO_MF-PO-1031.pdf",
+      "6b554be1e0861ffbfc105e54429f7be1115bdc3f1eca9dbfc45fe730b12a2cdc",
+      "",
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0044",
+     "role": "sync",
+     "reducer": "record_document",
+     "args": [
+      "doc_mf_po_1031",
+      "po",
+      "src_6b554be1",
+      "6b554be1e0861ffbfc105e54429f7be1115bdc3f1eca9dbfc45fe730b12a2cdc",
+      "MarlowFinch_PO_MF-PO-1031.pdf",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0045",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l1",
+      "doc_mf_po_1031",
+      1,
+      "",
+      1,
+      1,
+      "Marlow & Finch Builders"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0046",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l2",
+      "doc_mf_po_1031",
+      1,
+      "",
+      2,
+      2,
+      "General contractor - Fremont, CA - purchasing@marlowfinch.example"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0047",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l3",
+      "doc_mf_po_1031",
+      1,
+      "",
+      3,
+      3,
+      "PURCHASE ORDER MF-PO-1031"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0048",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l4",
+      "doc_mf_po_1031",
+      1,
+      "",
+      4,
+      4,
+      "PO date: 2026-10-01"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0049",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l5",
+      "doc_mf_po_1031",
+      1,
+      "",
+      5,
+      5,
+      "Supplier: BayMix Supply, 2200 Quarry Road, Newark, CA 94560"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0050",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l6",
+      "doc_mf_po_1031",
+      1,
+      "",
+      6,
+      6,
+      "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0051",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l8",
+      "doc_mf_po_1031",
+      1,
+      "",
+      8,
+      8,
+      "Line  Description                                   Qty      Unit  Unit price    Amount"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0052",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l9",
+      "doc_mf_po_1031",
+      1,
+      "",
+      9,
+      9,
+      "1     Ready-mix concrete 4,000 psi, mix BM-40-34    500.000  cy    $165.00       $82,500.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0053",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l11",
+      "doc_mf_po_1031",
+      1,
+      "",
+      11,
+      11,
+      "PO total, not to exceed: $82,500.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0054",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l12",
+      "doc_mf_po_1031",
+      1,
+      "",
+      12,
+      12,
+      "Terms: BayMix Quote BMQ-4417 and its Terms and Conditions of Sale. Deposit $10,000.00 per the quote."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0055",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l13",
+      "doc_mf_po_1031",
+      1,
+      "",
+      13,
+      13,
+      "Price fixed for deliveries through 2026-10-31. Any change needs written agreement and approval"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0056",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l14",
+      "doc_mf_po_1031",
+      1,
+      "",
+      14,
+      14,
+      "by Marlow & Finch purchasing."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0057",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l15",
+      "doc_mf_po_1031",
+      1,
+      "",
+      15,
+      15,
+      "Issued by: Jordan Pike, Purchasing, Marlow & Finch Builders"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0058",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l17",
+      "doc_mf_po_1031",
+      1,
+      "",
+      17,
+      17,
+      "SUPPLIER ACKNOWLEDGMENT"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0059",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l18",
+      "doc_mf_po_1031",
+      1,
+      "",
+      18,
+      18,
+      "BayMix Supply acknowledges and accepts purchase order MF-PO-1031 on the terms of Quote BMQ-4417."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0060",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_mf_po_1031_p1_l19",
+      "doc_mf_po_1031",
+      1,
+      "",
+      19,
+      19,
+      "Acknowledged by: Rosa Delgado, Sales Manager, BayMix Supply    Date: 2026-10-01"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0061",
+     "role": "sync",
+     "reducer": "record_source_file",
+     "args": [
+      "src_a654dcbe",
+      "seed",
+      "em_weekend_1.eml",
+      "a654dcbec93da8b66d8d992e2f1e57cb6e2d2de5436e1222fcba0218b4386c4e",
+      "2026-10-08T09:20:00-07:00",
+      "rosa.delgado@baymix-supply.example",
+      "Saturday Oct 10 pour - weekend delivery charge",
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0062",
+     "role": "sync",
+     "reducer": "record_document",
+     "args": [
+      "doc_em_weekend_1",
+      "email",
+      "src_a654dcbe",
+      "a654dcbec93da8b66d8d992e2f1e57cb6e2d2de5436e1222fcba0218b4386c4e",
+      "em_weekend_1.eml",
+      0
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0063",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_1_p0_l1",
+      "doc_em_weekend_1",
+      0,
+      "em_weekend_1",
+      1,
+      1,
+      "Hi Jordan,"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0064",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_1_p0_l3",
+      "doc_em_weekend_1",
+      0,
+      "em_weekend_1",
+      3,
+      3,
+      "Granite Line asked us to deliver the Oakview foundation pour on Saturday, October 10."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0065",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_1_p0_l4",
+      "doc_em_weekend_1",
+      0,
+      "em_weekend_1",
+      4,
+      4,
+      "Weekend delivery is not included in Quote BMQ-4417. We can do it for a flat weekend"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0066",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_1_p0_l5",
+      "doc_em_weekend_1",
+      0,
+      "em_weekend_1",
+      5,
+      5,
+      "delivery charge of $1,200.00 for that pour."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0067",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_1_p0_l7",
+      "doc_em_weekend_1",
+      0,
+      "em_weekend_1",
+      7,
+      7,
+      "Please confirm in writing if you want us to go ahead."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0068",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_1_p0_l9",
+      "doc_em_weekend_1",
+      0,
+      "em_weekend_1",
+      9,
+      9,
+      "Rosa Delgado"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0069",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_1_p0_l10",
+      "doc_em_weekend_1",
+      0,
+      "em_weekend_1",
+      10,
+      10,
+      "Sales Manager, BayMix Supply"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0070",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_1_body",
+      "doc_em_weekend_1",
+      0,
+      "em_weekend_1",
+      1,
+      10,
+      "Hi Jordan,\n\nGranite Line asked us to deliver the Oakview foundation pour on Saturday, October 10.\nWeekend delivery is not included in Quote BMQ-4417. We can do it for a flat weekend\ndelivery charge of $1,200.00 for that pour.\n\nPlease confirm in writing if you want us to go ahead.\n\nRosa Delgado\nSales Manager, BayMix Supply\n"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0071",
+     "role": "sync",
+     "reducer": "record_email",
+     "args": [
+      "em_weekend_1",
+      "thr_weekend",
+      "doc_em_weekend_1",
+      "rosa.delgado@baymix-supply.example",
+      "jordan.pike@marlowfinch.example",
+      "Saturday Oct 10 pour - weekend delivery charge",
+      "2026-10-08T09:12:00-07:00",
+      "2026-10-08T09:20:00-07:00",
+      "frag_em_weekend_1_body"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0072",
+     "role": "sync",
+     "reducer": "record_source_file",
+     "args": [
+      "src_6777ed17",
+      "seed",
+      "em_weekend_2.eml",
+      "6777ed173563a3ec4f70966f61affbb2ca93e6f3ce8a861373aa7b96c502799d",
+      "2026-10-08T14:45:00-07:00",
+      "jordan.pike@marlowfinch.example",
+      "Re: Saturday Oct 10 pour - weekend delivery charge",
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0073",
+     "role": "sync",
+     "reducer": "record_document",
+     "args": [
+      "doc_em_weekend_2",
+      "email",
+      "src_6777ed17",
+      "6777ed173563a3ec4f70966f61affbb2ca93e6f3ce8a861373aa7b96c502799d",
+      "em_weekend_2.eml",
+      0
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0074",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_2_p0_l1",
+      "doc_em_weekend_2",
+      0,
+      "em_weekend_2",
+      1,
+      1,
+      "Hi Rosa,"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0075",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_2_p0_l3",
+      "doc_em_weekend_2",
+      0,
+      "em_weekend_2",
+      3,
+      3,
+      "Yes, please go ahead with the Saturday, October 10 pour at the flat $1,200.00 weekend charge."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0076",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_2_p0_l4",
+      "doc_em_weekend_2",
+      0,
+      "em_weekend_2",
+      4,
+      4,
+      "I've approved it on our side."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0077",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_2_p0_l6",
+      "doc_em_weekend_2",
+      0,
+      "em_weekend_2",
+      6,
+      6,
+      "Jordan Pike"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0078",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_2_p0_l7",
+      "doc_em_weekend_2",
+      0,
+      "em_weekend_2",
+      7,
+      7,
+      "Purchasing, Marlow & Finch Builders"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0079",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_2_body",
+      "doc_em_weekend_2",
+      0,
+      "em_weekend_2",
+      1,
+      7,
+      "Hi Rosa,\n\nYes, please go ahead with the Saturday, October 10 pour at the flat $1,200.00 weekend charge.\nI've approved it on our side.\n\nJordan Pike\nPurchasing, Marlow & Finch Builders\n"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0080",
+     "role": "sync",
+     "reducer": "record_email",
+     "args": [
+      "em_weekend_2",
+      "thr_weekend",
+      "doc_em_weekend_2",
+      "jordan.pike@marlowfinch.example",
+      "rosa.delgado@baymix-supply.example",
+      "Re: Saturday Oct 10 pour - weekend delivery charge",
+      "2026-10-08T14:40:00-07:00",
+      "2026-10-08T14:45:00-07:00",
+      "frag_em_weekend_2_body"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0081",
+     "role": "sync",
+     "reducer": "record_source_file",
+     "args": [
+      "src_a9b8cc5d",
+      "seed",
+      "em_weekend_3.eml",
+      "a9b8cc5dbcfa37d0b3f6e513778536e4e0019282c2e5f3ecee2105e764b011cf",
+      "2026-10-08T15:10:00-07:00",
+      "rosa.delgado@baymix-supply.example",
+      "Re: Saturday Oct 10 pour - weekend delivery charge",
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0082",
+     "role": "sync",
+     "reducer": "record_document",
+     "args": [
+      "doc_em_weekend_3",
+      "email",
+      "src_a9b8cc5d",
+      "a9b8cc5dbcfa37d0b3f6e513778536e4e0019282c2e5f3ecee2105e764b011cf",
+      "em_weekend_3.eml",
+      0
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0083",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_3_p0_l1",
+      "doc_em_weekend_3",
+      0,
+      "em_weekend_3",
+      1,
+      1,
+      "Jordan,"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0084",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_3_p0_l3",
+      "doc_em_weekend_3",
+      0,
+      "em_weekend_3",
+      3,
+      3,
+      "Confirmed: flat weekend delivery charge of $1,200.00 for the Saturday, October 10 pour."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0085",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_3_p0_l4",
+      "doc_em_weekend_3",
+      0,
+      "em_weekend_3",
+      4,
+      4,
+      "First truck on site at 7:00 AM."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0086",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_3_p0_l6",
+      "doc_em_weekend_3",
+      0,
+      "em_weekend_3",
+      6,
+      6,
+      "Rosa"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0087",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_weekend_3_body",
+      "doc_em_weekend_3",
+      0,
+      "em_weekend_3",
+      1,
+      6,
+      "Jordan,\n\nConfirmed: flat weekend delivery charge of $1,200.00 for the Saturday, October 10 pour.\nFirst truck on site at 7:00 AM.\n\nRosa\n"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0088",
+     "role": "sync",
+     "reducer": "record_email",
+     "args": [
+      "em_weekend_3",
+      "thr_weekend",
+      "doc_em_weekend_3",
+      "rosa.delgado@baymix-supply.example",
+      "jordan.pike@marlowfinch.example",
+      "Re: Saturday Oct 10 pour - weekend delivery charge",
+      "2026-10-08T15:05:00-07:00",
+      "2026-10-08T15:10:00-07:00",
+      "frag_em_weekend_3_body"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0089",
+     "role": "sync",
+     "reducer": "record_source_file",
+     "args": [
+      "src_58a34100",
+      "seed",
+      "em_waiting_1.eml",
+      "58a341006d2e5b963c6d7f6125ccf94b5705a5662e72877b352c0dc19144460c",
+      "2026-10-14T07:40:00-07:00",
+      "dispatch@baymix-supply.example",
+      "Oakview pours - site access",
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0090",
+     "role": "sync",
+     "reducer": "record_document",
+     "args": [
+      "doc_em_waiting_1",
+      "email",
+      "src_58a34100",
+      "58a341006d2e5b963c6d7f6125ccf94b5705a5662e72877b352c0dc19144460c",
+      "em_waiting_1.eml",
+      0
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0091",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_waiting_1_p0_l1",
+      "doc_em_waiting_1",
+      0,
+      "em_waiting_1",
+      1,
+      1,
+      "Jordan,"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0092",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_waiting_1_p0_l3",
+      "doc_em_waiting_1",
+      0,
+      "em_waiting_1",
+      3,
+      3,
+      "Heads up for the remaining Oakview pours: trucks were held at the gate on Monday while the"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0093",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_waiting_1_p0_l4",
+      "doc_em_waiting_1",
+      0,
+      "em_waiting_1",
+      4,
+      4,
+      "pump was set up. Waiting charges may apply if trucks are held on site."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0094",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_waiting_1_p0_l6",
+      "doc_em_waiting_1",
+      0,
+      "em_waiting_1",
+      6,
+      6,
+      "BayMix Dispatch"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0095",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_em_waiting_1_body",
+      "doc_em_waiting_1",
+      0,
+      "em_waiting_1",
+      1,
+      6,
+      "Jordan,\n\nHeads up for the remaining Oakview pours: trucks were held at the gate on Monday while the\npump was set up. Waiting charges may apply if trucks are held on site.\n\nBayMix Dispatch\n"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0096",
+     "role": "sync",
+     "reducer": "record_email",
+     "args": [
+      "em_waiting_1",
+      "thr_waiting",
+      "doc_em_waiting_1",
+      "dispatch@baymix-supply.example",
+      "jordan.pike@marlowfinch.example",
+      "Oakview pours - site access",
+      "2026-10-14T07:31:00-07:00",
+      "2026-10-14T07:40:00-07:00",
+      "frag_em_waiting_1_body"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0097",
+     "role": "agent",
+     "reducer": "record_extraction_run",
+     "args": [
+      "run_bm_quote_4c994916",
+      "doc_bm_quote",
+      "fixture",
+      "fixture",
+      "fixture-v1",
+      "ok",
+      "",
+      "{\"document_id\":\"doc_bm_quote\",\"document_kind\":\"quote\",\"fields\":{\"buyer_accepted_on\":{\"fragments\":[\"frag_bm_quote_p1_l19\"],\"quote\":\"Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing Date: 2026-10-01\",\"value\":\"2026-10-01\"},\"incorporates_terms\":{\"fragments\":[\"frag_bm_quote_p1_l17\"],\"quote\":\"This quote incorporates the BayMix Supply Terms and Conditions of Sale on page 2.\",\"value\":true},\"product\":{\"fragments\":[\"frag_bm_quote_p1_l8\"],\"quote\":\"Product: Ready-mix concrete, 4,000 psi, 3/4 in. aggregate, mix BM-40-34\",\"value\":\"Ready-mix concrete, 4,000 psi, 3/4 in. aggregate, mix BM-40-34\"},\"project_name\":{\"fragments\":[\"frag_bm_quote_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex\",\"value\":\"Oakview Lane Fourplex\"},\"quote_date\":{\"fragments\":[\"frag_bm_quote_p1_l4\"],\"quote\":\"Quote date: 2026-09-29\",\"value\":\"2026-09-29\"},\"quote_number\":{\"fragments\":[\"frag_bm_quote_p1_l3\"],\"quote\":\"QUOTATION BMQ-4417\",\"value\":\"BMQ-4417\"},\"supplier_name\":{\"fragments\":[\"frag_bm_quote_p1_l1\"],\"quote\":\"BayMix Supply\",\"value\":\"BayMix Supply\"},\"unit\":{\"fragments\":[\"frag_bm_quote_p1_l9\"],\"quote\":\"500 cubic yards (cy)\",\"value\":\"cy\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\",\"terms\":[{\"amount_cents\":16500,\"code\":\"unit_price\",\"effective_from\":\"2026-10-01\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"label\":\"Unit price, delivered\",\"quantity_milli\":0,\"quote\":\"Unit price: $165.00 per cubic yard, delivered Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31\",\"scope\":{\"unit\":\"cy\"}},{\"amount_cents\":0,\"code\":\"max_quantity\",\"effective_from\":\"2026-10-01\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_bm_quote_p1_l9\"],\"label\":\"Maximum quantity\",\"quantity_milli\":500000,\"quote\":\"Maximum quantity: 500 cubic yards (cy), delivered to the project\",\"scope\":{\"unit\":\"cy\"}},{\"amount_cents\":0,\"code\":\"valid_through\",\"effective_from\":\"2026-10-01\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_bm_quote_p1_l11\"],\"label\":\"Price validity\",\"quantity_milli\":0,\"quote\":\"Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31\",\"scope\":{}},{\"amount_cents\":1000000,\"code\":\"deposit\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_bm_quote_p1_l13\",\"frag_bm_quote_p2_l16\"],\"label\":\"Deposit, applied once\",\"quantity_milli\":0,\"quote\":\"Deposit: $10,000.00 due before the first pour, applied once against invoices under this quote\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"payment_terms\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_bm_quote_p1_l14\"],\"label\":\"Net 30\",\"quantity_milli\":0,\"quote\":\"Payment terms: Net 30 days from invoice date\",\"scope\":{\"net_days\":30}},{\"amount_cents\":0,\"code\":\"price_change_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_bm_quote_p2_l3\",\"frag_bm_quote_p2_l4\"],\"label\":\"Price changes need mutual written agreement\",\"quantity_milli\":0,\"quote\":\"Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"extra_charge_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_bm_quote_p2_l6\",\"frag_bm_quote_p2_l7\"],\"label\":\"Extra charges only when agreed in writing first\",\"quantity_milli\":0,\"quote\":\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"fuel_surcharge_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_bm_quote_p2_l9\",\"frag_bm_quote_p2_l10\",\"frag_bm_quote_p2_l11\",\"frag_bm_quote_p2_l12\"],\"label\":\"Fuel surcharge tied to the weekly diesel index\",\"quantity_milli\":0,\"quote\":\"For deliveries in a week when the weekly California on-highway diesel price index published by the U.S. Energy Information Administration is above $5.25 per gallon, seller may add $0.40 per cubic yard for each full $0.10 per gallon above $5.25. The index for the week of delivery applies. No surcharge applies at or below $5.25 per gallon.\",\"scope\":{\"base_price_cents_per_gallon\":525,\"index\":\"EIA weekly California on-highway diesel price\",\"index_week\":\"week of delivery\",\"step_cents_per_gallon\":10,\"surcharge_cents_per_unit_per_step\":40,\"unit\":\"cy\"}}]}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0098",
+     "role": "agent",
+     "reducer": "record_extraction_run",
+     "args": [
+      "run_mf_po_1031_bc4f2d2a",
+      "doc_mf_po_1031",
+      "fixture",
+      "fixture",
+      "fixture-v1",
+      "ok",
+      "",
+      "{\"document_id\":\"doc_mf_po_1031\",\"document_kind\":\"po\",\"fields\":{\"incorporates_quote\":{\"fragments\":[\"frag_mf_po_1031_p1_l12\"],\"quote\":\"Terms: BayMix Quote BMQ-4417 and its Terms and Conditions of Sale.\",\"value\":\"BMQ-4417\"},\"not_to_exceed_cents\":{\"fragments\":[\"frag_mf_po_1031_p1_l11\"],\"quote\":\"PO total, not to exceed: $82,500.00\",\"value\":8250000},\"po_date\":{\"fragments\":[\"frag_mf_po_1031_p1_l4\"],\"quote\":\"PO date: 2026-10-01\",\"value\":\"2026-10-01\"},\"po_number\":{\"fragments\":[\"frag_mf_po_1031_p1_l3\"],\"quote\":\"PURCHASE ORDER MF-PO-1031\",\"value\":\"MF-PO-1031\"},\"project_name\":{\"fragments\":[\"frag_mf_po_1031_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex\",\"value\":\"Oakview Lane Fourplex\"},\"supplier_acknowledged_on\":{\"fragments\":[\"frag_mf_po_1031_p1_l18\",\"frag_mf_po_1031_p1_l19\"],\"quote\":\"BayMix Supply acknowledges and accepts purchase order MF-PO-1031 on the terms of Quote BMQ-4417. Acknowledged by: Rosa Delgado, Sales Manager, BayMix Supply Date: 2026-10-01\",\"value\":\"2026-10-01\"},\"supplier_name\":{\"fragments\":[\"frag_mf_po_1031_p1_l5\"],\"quote\":\"Supplier: BayMix Supply\",\"value\":\"BayMix Supply\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":8250000,\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragments\":[\"frag_mf_po_1031_p1_l9\"],\"kind\":\"material\",\"quantity_milli\":500000,\"quote\":\"1 Ready-mix concrete 4,000 psi, mix BM-40-34 500.000 cy $165.00 $82,500.00\",\"unit\":\"cy\",\"unit_price_cents\":16500}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0099",
+     "role": "agent",
+     "reducer": "upsert_purchase",
+     "args": [
+      "pur_baymix_oak",
+      "sup_baymix",
+      "prj_oak",
+      "Ready-mix concrete, 4,000 psi, 3/4 in. aggregate, mix BM-40-34",
+      "cy",
+      "MF-PO-1031",
+      "doc_bm_quote",
+      "doc_mf_po_1031",
+      "open"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0100",
+     "role": "agent",
+     "reducer": "record_term",
+     "args": [
+      "term_baymix_oak_unit_price",
+      "pur_baymix_oak",
+      "unit_price",
+      "Unit price, delivered",
+      16500,
+      0,
+      "Unit price: $165.00 per cubic yard, delivered Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31",
+      "{\"unit\":\"cy\"}",
+      "2026-10-01",
+      "2026-10-31",
+      "accepted",
+      "[\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"]",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0101",
+     "role": "agent",
+     "reducer": "record_term",
+     "args": [
+      "term_baymix_oak_max_quantity",
+      "pur_baymix_oak",
+      "max_quantity",
+      "Maximum quantity",
+      0,
+      500000,
+      "Maximum quantity: 500 cubic yards (cy), delivered to the project",
+      "{\"unit\":\"cy\"}",
+      "2026-10-01",
+      "2026-10-31",
+      "accepted",
+      "[\"frag_bm_quote_p1_l9\"]",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0102",
+     "role": "agent",
+     "reducer": "record_term",
+     "args": [
+      "term_baymix_oak_valid_through",
+      "pur_baymix_oak",
+      "valid_through",
+      "Price validity",
+      0,
+      0,
+      "Price validity: fixed for deliveries from 2026-10-01 through 2026-10-31",
+      "{}",
+      "2026-10-01",
+      "2026-10-31",
+      "accepted",
+      "[\"frag_bm_quote_p1_l11\"]",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0103",
+     "role": "agent",
+     "reducer": "record_term",
+     "args": [
+      "term_baymix_oak_deposit",
+      "pur_baymix_oak",
+      "deposit",
+      "Deposit, applied once",
+      1000000,
+      0,
+      "Deposit: $10,000.00 due before the first pour, applied once against invoices under this quote",
+      "{}",
+      "",
+      "",
+      "accepted",
+      "[\"frag_bm_quote_p1_l13\",\"frag_bm_quote_p2_l16\"]",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0104",
+     "role": "agent",
+     "reducer": "record_term",
+     "args": [
+      "term_baymix_oak_payment_terms",
+      "pur_baymix_oak",
+      "payment_terms",
+      "Net 30",
+      0,
+      0,
+      "Payment terms: Net 30 days from invoice date",
+      "{\"net_days\":30}",
+      "",
+      "",
+      "accepted",
+      "[\"frag_bm_quote_p1_l14\"]",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0105",
+     "role": "agent",
+     "reducer": "record_term",
+     "args": [
+      "term_baymix_oak_price_change_rule",
+      "pur_baymix_oak",
+      "price_change_rule",
+      "Price changes need mutual written agreement",
+      0,
+      0,
+      "Any price change requires mutual written agreement of buyer and seller before the affected deliveries.",
+      "{}",
+      "",
+      "",
+      "accepted",
+      "[\"frag_bm_quote_p2_l3\",\"frag_bm_quote_p2_l4\"]",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0106",
+     "role": "agent",
+     "reducer": "record_term",
+     "args": [
+      "term_baymix_oak_extra_charge_rule",
+      "pur_baymix_oak",
+      "extra_charge_rule",
+      "Extra charges only when agreed in writing first",
+      0,
+      0,
+      "Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.",
+      "{}",
+      "",
+      "",
+      "accepted",
+      "[\"frag_bm_quote_p2_l6\",\"frag_bm_quote_p2_l7\"]",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0107",
+     "role": "agent",
+     "reducer": "record_term",
+     "args": [
+      "term_baymix_oak_fuel_surcharge_rule",
+      "pur_baymix_oak",
+      "fuel_surcharge_rule",
+      "Fuel surcharge tied to the weekly diesel index",
+      0,
+      0,
+      "For deliveries in a week when the weekly California on-highway diesel price index published by the U.S. Energy Information Administration is above $5.25 per gallon, seller may add $0.40 per cubic yard for each full $0.10 per gallon above $5.25. The index for the week of delivery applies. No surcharge applies at or below $5.25 per gallon.",
+      "{\"base_price_cents_per_gallon\":525,\"index\":\"EIA weekly California on-highway diesel price\",\"index_week\":\"week of delivery\",\"step_cents_per_gallon\":10,\"surcharge_cents_per_unit_per_step\":40,\"unit\":\"cy\"}",
+      "",
+      "",
+      "accepted",
+      "[\"frag_bm_quote_p2_l9\",\"frag_bm_quote_p2_l10\",\"frag_bm_quote_p2_l11\",\"frag_bm_quote_p2_l12\"]",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0108",
+     "role": "agent",
+     "reducer": "record_extraction_run",
+     "args": [
+      "run_em_weekend_1_3f9ac2f6",
+      "doc_em_weekend_1",
+      "fixture",
+      "fixture",
+      "fixture-v1",
+      "ok",
+      "",
+      "{\"acceptances\":[],\"change_requests\":[{\"amount_cents\":120000,\"classification\":\"PROPOSED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"effective_from\":\"2026-10-10\",\"fragments\":[\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\"],\"kind\":\"extra_charge\",\"quote\":\"Weekend delivery is not included in Quote BMQ-4417. We can do it for a flat weekend delivery charge of $1,200.00 for that pour.\",\"rate_cents\":0,\"rate_unit\":\"\",\"ref\":\"baymix_weekend_oct10\",\"scope\":{\"delivery_refs\":[\"2026-10-10\"],\"from\":\"2026-10-10\",\"to\":\"2026-10-10\"},\"supplier_acceptance\":\"proposed\"}],\"document_id\":\"doc_em_weekend_1\",\"document_kind\":\"email\",\"email\":{\"message_id\":\"em_weekend_1\",\"thread_id\":\"thr_weekend\"},\"instructions_found\":[],\"internal_approval_claims\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0109",
+     "role": "agent",
+     "reducer": "propose_change_request",
+     "args": [
+      "cr_baymix_weekend_oct10",
+      "pur_baymix_oak",
+      "extra_charge",
+      "Weekend delivery, Saturday Oct 10 pour",
+      120000,
+      0,
+      "",
+      "{\"delivery_refs\":[\"2026-10-10\"],\"from\":\"2026-10-10\",\"to\":\"2026-10-10\"}",
+      "2026-10-10",
+      "2026-10-08T09:12:00-07:00",
+      "2026-10-08T09:20:00-07:00",
+      "PROPOSED",
+      "proposed",
+      "[\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\"]"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0110",
+     "role": "agent",
+     "reducer": "record_extraction_run",
+     "args": [
+      "run_em_weekend_2_42d5d065",
+      "doc_em_weekend_2",
+      "fixture",
+      "fixture",
+      "fixture-v1",
+      "ok",
+      "",
+      "{\"acceptances\":[],\"change_requests\":[],\"document_id\":\"doc_em_weekend_2\",\"document_kind\":\"email\",\"email\":{\"message_id\":\"em_weekend_2\",\"thread_id\":\"thr_weekend\"},\"instructions_found\":[],\"internal_approval_claims\":[{\"fragments\":[\"frag_em_weekend_2_p0_l4\"],\"note\":\"An email saying 'approved' is not an in-app decision by an authorized person; it does not count.\",\"quote\":\"I've approved it on our side.\",\"ref\":\"baymix_weekend_oct10\"}],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0111",
+     "role": "agent",
+     "reducer": "record_extraction_run",
+     "args": [
+      "run_em_weekend_3_3eed156c",
+      "doc_em_weekend_3",
+      "fixture",
+      "fixture",
+      "fixture-v1",
+      "ok",
+      "",
+      "{\"acceptances\":[{\"fragments\":[\"frag_em_weekend_3_p0_l3\"],\"quote\":\"Confirmed: flat weekend delivery charge of $1,200.00 for the Saturday, October 10 pour.\",\"ref\":\"baymix_weekend_oct10\",\"supplier_acceptance\":\"accepted\"}],\"change_requests\":[],\"document_id\":\"doc_em_weekend_3\",\"document_kind\":\"email\",\"email\":{\"message_id\":\"em_weekend_3\",\"thread_id\":\"thr_weekend\"},\"instructions_found\":[],\"internal_approval_claims\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0112",
+     "role": "agent",
+     "reducer": "record_supplier_acceptance",
+     "args": [
+      "cr_baymix_weekend_oct10",
+      "accepted",
+      "[\"frag_em_weekend_3_p0_l3\"]"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0113",
+     "role": "agent",
+     "reducer": "record_extraction_run",
+     "args": [
+      "run_em_waiting_1_5b689af9",
+      "doc_em_waiting_1",
+      "fixture",
+      "fixture",
+      "fixture-v1",
+      "ok",
+      "",
+      "{\"acceptances\":[],\"change_requests\":[{\"amount_cents\":0,\"classification\":\"PROPOSED\",\"description\":\"Truck waiting time\",\"effective_from\":\"\",\"fragments\":[\"frag_em_waiting_1_p0_l4\"],\"kind\":\"extra_charge\",\"missing\":{\"quantity_milli\":\"No waiting time is stated or evidenced.\",\"rate_cents\":\"No waiting rate is stated in the email.\"},\"quote\":\"Waiting charges may apply if trucks are held on site.\",\"rate_cents\":0,\"rate_unit\":\"min\",\"ref\":\"baymix_waiting\",\"scope\":{},\"supplier_acceptance\":\"proposed\"}],\"document_id\":\"doc_em_waiting_1\",\"document_kind\":\"email\",\"email\":{\"message_id\":\"em_waiting_1\",\"thread_id\":\"thr_waiting\"},\"instructions_found\":[],\"internal_approval_claims\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0114",
+     "role": "agent",
+     "reducer": "propose_change_request",
+     "args": [
+      "cr_baymix_waiting",
+      "pur_baymix_oak",
+      "extra_charge",
+      "Truck waiting time",
+      0,
+      0,
+      "min",
+      "{}",
+      "",
+      "2026-10-14T07:31:00-07:00",
+      "2026-10-14T07:40:00-07:00",
+      "PROPOSED",
+      "proposed",
+      "[\"frag_em_waiting_1_p0_l4\"]"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0115",
+     "role": "purchasing",
+     "reducer": "decide_change_request",
+     "args": [
+      "cr_baymix_weekend_oct10",
+      true,
+      "Saturday pour requested by Granite Line"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0116",
+     "role": "sync",
+     "reducer": "record_deposit",
+     "args": [
+      "dep_baymix_oak_1",
+      "pur_baymix_oak",
+      "sup_baymix",
+      1000000,
+      "settled",
+      "mock_nessie_dep_1003"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0117",
+     "role": "sync",
+     "reducer": "post_journal",
+     "args": [
+      "jrnl_dep_dep_baymix_oak_1",
+      "2026-10-03",
+      "Supplier deposit settled (simulated)",
+      "deposit",
+      "dep_baymix_oak_1",
+      "[{\"account\":\"supplier_prepayment\",\"credit_cents\":0,\"debit_cents\":1000000},{\"account\":\"cash\",\"credit_cents\":1000000,\"debit_cents\":0}]"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "invoice_r1",
+   "description": "Invoice BM-23104 arrives: $87,425 claimed, $3,725 under review, holds open.",
+   "calls": [
+    {
+     "request_id": "seed-baymix-0118",
+     "role": "sync",
+     "reducer": "record_source_file",
+     "args": [
+      "src_059dfd85",
+      "seed",
+      "BayMix_Invoice_BM-23104.pdf",
+      "059dfd85353a2b0d1b787fd663ef192ccd1566f51c88d0412eec5b6593453aec",
+      "",
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0119",
+     "role": "sync",
+     "reducer": "record_document",
+     "args": [
+      "doc_bm_inv_23104_r1",
+      "invoice",
+      "src_059dfd85",
+      "059dfd85353a2b0d1b787fd663ef192ccd1566f51c88d0412eec5b6593453aec",
+      "BayMix_Invoice_BM-23104.pdf",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0120",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l1",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      1,
+      1,
+      "BayMix Supply"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0121",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l2",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      2,
+      2,
+      "Ready-mix concrete - 2200 Quarry Road, Newark, CA 94560 - ar@baymix-supply.example"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0122",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l3",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      3,
+      3,
+      "INVOICE BM-23104"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0123",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l4",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      4,
+      4,
+      "Invoice date: 2026-10-23"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0124",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l5",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      5,
+      5,
+      "Due date: 2026-11-22 (Net 30)"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0125",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l6",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      6,
+      6,
+      "Bill to: Marlow & Finch Builders, Accounts Payable"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0126",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l7",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      7,
+      7,
+      "Project: Oakview Lane Fourplex"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0127",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l8",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      8,
+      8,
+      "Your PO: MF-PO-1031    Quote: BMQ-4417"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0128",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l10",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      10,
+      10,
+      "Line  Description                                   Qty      Unit  Unit price    Amount"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0129",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l11",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      11,
+      11,
+      "1     Ready-mix concrete 4,000 psi, mix BM-40-34    500.000  cy    $172.00       $86,000.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0130",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l12",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      12,
+      12,
+      "2     Weekend delivery, Saturday Oct 10 pour        1.000    ea    $1,200.00     $1,200.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0131",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l13",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      13,
+      13,
+      "3     Truck waiting time                            90.000   min   $2.50         $225.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0132",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l15",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      15,
+      15,
+      "Gross amount: $87,425.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0133",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l16",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      16,
+      16,
+      "Less deposit received: $10,000.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0134",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l17",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      17,
+      17,
+      "Balance due: $77,425.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0135",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l19",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      19,
+      19,
+      "Deliveries: 2026-10-05 through 2026-10-22, Oakview Lane Fourplex."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0136",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l20",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      20,
+      20,
+      "Remit to: BayMix Supply, Quarry Point Bank, account ending 2290"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0137",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r1_p1_l21",
+      "doc_bm_inv_23104_r1",
+      1,
+      "",
+      21,
+      21,
+      "Questions about this invoice: ar@baymix-supply.example, (510) 555-0192"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0138",
+     "role": "agent",
+     "reducer": "record_extraction_run",
+     "args": [
+      "run_bm_inv_23104_r1_32fe58d2",
+      "doc_bm_inv_23104_r1",
+      "fixture",
+      "fixture",
+      "fixture-v1",
+      "ok",
+      "",
+      "{\"document_id\":\"doc_bm_inv_23104_r1\",\"document_kind\":\"invoice\",\"fields\":{\"balance_requested_cents\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l17\"],\"quote\":\"Balance due: $77,425.00\",\"value\":7742500},\"currency\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l15\"],\"quote\":\"Gross amount: $87,425.00\",\"value\":\"USD\"},\"delivery_period\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l19\"],\"quote\":\"Deliveries: 2026-10-05 through 2026-10-22\",\"value\":{\"from\":\"2026-10-05\",\"to\":\"2026-10-22\"}},\"deposit_shown_cents\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l16\"],\"quote\":\"Less deposit received: $10,000.00\",\"value\":1000000},\"due_date\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l5\"],\"quote\":\"Due date: 2026-11-22 (Net 30)\",\"value\":\"2026-11-22\"},\"gross_cents\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l15\"],\"quote\":\"Gross amount: $87,425.00\",\"value\":8742500},\"invoice_date\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l4\"],\"quote\":\"Invoice date: 2026-10-23\",\"value\":\"2026-10-23\"},\"invoice_number\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l3\"],\"quote\":\"INVOICE BM-23104\",\"value\":\"BM-23104\"},\"po_number\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l8\"],\"quote\":\"Your PO: MF-PO-1031\",\"value\":\"MF-PO-1031\"},\"remit_account_last4\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l20\"],\"quote\":\"account ending 2290\",\"value\":\"2290\"},\"supersedes\":{\"missing_reason\":\"The invoice doesn't say it replaces an earlier invoice.\",\"value\":null},\"supplier_name\":{\"fragments\":[\"frag_bm_inv_23104_r1_p1_l1\"],\"quote\":\"BayMix Supply\",\"value\":\"BayMix Supply\"},\"tax_cents\":{\"missing_reason\":\"No tax line on this invoice; no tax rate is assumed.\",\"value\":null}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":8600000,\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragments\":[\"frag_bm_inv_23104_r1_p1_l11\"],\"kind\":\"material\",\"links\":{\"term_code\":\"unit_price\"},\"quantity_milli\":500000,\"quote\":\"1 Ready-mix concrete 4,000 psi, mix BM-40-34 500.000 cy $172.00 $86,000.00\",\"unit\":\"cy\",\"unit_price_cents\":17200},{\"amount_cents\":120000,\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragments\":[\"frag_bm_inv_23104_r1_p1_l12\"],\"kind\":\"extra\",\"links\":{\"change_request_ref\":\"baymix_weekend_oct10\"},\"quantity_milli\":1000,\"quote\":\"2 Weekend delivery, Saturday Oct 10 pour 1.000 ea $1,200.00 $1,200.00\",\"unit\":\"ea\",\"unit_price_cents\":120000},{\"amount_cents\":22500,\"description\":\"Truck waiting time\",\"fragments\":[\"frag_bm_inv_23104_r1_p1_l13\"],\"kind\":\"waiting\",\"links\":{\"change_request_ref\":\"baymix_waiting\"},\"quantity_milli\":90000,\"quote\":\"3 Truck waiting time 90.000 min $2.50 $225.00\",\"unit\":\"min\",\"unit_price_cents\":250}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0139",
+     "role": "agent",
+     "reducer": "record_invoice",
+     "args": [
+      "inv_bm23104",
+      "sup_baymix",
+      "pur_baymix_oak",
+      "BM-23104",
+      "2026-10-23",
+      "2026-11-22",
+      "USD"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0140",
+     "role": "agent",
+     "reducer": "record_invoice_revision",
+     "args": [
+      "rev_bm23104_r1",
+      "inv_bm23104",
+      1,
+      "doc_bm_inv_23104_r1",
+      8742500,
+      1000000,
+      7742500,
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0141",
+     "role": "agent",
+     "reducer": "record_invoice_line",
+     "args": [
+      "ln_bm23104_r1_1",
+      "rev_bm23104_r1",
+      "material",
+      "Ready-mix concrete 4,000 psi, mix BM-40-34",
+      500000,
+      "cy",
+      17200,
+      8600000,
+      "term_baymix_oak_unit_price",
+      "",
+      "[\"frag_bm_inv_23104_r1_p1_l11\"]"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0142",
+     "role": "agent",
+     "reducer": "record_invoice_line",
+     "args": [
+      "ln_bm23104_r1_2",
+      "rev_bm23104_r1",
+      "extra",
+      "Weekend delivery, Saturday Oct 10 pour",
+      1000,
+      "ea",
+      120000,
+      120000,
+      "",
+      "cr_baymix_weekend_oct10",
+      "[\"frag_bm_inv_23104_r1_p1_l12\"]"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0143",
+     "role": "agent",
+     "reducer": "record_invoice_line",
+     "args": [
+      "ln_bm23104_r1_3",
+      "rev_bm23104_r1",
+      "waiting",
+      "Truck waiting time",
+      90000,
+      "min",
+      250,
+      22500,
+      "",
+      "cr_baymix_waiting",
+      "[\"frag_bm_inv_23104_r1_p1_l13\"]"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0144",
+     "role": "agent",
+     "reducer": "record_assessment",
+     "args": [
+      "asm_bm23104_r1_v1",
+      "rev_bm23104_r1",
+      1,
+      "fp_51ec0c7e9e42a584a806ed8e1c1eebb9",
+      "commercial-2026-10-24.1",
+      8742500,
+      8370000,
+      22500,
+      350000,
+      1000000,
+      0,
+      "differences_under_review",
+      "Claimed $87,425.00: $83,700.00 authorised, $3,500.00 price variance, $225.00 pending. $3,725.00 under review (not savings until the supplier agrees).",
+      "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $87,425.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":8250000,\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\",\"claimed_cents\":8600000,\"classification\":\"\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r1_1\",\"pending_cents\":0,\"status\":\"variance\",\"uncertainty\":\"No accepted amendment covers this price. Quote terms: \\\"Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\\\"\",\"variance_cents\":350000}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[{\"accepted_cents\":120000,\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l12\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r1_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"calculation\":\"\",\"claimed_cents\":22500,\"classification\":\"PROPOSED\",\"description\":\"Truck waiting time\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"hold_code\":\"PROPOSED_CHARGE\",\"kind\":\"waiting\",\"line_id\":\"ln_bm23104_r1_3\",\"pending_cents\":22500,\"status\":\"pending\",\"uncertainty\":\"Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Kept Weekend delivery, Saturday Oct 10 pour ($1,200.00): AUTHORISED_FIXED; Pending Truck waiting time ($225.00): Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":500000,\"this_invoice_milli\":500000,\"unit\":\"cy\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"500 cy billed to date of 500 cy allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":1000000,\"shown_cents\":1000000},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"Deposit of $10,000.00 applied once.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"fail\",\"summary\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_baymix:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 2290 (sup_baymix:v1).\"}],\"clarification_points\":[\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00. No accepted amendment covers this price. Quote terms: \\\"Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\\\"\",\"Truck waiting time ($225.00): Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\",\"Please send a corrected invoice or an agreed credit memo. We'll keep your original invoice on file.\"],\"conditional_payment_cents\":7370000,\"deposit_applied_cents\":1000000,\"holds\":[{\"amount_cents\":350000,\"code\":\"PRICE_VARIANCE\",\"evidence\":{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"line_ids\":[\"ln_bm23104_r1_1\"]},\"reason\":\"Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\"},{\"amount_cents\":22500,\"code\":\"PROPOSED_CHARGE\",\"evidence\":{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"line_ids\":[\"ln_bm23104_r1_3\"]},\"reason\":\"Truck waiting time: Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\"},{\"amount_cents\":0,\"code\":\"RECEIPT_NOT_VERIFIED\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"reason\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"}],\"lines\":[{\"accepted_cents\":8250000,\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00\",\"claimed_cents\":8600000,\"classification\":\"\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r1_1\",\"pending_cents\":0,\"status\":\"variance\",\"uncertainty\":\"No accepted amendment covers this price. Quote terms: \\\"Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\\\"\",\"variance_cents\":350000},{\"accepted_cents\":120000,\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l12\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r1_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"calculation\":\"\",\"claimed_cents\":22500,\"classification\":\"PROPOSED\",\"description\":\"Truck waiting time\",\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"hold_code\":\"PROPOSED_CHARGE\",\"kind\":\"waiting\",\"line_id\":\"ln_bm23104_r1_3\",\"pending_cents\":22500,\"status\":\"pending\",\"uncertainty\":\"Mentioned as possible, but never agreed in writing or approved. Quote terms: \\\"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\\\"\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":372500}",
+      "Ask the supplier for a corrected invoice or an agreed credit for the $3,725.00 under review."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0145",
+     "role": "agent",
+     "reducer": "open_hold",
+     "args": [
+      "hold_rev_bm23104_r1_price_variance",
+      "rev_bm23104_r1",
+      "PRICE_VARIANCE",
+      350000,
+      "Ready-mix concrete 4,000 psi, mix BM-40-34: Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $172.00 = $86,000.00; difference $3,500.00",
+      "{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l11\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"line_ids\":[\"ln_bm23104_r1_1\"]}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0146",
+     "role": "agent",
+     "reducer": "open_hold",
+     "args": [
+      "hold_rev_bm23104_r1_proposed_charge",
+      "rev_bm23104_r1",
+      "PROPOSED_CHARGE",
+      22500,
+      "Truck waiting time: Mentioned as possible, but never agreed in writing or approved. Quote terms: \"Charges not listed in this quote, including weekend or after-hours delivery and truck waiting time, apply only when both parties agree to them in writing before the work.\"",
+      "{\"fragment_ids\":[\"frag_bm_inv_23104_r1_p1_l13\",\"frag_em_waiting_1_p0_l4\"],\"line_ids\":[\"ln_bm23104_r1_3\"]}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0147",
+     "role": "agent",
+     "reducer": "open_hold",
+     "args": [
+      "hold_rev_bm23104_r1_receipt_not_verified",
+      "rev_bm23104_r1",
+      "RECEIPT_NOT_VERIFIED",
+      0,
+      "Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.",
+      "{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"}"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "correction_r2",
+   "description": "Corrected invoice ($83,700) supersedes revision 1; receipt still unconfirmed.",
+   "calls": [
+    {
+     "request_id": "seed-baymix-0148",
+     "role": "sync",
+     "reducer": "record_source_file",
+     "args": [
+      "src_473205ea",
+      "seed",
+      "BayMix_Invoice_BM-23104_rev2.pdf",
+      "473205eae13c9870cf3b8b90f768cc9236cdf04a5dccd92cfb97178c35bb112a",
+      "",
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0149",
+     "role": "sync",
+     "reducer": "record_document",
+     "args": [
+      "doc_bm_inv_23104_r2",
+      "invoice",
+      "src_473205ea",
+      "473205eae13c9870cf3b8b90f768cc9236cdf04a5dccd92cfb97178c35bb112a",
+      "BayMix_Invoice_BM-23104_rev2.pdf",
+      1
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0150",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l1",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      1,
+      1,
+      "BayMix Supply"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0151",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l2",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      2,
+      2,
+      "Ready-mix concrete - 2200 Quarry Road, Newark, CA 94560 - ar@baymix-supply.example"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0152",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l3",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      3,
+      3,
+      "CORRECTED INVOICE BM-23104 (REVISION 2)"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0153",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l4",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      4,
+      4,
+      "This corrected invoice supersedes invoice BM-23104 dated 2026-10-23."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0154",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l5",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      5,
+      5,
+      "Invoice date: 2026-10-23    Revision date: 2026-10-24"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0155",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l6",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      6,
+      6,
+      "Due date: 2026-11-22 (Net 30)"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0156",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l7",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      7,
+      7,
+      "Bill to: Marlow & Finch Builders, Accounts Payable"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0157",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l8",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      8,
+      8,
+      "Project: Oakview Lane Fourplex"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0158",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l9",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      9,
+      9,
+      "Your PO: MF-PO-1031    Quote: BMQ-4417"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0159",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l11",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      11,
+      11,
+      "Line  Description                                   Qty      Unit  Unit price    Amount"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0160",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l12",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      12,
+      12,
+      "1     Ready-mix concrete 4,000 psi, mix BM-40-34    500.000  cy    $165.00       $82,500.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0161",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l13",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      13,
+      13,
+      "2     Weekend delivery, Saturday Oct 10 pour        1.000    ea    $1,200.00     $1,200.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0162",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l15",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      15,
+      15,
+      "Gross amount: $83,700.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0163",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l16",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      16,
+      16,
+      "Less deposit received: $10,000.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0164",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l17",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      17,
+      17,
+      "Balance due: $73,700.00"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0165",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l18",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      18,
+      18,
+      "Changes from revision 1: unit price corrected to $165.00 per Quote BMQ-4417; waiting time removed."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0166",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l20",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      20,
+      20,
+      "Deliveries: 2026-10-05 through 2026-10-22, Oakview Lane Fourplex."
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0167",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l21",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      21,
+      21,
+      "Remit to: BayMix Supply, Quarry Point Bank, account ending 2290"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0168",
+     "role": "sync",
+     "reducer": "add_fragment",
+     "args": [
+      "frag_bm_inv_23104_r2_p1_l22",
+      "doc_bm_inv_23104_r2",
+      1,
+      "",
+      22,
+      22,
+      "Questions about this invoice: ar@baymix-supply.example, (510) 555-0192"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0169",
+     "role": "agent",
+     "reducer": "record_extraction_run",
+     "args": [
+      "run_bm_inv_23104_r2_dd88d29d",
+      "doc_bm_inv_23104_r2",
+      "fixture",
+      "fixture",
+      "fixture-v1",
+      "ok",
+      "",
+      "{\"document_id\":\"doc_bm_inv_23104_r2\",\"document_kind\":\"invoice\",\"fields\":{\"balance_requested_cents\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l17\"],\"quote\":\"Balance due: $73,700.00\",\"value\":7370000},\"currency\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l15\"],\"quote\":\"Gross amount: $83,700.00\",\"value\":\"USD\"},\"delivery_period\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l20\"],\"quote\":\"Deliveries: 2026-10-05 through 2026-10-22\",\"value\":{\"from\":\"2026-10-05\",\"to\":\"2026-10-22\"}},\"deposit_shown_cents\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l16\"],\"quote\":\"Less deposit received: $10,000.00\",\"value\":1000000},\"due_date\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l6\"],\"quote\":\"Due date: 2026-11-22 (Net 30)\",\"value\":\"2026-11-22\"},\"gross_cents\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l15\"],\"quote\":\"Gross amount: $83,700.00\",\"value\":8370000},\"invoice_date\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l5\"],\"quote\":\"Invoice date: 2026-10-23\",\"value\":\"2026-10-23\"},\"invoice_number\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l3\"],\"quote\":\"CORRECTED INVOICE BM-23104 (REVISION 2)\",\"value\":\"BM-23104\"},\"po_number\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l9\"],\"quote\":\"Your PO: MF-PO-1031\",\"value\":\"MF-PO-1031\"},\"remit_account_last4\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l21\"],\"quote\":\"account ending 2290\",\"value\":\"2290\"},\"revision\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l3\"],\"quote\":\"(REVISION 2)\",\"value\":2},\"supersedes\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l4\"],\"quote\":\"This corrected invoice supersedes invoice BM-23104 dated 2026-10-23.\",\"value\":{\"invoice_date\":\"2026-10-23\",\"invoice_number\":\"BM-23104\"}},\"supplier_name\":{\"fragments\":[\"frag_bm_inv_23104_r2_p1_l1\"],\"quote\":\"BayMix Supply\",\"value\":\"BayMix Supply\"},\"tax_cents\":{\"missing_reason\":\"No tax line on this invoice; no tax rate is assumed.\",\"value\":null}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":8250000,\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragments\":[\"frag_bm_inv_23104_r2_p1_l12\"],\"kind\":\"material\",\"links\":{\"term_code\":\"unit_price\"},\"quantity_milli\":500000,\"quote\":\"1 Ready-mix concrete 4,000 psi, mix BM-40-34 500.000 cy $165.00 $82,500.00\",\"unit\":\"cy\",\"unit_price_cents\":16500},{\"amount_cents\":120000,\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragments\":[\"frag_bm_inv_23104_r2_p1_l13\"],\"kind\":\"extra\",\"links\":{\"change_request_ref\":\"baymix_weekend_oct10\"},\"quantity_milli\":1000,\"quote\":\"2 Weekend delivery, Saturday Oct 10 pour 1.000 ea $1,200.00 $1,200.00\",\"unit\":\"ea\",\"unit_price_cents\":120000}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0170",
+     "role": "agent",
+     "reducer": "record_invoice_revision",
+     "args": [
+      "rev_bm23104_r2",
+      "inv_bm23104",
+      2,
+      "doc_bm_inv_23104_r2",
+      8370000,
+      1000000,
+      7370000,
+      "rev_bm23104_r1"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0171",
+     "role": "agent",
+     "reducer": "record_invoice_line",
+     "args": [
+      "ln_bm23104_r2_1",
+      "rev_bm23104_r2",
+      "material",
+      "Ready-mix concrete 4,000 psi, mix BM-40-34",
+      500000,
+      "cy",
+      16500,
+      8250000,
+      "term_baymix_oak_unit_price",
+      "",
+      "[\"frag_bm_inv_23104_r2_p1_l12\"]"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0172",
+     "role": "agent",
+     "reducer": "record_invoice_line",
+     "args": [
+      "ln_bm23104_r2_2",
+      "rev_bm23104_r2",
+      "extra",
+      "Weekend delivery, Saturday Oct 10 pour",
+      1000,
+      "ea",
+      120000,
+      120000,
+      "",
+      "cr_baymix_weekend_oct10",
+      "[\"frag_bm_inv_23104_r2_p1_l13\"]"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0173",
+     "role": "agent",
+     "reducer": "record_assessment",
+     "args": [
+      "asm_bm23104_r2_v1",
+      "rev_bm23104_r2",
+      1,
+      "fp_853ed62668b82936373fa4d1daa74f78",
+      "commercial-2026-10-24.1",
+      8370000,
+      8370000,
+      0,
+      0,
+      1000000,
+      7370000,
+      "matches",
+      "Claimed $83,700.00: $83,700.00 authorised, $0.00 price variance, $0.00 pending. Everything claimed is authorised; $73,700.00 proposed after the $10,000.00 deposit.",
+      "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $83,700.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":8250000,\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $165.00 = $82,500.00\",\"claimed_cents\":8250000,\"classification\":\"\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l12\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r2_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Material billed at the accepted price.\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[{\"accepted_cents\":120000,\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l13\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r2_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Kept Weekend delivery, Saturday Oct 10 pour ($1,200.00): AUTHORISED_FIXED\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":500000,\"this_invoice_milli\":500000,\"unit\":\"cy\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"500 cy billed to date of 500 cy allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":1000000,\"shown_cents\":1000000},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"Deposit of $10,000.00 applied once.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"fail\",\"summary\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_baymix:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 2290 (sup_baymix:v1).\"}],\"clarification_points\":[],\"conditional_payment_cents\":7370000,\"deposit_applied_cents\":1000000,\"holds\":[{\"amount_cents\":0,\"code\":\"RECEIPT_NOT_VERIFIED\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"reason\":\"Nobody has attested receipt of 500 cy. Countersign can't verify deliveries; the superintendent must confirm.\"}],\"lines\":[{\"accepted_cents\":8250000,\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $165.00 = $82,500.00\",\"claimed_cents\":8250000,\"classification\":\"\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l12\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r2_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":120000,\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l13\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r2_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":0}",
+      "Superintendent: confirm what was received (manual attestation)."
+     ]
+    }
+   ]
+  },
+  {
+   "name": "receipt",
+   "description": "Superintendent attests 500 cy (MANUALLY_CONFIRMED); reassessed: $73,700 proposed, no holds.",
+   "calls": [
+    {
+     "request_id": "seed-baymix-0174",
+     "role": "receiver",
+     "reducer": "attest_receipt",
+     "args": [
+      "att_bm23104_500cy",
+      "inv_bm23104",
+      "Deliveries 2026-10-05 to 2026-10-22",
+      500000,
+      "cy",
+      "On site for every pour; matches the pour log"
+     ]
+    },
+    {
+     "request_id": "seed-baymix-0175",
+     "role": "agent",
+     "reducer": "record_assessment",
+     "args": [
+      "asm_bm23104_r2_v2",
+      "rev_bm23104_r2",
+      2,
+      "fp_c92cc773802668fbbcada665161e6b87",
+      "commercial-2026-10-24.1",
+      8370000,
+      8370000,
+      0,
+      0,
+      1000000,
+      7370000,
+      "matches",
+      "Claimed $83,700.00: $83,700.00 authorised, $0.00 price variance, $0.00 pending. Everything claimed is authorised; $73,700.00 proposed after the $10,000.00 deposit.",
+      "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $83,700.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":8250000,\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $165.00 = $82,500.00\",\"claimed_cents\":8250000,\"classification\":\"\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l12\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r2_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Material billed at the accepted price.\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[{\"accepted_cents\":120000,\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l13\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r2_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Kept Weekend delivery, Saturday Oct 10 pour ($1,200.00): AUTHORISED_FIXED\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":500000,\"this_invoice_milli\":500000,\"unit\":\"cy\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"500 cy billed to date of 500 cy allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":1000000,\"shown_cents\":1000000},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"Deposit of $10,000.00 applied once.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{\"cy\":500000},\"billed_milli\":{\"cy\":500000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Receipt of 500 cy attested by the superintendent (MANUALLY_CONFIRMED, not machine-verified).\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_baymix:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 2290 (sup_baymix:v1).\"}],\"clarification_points\":[],\"conditional_payment_cents\":7370000,\"deposit_applied_cents\":1000000,\"holds\":[],\"lines\":[{\"accepted_cents\":8250000,\"calculation\":\"Allowed 500 cy x $165.00 (accepted unit price) = $82,500.00; billed 500 cy x $165.00 = $82,500.00\",\"claimed_cents\":8250000,\"classification\":\"\",\"description\":\"Ready-mix concrete 4,000 psi, mix BM-40-34\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l12\",\"frag_bm_quote_p1_l10\",\"frag_bm_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_bm23104_r2_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":120000,\"calculation\":\"Agreed flat $1,200.00 (approved in the app by purchasing, accepted by the supplier); billed $1,200.00\",\"claimed_cents\":120000,\"classification\":\"AUTHORISED_FIXED\",\"description\":\"Weekend delivery, Saturday Oct 10 pour\",\"fragment_ids\":[\"frag_bm_inv_23104_r2_p1_l13\",\"frag_em_weekend_1_p0_l3\",\"frag_em_weekend_1_p0_l4\",\"frag_em_weekend_1_p0_l5\",\"frag_em_weekend_3_p0_l3\"],\"hold_code\":\"\",\"kind\":\"extra\",\"line_id\":\"ln_bm23104_r2_2\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":0}",
+      "Review and approve the $73,700.00 payment."
+     ]
+    }
+   ]
+  }
+ ]
+}
