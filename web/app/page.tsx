@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { PERSONAS, initials } from '@/lib/personas';
 import { refreshAll, useTables, type Row, type Tables } from '@/lib/client';
-import { money, HOLD_LABEL, daysUntil } from '@/lib/format';
+import { money, HOLD_LABEL, daysUntil, isSandbox } from '@/lib/format';
 
 const MONEY_HOLD = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING'];
 const SEVERITY = ['PROMPT_INJECTION', 'PAYEE_CHANGE_PENDING', 'PO_CEILING', 'PROPOSED_CHARGE', 'PRICE_VARIANCE', 'DUPLICATE_REVIEW'];
@@ -91,7 +91,7 @@ export default function Landing() {
 }
 
 function Preview({ t }: { t: Tables }) {
-  const invoices = t.invoice;
+  const invoices = t.invoice.filter(i => !isSandbox(i));
   const rev = (inv: Row) => t.invoice_revision.find(r => r.id === inv.active_revision_id);
   const unpaid = invoices.filter(i => i.payment_status !== 'settled');
   const unpaidRevs = new Set(unpaid.map(i => i.active_revision_id));

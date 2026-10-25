@@ -96,6 +96,10 @@ export function assessmentLines(detailsJson: string): AssessmentLine[] {
   });
 }
 
+/** Judge submissions from the Sneak page land on this fictional supplier; they are not the company's bills. */
+export const SANDBOX_SUPPLIER = 'sup_sandbox';
+export const isSandbox = (inv: { supplier_id?: unknown }) => inv.supplier_id === SANDBOX_SUPPLIER;
+
 export const HOLD_LABEL: Record<string, string> = {
   CONTRACT_REVIEW: 'Needs a closer look at the contract',
   PRICE_VARIANCE: 'Price is higher than agreed',
