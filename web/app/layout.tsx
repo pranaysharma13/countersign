@@ -3,7 +3,7 @@ import './globals.css';
 import { Shell } from '@/components/Shell';
 
 export const metadata: Metadata = {
-  title: 'Countersign',
+  title: 'Clerk',
   description: 'Checks every supplier invoice against what was agreed before any money moves.',
 };
 

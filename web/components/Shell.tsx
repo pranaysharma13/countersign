@@ -53,7 +53,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app">
       <header className="top">
-        <Link href="/" className="mark">Countersign</Link>
+        <Link href="/" className="mark">Clerk</Link>
         <nav className="nav" aria-label="Main">
           {nav.map(n => <Link key={n.href} href={n.href} aria-current={n.on ? 'page' : undefined}>{n.label}</Link>)}
         </nav>
