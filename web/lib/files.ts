@@ -10,3 +10,9 @@ export function fileHref(
   const url = `/api/files/${encodeURIComponent(id)}`;
   return page && Number(page) > 0 ? `${url}#page=${page}` : url;
 }
+
+/** The audit export for one invoice, as CSV, from the Python API (port 8000 unless NEXT_PUBLIC_CORE_URL says otherwise). */
+export function auditHref(invoiceId: string): string {
+  const base = (process.env.NEXT_PUBLIC_CORE_URL || 'http://localhost:8000').replace(/\/$/, '');
+  return `${base}/invoices/${encodeURIComponent(invoiceId)}/audit?format=csv`;
+}

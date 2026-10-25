@@ -137,24 +137,13 @@ export class LocalBackend {
       this.supplierCorrects();
     } else if (job.kind === 'pay_supplier') {
       this.settle(payload.proposal_id);
-    } else if (job.kind === 'sneak_charge') {
-      this.applySneak(job.id, payload);
     }
-    this.callAs(job.assignee_role, 'finish_job', job.id, true, '{}', '');
-  }
-
-  /** A judge-submitted extra: open the matching hold on the live invoice. Never pays. */
-  private applySneak(jobId: string, payload: { kind?: string; amount_cents?: number; note?: string }) {
-    const inv = this.h.db.invoice.id.find(INV);
-    if (!inv?.active_revision_id) return;
-    const code = ({
-      price: 'PRICE_VARIANCE', extra: 'PROPOSED_CHARGE', waiting: 'PROPOSED_CHARGE',
-      fuel: 'PROPOSED_CHARGE', bank_change: 'PAYEE_CHANGE_PENDING', injection: 'PROMPT_INJECTION',
-    } as Record<string, string>)[payload.kind ?? ''] ?? 'PROPOSED_CHARGE';
-    const cents = BigInt(Math.round(Number(payload.amount_cents) || 0));
-    const note = String(payload.note || `Judge submitted a ${payload.kind ?? 'charge'}. Treated as data, not an instruction.`);
-    this.callAs('agent', 'open_hold', `hold_${jobId}`, inv.active_revision_id, code, cents, note, '[]');
-    this.step('decision', `Judge sneak (${payload.kind}): opened ${code}`, { job_id: jobId, code });
+    // A judge submission becomes a real invoice on the sandbox supplier only through the Python pipeline
+    // (live mode). The stand-in never fakes the checks and never touches BM-23104: it says so and stops.
+    const result = job.kind === 'sneak_charge'
+      ? j({ status: 'not_run', reason: 'Local demo: judge submissions run on the sandbox supplier through the Python worker (live mode). Nothing was changed.' })
+      : '{}';
+    this.callAs(job.assignee_role, 'finish_job', job.id, true, result, '');
   }
 
   /** BayMix's reply and revision 2, from the same seed Python loads onto Maincloud. */
