@@ -20,6 +20,7 @@ from .checks import CheckOutcome
 from .config import settings
 from .pipeline import AgentTools, PipelineError, check_codes
 from .store import Store, one
+from .supplier_agent import DroidFailed  # one failure type for both agents
 
 AGENT_SYSTEM_PROMPT = """You are Countersign, the accounts-payable clerk and vendor-risk analyst for Marlow & Finch Builders,
 a small California general contractor. Your job on each subcontractor bill: read it, investigate it, and file exactly
@@ -114,9 +115,28 @@ def _build_droid_tools(t: AgentTools, done: dict[str, Any]):
     return [read_bill, list_checks, run_check, get_sub_history, file_proposal]
 
 
+def _on_event(t: AgentTools, ev: Any, done: dict[str, Any], errors: list[str]) -> None:
+    """One Droid stream event onto the timeline. A failed run raises DroidFailed with Droid's own error
+    messages, so it's never mistaken for a run that chose to file nothing."""
+    from droid_sdk import AssistantMessage, ErrorEvent, RunFailure, ToolCall
+
+    if isinstance(ev, ToolCall):
+        name = ev.name.rsplit("__", 1)[-1]
+        if name == "run_check" and not done.get("investigating"):
+            t.set_state("investigating")
+            done["investigating"] = True
+        t.step("tool_call", name, dict(ev.input))
+    elif isinstance(ev, AssistantMessage) and getattr(ev, "text", ""):
+        t.step("thought", ev.text[:280], {})
+    elif isinstance(ev, ErrorEvent):
+        errors.append(ev.message)
+    elif isinstance(ev, RunFailure):
+        raise DroidFailed("; ".join(errors) or (ev.error.message if ev.error else "") or ev.subtype)
+
+
 async def _run_droid_async(store: Store, work_item_id: str) -> dict[str, Any]:
     global _TOOL_IDS
-    from droid_sdk import AssistantMessage, Session, SessionConfig, ToolCall
+    from droid_sdk import Session, SessionConfig
     from droid_sdk.mcp import create_sdk_mcp_server
 
     if settings.factory_api_key:
@@ -135,17 +155,11 @@ async def _run_droid_async(store: Store, work_item_id: str) -> dict[str, Any]:
     t.set_state("reading")
     t.step("plan", "Droid session started for this bill (tools: read_bill, list_checks, run_check, get_sub_history, file_proposal)",
            {"tools": _TOOL_IDS, "trigger": "process_bill job"})
+    errors: list[str] = []
     async with Session(config=config, model=settings.droid_model or None) as session:
         async with session.stream(f"Investigate work item {work_item_id} and file one proposal.", timeout=180) as stream:
             async for ev in stream:
-                if isinstance(ev, ToolCall):
-                    name = ev.name.rsplit("__", 1)[-1]
-                    if name == "run_check":
-                        t.set_state("investigating") if "investigating" not in done else None
-                        done["investigating"] = True
-                    t.step("tool_call", name, dict(ev.input))
-                elif isinstance(ev, AssistantMessage) and getattr(ev, "text", ""):
-                    t.step("thought", ev.text[:280], {})
+                _on_event(t, ev, done, errors)
     if not done.get("filed"):
         t.step("error", "Droid ended without filing a proposal; finishing with the scripted rules", {})
         _restore_outcomes(t)
