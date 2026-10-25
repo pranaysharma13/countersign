@@ -186,6 +186,8 @@ export class LocalBackend {
     for (const p of Object.keys(PERSONAS) as Persona[]) {
       if (p !== 'admin') this.must('admin', 'register_actor', ID[p].toHexString(), p, PERSONAS[p].name);
     }
+    // No authority row = no approval authority, so the owner gets an explicit one too.
+    this.must('admin', 'set_authority', ID.owner.toHexString(), 'owner', D(250000), '*');
     this.must('admin', 'set_authority', ID.purchasing.toHexString(), 'purchasing', D(2000), '*');
     this.must('sync', 'upsert_company', 'co_mf', 'Marlow & Finch Builders', 'Dana Marlow', 'CA', 'acct_mf_operating', '0042');
     this.must('sync', 'upsert_project', 'prj_oakview', 'Oakview Lane Fourplex', '1200 Oakview Ln (fictional)', 'active');
@@ -241,7 +243,7 @@ export class LocalBackend {
 
     // Amendments: weekend charge (legit, approved within limit) and waiting (only proposed).
     this.must('sync', 'propose_change_request', 'cr_weekend', 'pur_2201', 'extra_charge', 'Weekend delivery, Oct 11 pour', D(1200), 0n, '',
-      j({ deliveries: ['Oct 11'] }), '2026-10-11', '2026-10-08T09:14:00-07:00', '2026-10-08T09:15:00-07:00', 'AUTHORISED_FIXED', 'proposed', j(['frag_wk1']));
+      j({ deliveries: ['Oct 11'] }), '2026-10-11', '2026-10-08T09:14:00-07:00', '2026-10-08T09:15:00-07:00', 'PROPOSED', 'proposed', j(['frag_wk1']));
     this.must('purchasing', 'decide_change_request', 'cr_weekend', true, 'Weekend pour needed for schedule');
     this.must('sync', 'record_supplier_acceptance', 'cr_weekend', 'accepted', j(['frag_wk3']));
     this.must('sync', 'propose_change_request', 'cr_waiting', 'pur_2201', 'extra_charge', 'Waiting time', 0n, 250n, 'min',

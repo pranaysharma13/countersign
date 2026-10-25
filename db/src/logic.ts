@@ -10,28 +10,11 @@ import {
 } from './constants';
 import { handle, ok, invalid, deny, audit, oneOf, iso, json, type Call, type Result } from './request';
 import { recheckSupplierApproval, onSupplierPayment } from './logic_v2';
+import { setItemState, insertJob } from './helpers';
+export { setItemState, insertJob };
 
 const nonNeg = (v: bigint, f: string) => (v < 0n ? `${f} can't be negative` : null);
 const firstErr = (...errs: (string | null)[]) => errs.find(e => e) ?? null;
-
-export function setItemState(c: Call, id: string, state: string, note = '') {
-  const wi = c.ctx.db.work_item.id.find(id);
-  if (!wi) return;
-  const after = { ...wi, state, updated_at: c.ctx.timestamp };
-  c.ctx.db.work_item.id.update(after);
-  audit(c, 'work_item', id, { state: wi.state }, { state }, note);
-}
-
-export function insertJob(c: Call, id: string, kind: string, payload: unknown) {
-  const row = {
-    id, kind, assignee_role: JOB_KINDS[kind].assignee, payload_json: json(payload), status: 'queued',
-    requested_by: c.sender_hex, claimed_by: '', result_json: '', error: '',
-    created_at: c.ctx.timestamp, updated_at: c.ctx.timestamp,
-    attempts: 0, next_attempt_at_iso: '', lease_expires_at_iso: '',
-  };
-  c.ctx.db.job.insert(row);
-  audit(c, 'job', id, null, row);
-}
 
 function failedHardStops(ctx: Ctx, work_item_id: string) {
   return [...ctx.db.check_result.work_item_id.filter(work_item_id)]
