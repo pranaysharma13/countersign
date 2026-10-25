@@ -255,25 +255,32 @@ def _invoice(store: Store, ext: dict[str, Any], injected: list[str]) -> dict[str
 
 def supplier_risk(store: Store, ext: dict[str, Any], invoice_id: str, revision_id: str, supplier_id: str) -> str | None:
     """SPEC §8: CRS public records (liens, judgments, bankruptcies) on the supplier open SUPPLIER_RISK for the
-    owner. Mock test identities unless CRS credentials are set; the reason says which. A retry opens nothing new."""
+    owner. Mock test identities unless CRS credentials are set; the reason says which. When live CRS is set up
+    but the call fails, it holds too (fail safe): a check that didn't run is never a clean result. A retry opens
+    nothing new."""
     sup = one(store, "supplier", id=supplier_id) or {}
     if not sup.get("crs_ref"):
         return None
     rep = crs.business_report(sup["crs_ref"])
+    name = sup.get("name", supplier_id)
     found = [(kind, r) for kind in ("judgments", "liens", "bankruptcies") for r in rep.get(kind) or []]
-    if not found:
+    if rep.get("source") == "mock_fallback":
+        reason = f"CRS couldn't be reached for {name}, so its public records weren't checked. Payment is held for the owner."
+        found = []
+    elif not found:
         return None
-    what = "; ".join(f"a {r.get('type', kind[:-1])} of {fmt(int(r.get('amount_cents') or 0))} filed {r.get('filed', 'on an unknown date')}"
-                     for kind, r in found)
-    source = "CRS" if rep.get("source") == "crs" else "CRS (mock test data)"
+    else:
+        what = "; ".join(f"a {r.get('type', kind[:-1])} of {fmt(int(r.get('amount_cents') or 0))} filed "
+                         f"{r.get('filed', 'on an unknown date')}" for kind, r in found)
+        reason = f"{'CRS' if rep.get('source') == 'crs' else 'CRS (mock test data)'} reports {what} for {name}. " \
+                 "Payment is held for the owner."
     hid = hold_id(revision_id, "SUPPLIER_RISK")
-    res = R.open_hold(store, "agent", hid, revision_id, "SUPPLIER_RISK", 0,
-                      f"{source} reports {what} for {sup.get('name', supplier_id)}. Payment is held for the owner.",
+    res = R.open_hold(store, "agent", hid, revision_id, "SUPPLIER_RISK", 0, reason,
                       {"crs_ref": sup["crs_ref"], "source": rep.get("source"), "records": [r for _, r in found],
                        "fragment_ids": (ext.get("fields", {}).get("supplier_name") or {}).get("fragments") or []})
     if res.ok:
-        _step(store, invoice_id, "decision", f"{source} reports public records for {sup.get('name', supplier_id)}; "
-              "opened SUPPLIER_RISK", {"hold_id": hid, "crs_ref": sup["crs_ref"], "source": rep.get("source")})
+        _step(store, invoice_id, "decision", f"{reason.split('. Payment')[0]}; opened SUPPLIER_RISK",
+              {"hold_id": hid, "crs_ref": sup["crs_ref"], "source": rep.get("source")})
     return hid
 
 
