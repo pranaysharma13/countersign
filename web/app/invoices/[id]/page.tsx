@@ -5,6 +5,7 @@ import { useTables, call, type Row, type Tables, type CallResult } from '@/lib/c
 import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, assessmentLines, billStory, nextStep, safeReason, ceilingCopy, plainCalc, plainTerms } from '@/lib/format';
 import { StatusStrip, Evidence, Loading, Outcome, sourceOf } from '@/components/parts';
 import { Papers } from '@/components/Stationery';
+import { auditHref } from '@/lib/files';
 
 const TABLES = ['invoice', 'invoice_revision', 'invoice_line', 'assessment', 'hold', 'supplier', 'supplier_contact', 'purchase',
   'project', 'document', 'source_file', 'source_fragment', 'email_message', 'outbox', 'agent_step', 'audit_log', 'receipt_attestation',
@@ -50,6 +51,7 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
           </p>
         </div>
         <div className="row">
+          <a className="btn secondary" href={auditHref(inv.id)} download>Download audit</a>
           {inv.payment_status === 'settled' ? null
             : holds.length > 0
               ? <a className="btn" href="#holds">Review what's blocking</a>
