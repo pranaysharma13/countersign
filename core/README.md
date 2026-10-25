@@ -50,6 +50,17 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 
 **Measured** (`scripts/check_extraction.py`, 2026-10-25, `claude-opus-5-5`, effort medium, no fallback): 27/27 labelled fields correct; all exact values reproduced ($87,425 claimed, $83,700 authorised, $3,500 variance, $225 pending; corrected $83,700, $73,700 proposed, no holds after receipt). Claude time per document: emails 3–7 s, PO 11 s, quote and invoices 19–22 s (classify about 3 s of that). One run; numbers will vary.
 
+## Payment and settlement (step E, done)
+
+1. **Proposal from the assessment** (`supplier_pipeline.propose_payment`): whenever a recorded assessment proposes more than $0 and the supplier has a verified payee, the agent proposes exactly that amount, with the deposit it applies, to the verified account. One proposal per assessment; the module denies any other amount and cancels older pending ones.
+2. **Owner approval** (in the app): `approve_supplier_payment` with the fingerprint of the assessment the owner saw. The module checks the six eligibility rules (active revision, no open holds, receipt attested, verified payee, latest fingerprint and amount, deposit fits). If any fails, approval is denied with the reasons.
+3. **Gateway** (`supplier_gateway.pay_supplier`, the `pay_supplier` job):
+   - **Before paying:** it recomputes the fingerprint from the current rows. If an input changed since approval, it doesn't pay; it logs the changed inputs on the invoice timeline, and the sweep then reassesses, which makes the approval stale. If no input changed but the fingerprint differs, it prints `FINGERPRINT MISMATCH with the module` and doesn't pay.
+   - **Paying:** `start_payment` (the module re-checks everything and marks the approval stale on any mismatch), then one Nessie transfer per idempotency key (`nessie.pay_once`, which survives a timeout after the bank accepted it).
+   - **Afterwards:** `record_payment`, the deposit allocation, and the §9.6 journals (bill at the authorised amount, deposit applied, settlement). A retry after a crash finds the payment already recorded and finishes the bookkeeping exactly once.
+   - **Simulated** throughout ("Nessie sandbox (simulated)").
+4. **Result** (tested): $73,700 settled to the account ending 2290, AP $0, prepayment $0, $83,700 cash out including the deposit, one transfer, approval `used`.
+
 ## Key files
 
 | File | What |
@@ -65,6 +76,7 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 | `countersign/extraction_score.py` | Labelled fields vs. the answer key (tests, `check_extraction.py`, scorecard only) |
 | `countersign/supplier_world.py`, `supplier_docs.py` | v2 fictional world, document rendering and fragments |
 | `countersign/supplier_ledger.py` | v2 journals |
+| `countersign/supplier_gateway.py` | v2 gateway: fingerprint re-check, start_payment, Nessie (simulated), deposit allocation, journals |
 | `countersign/clarify.py` | v2 clarification to the supplier: deterministic template until step C |
 | `countersign/supplier_seed.py` | v2 seeding, plus `RecordingStore` / `export_seeds` / `replay` for `data/seeds/` (`scripts/export_supplier_seed.py`; see `data/README.md`) |
 | `countersign/money.py` | Integer cents and integer-thousandth quantities; exact extension |
@@ -76,9 +88,9 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 
 ## Module reference coverage (CONTRACT §9.4)
 
-Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions, the outbox (`draft_outbox`, `approve_outbox`, `mark_outbox`), and the job rules (attempts, leases, backoff, §9.5 kinds). Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
+Implemented in `fake_store.py` and `reducers.py`: setup and records, amendments, invoices and assessment, holds, receipt attestation, payee decisions, the outbox (`draft_outbox`, `approve_outbox`, `mark_outbox`), supplier payments (`propose_supplier_payment`, `approve_supplier_payment`, `reject_supplier_payment`, `start_payment` re-check, `record_payment`, `record_deposit_allocation`, with the module's `makeStale`), and the job rules (attempts, leases, backoff, §9.5 kinds). Rules beyond the contract text that the TypeScript module should mirror: a new change request can't be created as authorised (the stored classification follows the in-app decision and supplier acceptance); a pre-established contact's email and phone can't change, and a contact can't become pre-established later; payee profiles, documents and invoice lines are immutable; lines go only on the active revision.
 
-Not yet: payment proposal/approval/settlement for supplier payments, deposit allocation, and CONTRACT v2.2 (`decide_disputed_line`, `resolve_hold` refusing money holds).
+Not yet: CONTRACT v2.2 (`decide_disputed_line`, `resolve_hold` refusing money holds).
 
 ## Run against the SpacetimeDB module
 
@@ -111,7 +123,7 @@ Other scripts: `smoke_spacetime.py` (go/no-go HTTP check), `check_droid.py` (Dro
 
 ## Known gaps (as of this commit)
 
-- Steps D–E: the web's upload/email intake endpoint and file preview for v2, version-bound approval and settlement, audit export.
+- Step D (web side): the upload/email intake endpoint and file preview for v2. Audit export.
 - The Droid session for v2 (planned next), the citation-backed "why?" explanation (a separate call that can't change amounts), and a small call that reads the fuel-surcharge parameters for the fuel variant.
 - Variants: scoped amendment, fuel surcharge (Apify diesel index), supplier risk (CRS), prompt injection on supplier documents, judge page.
 - Settlement decisions on disputed lines (`decide_disputed_line`, CONTRACT v2.2): next, now that step B's core works. Until then, money holds clear only through a corrected invoice.

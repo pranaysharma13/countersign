@@ -19,8 +19,8 @@ Two ordered JSON lists of reducer calls, so the web's local demo shows the same 
 
 | File | Ends at |
 |---|---|
-| `seeds/baymix_opening.json` | The demo's starting state: actors and limits, supplier and contacts, documents with fragments and emails, purchase and terms, change requests, the purchasing decision on the weekend charge, supplier acceptances, the settled deposit (simulated) and its journal, invoice BM-23104 revision 1 with lines, its assessment and holds, and the clarification drafted to BayMix (simulated outbox). |
-| `seeds/baymix_correction.json` | BayMix's reply email (agrees to $165/cy, withdraws waiting), corrected revision 2 with lines, and its assessment. `RECEIPT_NOT_VERIFIED` carries over to revision 2 inside `record_invoice_revision`. |
+| `seeds/baymix_opening.json` | The demo's starting state: actors and limits, the company (the payer account), supplier and contacts, documents with fragments and emails, purchase and terms, change requests, the purchasing decision on the weekend charge, supplier acceptances, the settled deposit (simulated) and its journal, invoice BM-23104 revision 1 with lines, its assessment and holds, and the clarification drafted to BayMix (simulated outbox). |
+| `seeds/baymix_correction.json` | BayMix's reply email (agrees to $165/cy, withdraws waiting), corrected revision 2 with lines, its assessment, and the agent's $73,700 payment proposal (the owner can approve it once receipt is attested). `RECEIPT_NOT_VERIFIED` carries over to revision 2 inside `record_invoice_revision`. |
 
 Format: `[{"role": "sync", "reducer": "add_fragment", "args": {"id": "...", ...}}, ...]`
 - `args` are named with the contract's parameter names, in contract order. There's no `request_id`: the replayer generates one per call. Every call returned `ok` when the seed was generated.

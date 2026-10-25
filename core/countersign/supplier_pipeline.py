@@ -25,7 +25,7 @@ from .injection import scan_document
 from .money import fmt
 from .store import Store, one
 
-__all__ = ["NotYet", "process_document", "reassess", "reassess_stale", "send_outbox", "give_up_document"]
+__all__ = ["NotYet", "process_document", "reassess", "reassess_stale", "send_outbox", "give_up_document", "propose_payment"]
 
 
 def ai_mode() -> str:
@@ -266,6 +266,29 @@ def _maybe_draft(store: Store, b: InvoiceBundle, a: Assessment, reading: str) ->
     return outbox
 
 
+def propose_payment(store: Store, b: InvoiceBundle, a: Assessment, assessment_id: str) -> str | None:
+    """Propose exactly what the assessment proposes, to the supplier's verified account, with the deposit it
+    applies. One proposal per assessment (the module cancels older pending ones and denies any other
+    amount). The owner approves it in the app; eligibility is the module's."""
+    if a.proposed_payment_cents <= 0:
+        return None
+    payee = next((p for p in b.payee_profiles if p["status"] == "verified"), None)
+    if payee is None:
+        return None
+    proposal_id = f"prop_{assessment_id.removeprefix('asm_')}"
+    if one(store, "proposal", id=proposal_id):
+        return None
+    res = R.propose_supplier_payment(store, proposal_id, b.invoice["id"], a.revision_id, assessment_id, a.proposed_payment_cents,
+                                     a.deposit_applied_cents, payee["id"])
+    if not res.ok:
+        _step(store, b.invoice["id"], "error", f"Couldn't propose the payment: {res.outcome} {res.message}")
+        return None
+    _step(store, b.invoice["id"], "decision", f"Proposed paying {fmt(a.proposed_payment_cents)} to the verified account ending "
+          f"{payee['last4']} ({fmt(a.deposit_applied_cents)} deposit applied); waiting for the owner's approval",
+          {"proposal_id": proposal_id, "assessment_id": assessment_id})
+    return proposal_id
+
+
 def reassess(store: Store, invoice_id: str, force: bool = False, reading: str = "") -> dict[str, Any]:
     """Assess the active revision; record it only if an input changed (or `force`). `reading` is the
     document whose job is calling, so it doesn't count as still being read."""
@@ -277,7 +300,8 @@ def reassess(store: Store, invoice_id: str, force: bool = False, reading: str = 
     assessment_id = record(store, a)
     _step(store, invoice_id, "decision", a.summary, {"assessment_id": assessment_id, "holds": a.hold_amounts(),
                                                       "next_action": a.next_action})
-    return {"status": "assessed", **_summary(a, assessment_id, _maybe_draft(store, b, a, reading))}
+    proposal = propose_payment(store, b, a, assessment_id)
+    return {"status": "assessed", "proposal_id": proposal, **_summary(a, assessment_id, _maybe_draft(store, b, a, reading))}
 
 
 def reassess_stale(store: Store) -> list[str]:
