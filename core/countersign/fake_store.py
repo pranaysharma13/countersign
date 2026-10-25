@@ -26,7 +26,7 @@ AGENT_STATE_TARGETS = {"reading", "investigating", "needs_info", "failed"}
 
 # v2 (CONTRACT §9)
 DOCUMENT_KINDS = {"quote", "terms", "po", "invoice", "email", "other"}
-DOC_STATUS_AFTER_RUN = {"ok": "validated", "invalid": "needs_review", "failed": "failed"}
+DOC_STATUS_AFTER_RUN = {"ok": "extracted", "invalid": "needs_review", "failed": "failed"}  # as the module does
 TERM_CODES = {"unit_price", "max_quantity", "valid_through", "deposit", "payment_terms", "price_change_rule",
               "extra_charge_rule", "fuel_surcharge_rule"}
 CHANGE_KINDS = {"extra_charge", "price_change", "quantity_change"}

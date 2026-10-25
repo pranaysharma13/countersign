@@ -30,11 +30,11 @@ Marlow & Finch buys ready-mix from BayMix Supply for the Oakview Lane Fourplex. 
 1. **Intake** (`intake.py`, sync): keeps the original bytes and SHA-256, records the document and its fragments (and the email, for `.eml`), and queues `process_document`. The document id comes from the bytes, so receiving a file twice records nothing new and queues no second job. Any PDF or email that isn't a known fixture is cut into one fragment per text line. In fixture mode it goes to review, because there's no labelled extraction for it and nothing is guessed.
 2. **`process_document`** (`supplier_pipeline.py`, agent): fixture extraction (live Claude in step C), evidence check, then records what the document establishes.
    - A quote and its PO become a purchase once both are read, in either order.
-   - An email goes to its supplier's single open purchase. If there are several, it goes to review; if there's none yet, the job retries.
-   - An invoice links by its PO number, then is assessed. When there are differences, the clarification is drafted to the simulated outbox.
+   - An email goes to its supplier's single open purchase. If there are several, it goes to review; if there's none yet, the job retries. An acceptance whose proposal hasn't been read yet also retries.
+   - An invoice links by its PO number, retrying until that purchase is on file, then is assessed. A line that names a change not on file yet retries too; a charge that names no change is recorded unlinked and disputed (a surprise charge). When there are differences, the clarification is drafted to the simulated outbox.
 3. **Reassessment:** every drain round and every few seconds of polling, the worker reassesses any open invoice whose inputs changed (a receipt attestation, a purchasing decision, a new email). It records a new assessment only when the fingerprint changed.
 4. **Outbox:** a person approves the draft (`approve_outbox`); `send_outbox` marks it sent with a `simulated-` delivery ref. Nothing leaves the laptop.
-5. **Failures:** the module retries a failed job (10 s, 20 s backoff, three attempts) and hands a dead worker's job to another after its 5-minute lease. When retries run out on `process_document`, the document is marked failed, and an invoice revision it backs gets `EXTRACTION_REVIEW`. A failure never produces an approval. Handlers are idempotent, so a retried job never duplicates a record.
+5. **Failures:** the module retries a failed job (10 s, 20 s backoff, three attempts) and hands a dead worker's job to another after its 5-minute lease. Anything a person must look at ends with the document in `needs_review`, with the reason in an `invalid` extraction run: no labelled extraction, bad evidence, ambiguous linking, or retries run out (any document type; an invoice revision it backs also gets `EXTRACTION_REVIEW`). A failure never produces an approval. Handlers are idempotent, so a retried job never duplicates a record.
 
 ## Key files
 
