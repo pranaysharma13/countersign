@@ -1,0 +1,16 @@
+{
+  "document_id": "doc_em_weekend_3",
+  "document_kind": "email",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "email": {"message_id": "em_weekend_3", "thread_id": "thr_weekend"},
+  "change_requests": [],
+  "acceptances": [
+    {"ref": "baymix_weekend_oct10", "supplier_acceptance": "accepted",
+     "quote": "Confirmed: flat weekend delivery charge of $1,200.00 for the Saturday, October 10 pour.",
+     "fragments": ["frag_em_weekend_3_p0_l3"]}
+  ],
+  "internal_approval_claims": [],
+  "instructions_found": []
+}

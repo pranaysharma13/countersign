@@ -1,0 +1,19 @@
+{
+  "document_id": "doc_em_weekend_1",
+  "document_kind": "email",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "email": {"message_id": "em_weekend_1", "thread_id": "thr_weekend"},
+  "change_requests": [
+    {"ref": "baymix_weekend_oct10", "kind": "extra_charge", "description": "Weekend delivery, Saturday Oct 10 pour",
+     "amount_cents": 120000, "rate_cents": 0, "rate_unit": "",
+     "scope": {"delivery_refs": ["2026-10-10"], "from": "2026-10-10", "to": "2026-10-10"},
+     "effective_from": "2026-10-10", "classification": "PROPOSED", "supplier_acceptance": "proposed",
+     "quote": "Weekend delivery is not included in Quote BMQ-4417. We can do it for a flat weekend delivery charge of $1,200.00 for that pour.",
+     "fragments": ["frag_em_weekend_1_p0_l3", "frag_em_weekend_1_p0_l4", "frag_em_weekend_1_p0_l5"]}
+  ],
+  "acceptances": [],
+  "internal_approval_claims": [],
+  "instructions_found": []
+}

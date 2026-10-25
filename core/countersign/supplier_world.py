@@ -119,6 +119,8 @@ PO_NUMBER = "MF-PO-1031"
 QUOTE_NUMBER = "BMQ-4417"
 INVOICE_ID = "inv_bm23104"
 INVOICE_NUMBER = "BM-23104"
+REV1_ID = "rev_bm23104_r1"
+REV2_ID = "rev_bm23104_r2"
 WEEKEND_CR_ID = "cr_baymix_weekend_oct10"
 WAITING_CR_ID = "cr_baymix_waiting"
 
