@@ -321,3 +321,23 @@ def test_purchasing_approves_the_weekend_charge_after_the_invoice_arrives(tmp_pa
     assert len(disputed) == 2 and not any("Weekend" in ln for ln in disputed)
     assert "These lines are correct: Weekend delivery, Saturday Oct 10 pour ($1,200.00)." in ob["body"]
 
+
+
+def test_no_payment_is_proposed_while_an_injection_hold_is_open(tmp_path):
+    """Harbor's invoice matches and receipt is attested, but it carries text aimed at an automated system: the
+    pipeline's PROMPT_INJECTION hold sits beside the assessment's checks, and still nothing is proposed."""
+    from countersign.companion_seed import seed_companion_parties
+    from countersign.companion_world import HARBOR_DOCS, HARBOR_INVOICE_ID, HP_QTY_MILLI
+
+    s = FakeStore()
+    seed_setup(s)
+    seed_companion_parties(s)
+    for doc in HARBOR_DOCS:
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    assert R.attest_receipt(s, "att_hp_40", HARBOR_INVOICE_ID, "Crates by the job-box", HP_QTY_MILLI, "crate", "Counted").ok
+    worker.drain(s)
+    inv = s.rows("invoice", id=HARBOR_INVOICE_ID)[0]
+    assert {h["code"] for h in s.rows("hold", revision_id=inv["active_revision_id"], status="open")} == {"PROMPT_INJECTION"}
+    assert latest(s, inv["active_revision_id"])["proposed_payment_cents"] == 74_000  # the numbers still say what's owed
+    assert not s.rows("proposal", work_item_id=f"wi_{HARBOR_INVOICE_ID}")

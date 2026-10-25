@@ -314,8 +314,11 @@ def propose_payment(store: Store, b: InvoiceBundle, a: Assessment, assessment_id
 
     Only from an assessment with no blocking hold (receipt attested, payee verified, nothing disputed): a
     proposal made earlier could be approved in the seconds before the sweep reassesses a new input such
-    as the receipt attestation, and the gateway would then refuse it as stale."""
-    if a.proposed_payment_cents <= 0 or blocking_holds(a):
+    as the receipt attestation, and the gateway would then refuse it as stale. Nor while another hold is open
+    on the revision: PROMPT_INJECTION and SUPPLIER_RISK are opened beside the assessment, not by its checks.
+    APPROVAL_STALE is the exception: only the owner approving a fresh proposal clears it."""
+    beside = [h for h in store.rows("hold", revision_id=a.revision_id, status="open") if h["code"] != "APPROVAL_STALE"]
+    if a.proposed_payment_cents <= 0 or blocking_holds(a) or beside:
         return None
     payee = next((p for p in b.payee_profiles if p["status"] == "verified"), None)
     if payee is None:
