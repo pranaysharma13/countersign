@@ -102,7 +102,10 @@ def test_the_scenario_settles_73700_with_ap_zero_and_83700_cash_out(tmp_path, ba
 
 def test_approval_before_receipt_is_denied_with_the_reasons(tmp_path, bank):
     s = build(tmp_path, attest=False)
-    _, res = approve(s)
+    assert not [p for p in s.rows("proposal", work_item_id=WI) if p["status"] == "pending"]  # nothing proposed before receipt
+    a = max(s.rows("assessment", revision_id=REV2_ID), key=lambda r: r["version"])
+    assert R.propose_supplier_payment(s, "prop_early", INVOICE_ID, REV2_ID, a["id"], 7_370_000, 1_000_000, PAYEE_V1.id).ok
+    _, res = approve(s)  # a proposal made by hand is still refused by the module
     assert res.outcome == "denied"
     reasons = json.loads(res.message)
     assert "receipt not attested" in reasons and any(r.startswith("open hold RECEIPT_NOT_VERIFIED") for r in reasons)
