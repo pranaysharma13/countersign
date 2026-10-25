@@ -285,7 +285,6 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .mail p { margin: 6px 0 0; white-space: pre-wrap; }
 .empty { padding: 36px; text-align: center; color: var(--ink-2); }
 .next { margin: 8px 0 0; font-size: 15px; }
-.activity { margin-top: 0; }
 .activity summary { cursor: pointer; font-weight: 700; }
 .activity section + section { margin-top: 20px; }
 .activity h2 { margin-top: 16px; }
