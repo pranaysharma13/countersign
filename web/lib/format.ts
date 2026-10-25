@@ -172,6 +172,7 @@ const holdCodes = (holds: readonly ({ code: string } | Row)[]) =>
 export function billStory(row: BillLike | Row, holds: readonly ({ code: string } | Row)[]): string {
   const inv = asBill(row);
   if (inv.payment_status === 'settled') return 'Already paid.';
+  if (inv.payment_status === 'partially_settled') return 'We paid the part we agreed. The rest stays disputed until they correct the invoice or agree a credit.';
   const codes = holdCodes(holds);
   if (codes.has('PROMPT_INJECTION')) return 'This invoice included a hidden instruction. We ignored it. The line items still match the order.';
   if (codes.has('PAYEE_CHANGE_PENDING')) return 'They asked us to send money to a new bank account.';
@@ -187,6 +188,7 @@ export function billStory(row: BillLike | Row, holds: readonly ({ code: string }
 export function nextStep(row: BillLike | Row, holds: readonly ({ code: string } | Row)[]): { role: string; action: string } {
   const inv = asBill(row);
   if (inv.payment_status === 'settled') return { role: '', action: 'Nothing left to do.' };
+  if (inv.payment_status === 'partially_settled') return { role: 'purchasing', action: 'Wait for a corrected invoice or an agreed credit for the disputed amount.' };
   const codes = holdCodes(holds);
   if (codes.has('PROMPT_INJECTION')) return { role: 'owner', action: 'Record that the hidden instruction was ignored, then review the line items.' };
   if (codes.has('SUPPLIER_RISK')) return { role: 'owner', action: 'Read the supplier flag before anyone pays.' };

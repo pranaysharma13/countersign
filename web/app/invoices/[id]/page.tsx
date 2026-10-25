@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { use, useState } from 'react';
-import { useTables, call, type Row, type Tables, type CallResult } from '@/lib/client';
+import { useTables, call, newId, type Row, type Tables, type CallResult } from '@/lib/client';
 import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, assessmentLines, billStory, nextStep, safeReason, ceilingCopy, plainCalc, plainTerms } from '@/lib/format';
 import { StatusStrip, Evidence, Loading, Outcome, sourceOf } from '@/components/parts';
 import { Papers } from '@/components/Stationery';
@@ -9,7 +9,7 @@ import { auditHref } from '@/lib/files';
 
 const TABLES = ['invoice', 'invoice_revision', 'invoice_line', 'assessment', 'hold', 'supplier', 'supplier_contact', 'purchase',
   'project', 'document', 'source_file', 'source_fragment', 'email_message', 'outbox', 'agent_step', 'audit_log', 'receipt_attestation',
-  'change_request', 'proposal'];
+  'change_request', 'proposal', 'settlement_decision'];
 const ACTION_WORDS: Record<string, string> = {
   record_invoice: 'recorded the invoice', record_invoice_revision: 'recorded a revision', record_invoice_line: 'recorded a line',
   set_work_item_state: 'updated the case', open_hold: 'opened a hold', resolve_hold: 'cleared a hold', record_assessment: 'assessed the invoice',
@@ -71,6 +71,7 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
           {assessment ? <Reconciliation a={assessment} rev={rev!} holds={holds} /> : <div className="sheet pad muted">Still checking this bill.</div>}
           {assessment && <Ledger a={assessment} holds={holds} t={t} />}
           <Holds holds={holds} inv={inv} pur={pur} t={t} />
+          <DisputedLines inv={inv} a={assessment} t={t} />
           <Revisions revs={revs} active={inv.active_revision_id} />
         </div>
         <div className="stack">
@@ -240,7 +241,7 @@ function Holds({ holds, inv, pur, t }: { holds: Row[]; inv: Row; pur?: Row; t: T
                 <div className="small muted" style={{ marginTop: 8 }}>
                   {h.code === 'RECEIPT_NOT_VERIFIED' ? 'Clears when someone on site confirms the delivery.'
                     : h.code === 'PAYEE_CHANGE_PENDING' ? 'Clears when the owner calls a number already on file — never a number from the request.'
-                      : MONEY_HOLD.includes(h.code) ? 'Ask the supplier for a corrected invoice, or accept the extra on each line. This cannot be waved from here.'
+                      : MONEY_HOLD.includes(h.code) ? 'Ask the supplier for a corrected invoice, or the owner decides each disputed line below. This cannot be waved from here.'
                         : 'This stays open until the matching event happens.'}
                 </div>
               )}
@@ -248,6 +249,81 @@ function Holds({ holds, inv, pur, t }: { holds: Row[]; inv: Row; pur?: Row; t: T
           );
         })}
       </div>
+      <Outcome r={result} />
+    </section>
+  );
+}
+
+/** §9.9: when the supplier won't correct the invoice, the owner decides each disputed line. Never pays short silently:
+ * "pay agreed" drafts a notice to the supplier, and payment waits until it's sent. */
+function DisputedLines({ inv, a, t }: { inv: Row; a?: Row; t: Tables }) {
+  const [note, setNote] = useState<Record<string, string>>({});
+  const [to, setTo] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<CallResult | null>(null);
+  if (!a) return null;
+  const decisions = (t.settlement_decision ?? []).filter(d => d.invoice_id === inv.id && d.status === 'active');
+  let raw: unknown[] = [];
+  try { const d = JSON.parse(a.details_json || '{}'); raw = Array.isArray(d?.lines) ? d.lines : []; } catch { raw = []; }
+  const cents = (v: unknown) => Number(v) || 0;
+  const disputed = raw.map(l => (l && typeof l === 'object' ? l as Row : {}))
+    .filter(l => MONEY_HOLD.includes(String(l.hold_code)) && cents(l.pending_cents) + cents(l.variance_cents) > 0);
+  if (!disputed.length && !decisions.length) return null;
+  const contacts = t.supplier_contact.filter(c => c.supplier_id === inv.supplier_id);
+  const ar = contacts.find(c => /receivable/i.test(String(c.title))) ?? contacts[0];
+  const stillOpen = decisions.filter(d => d.decision === 'pay_agreed_dispute_rest').reduce((s, d) => s + cents(d.amount_cents), 0);
+  const decide = async (l: Row, decision: string) => {
+    const id = String(l.line_id);
+    setResult(await call('decide_disputed_line', {
+      id: newId('dec'), invoice_line_id: id, decision, amount_cents: cents(l.pending_cents) + cents(l.variance_cents),
+      expected_fingerprint: a.fingerprint, to_contact_id: decision === 'pay_agreed_dispute_rest' ? (to[id] || ar?.id || '') : '',
+      note: note[id] ?? '',
+    }));
+  };
+  return (
+    <section className="sheet pad" aria-labelledby="disputed">
+      <h2 id="disputed">If they won&apos;t correct it</h2>
+      <p className="small" style={{ marginTop: 0 }}>
+        The owner decides each disputed line. Accepting pays it as billed, within your limit. Paying the agreed part drafts a
+        notice to the supplier; nothing is paid until it&apos;s sent, and the rest stays open.
+      </p>
+      {disputed.map(l => {
+        const id = String(l.line_id);
+        const d = decisions.find(x => x.invoice_line_id === id);
+        const amount = cents(l.pending_cents) + cents(l.variance_cents);
+        const notice = d ? t.outbox.find(o => o.id === d.outbox_id) : undefined;
+        return (
+          <div key={id} className="hold-item">
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span>{String(l.description ?? id)}</span>
+              <span className="num small">{money(amount)} disputed</span>
+            </div>
+            {d ? (
+              <p className="small" style={{ marginBottom: 0 }}>
+                Paying the agreed part; {money(amount)} stays open. Notice to the supplier:{' '}
+                {notice ? (notice.status === 'sent' ? 'sent (simulated)' : notice.status === 'draft' ? 'draft — send it below' : notice.status) : 'none'}.
+              </p>
+            ) : (
+              <form className="stack" style={{ marginTop: 10 }} onSubmit={e => e.preventDefault()}>
+                <input type="text" placeholder="Why (required, stays internal)" value={note[id] ?? ''} style={{ width: '100%' }}
+                  aria-label={`Note for ${String(l.description ?? id)}`} onChange={e => setNote({ ...note, [id]: e.target.value })} />
+                <label className="f small">Send the notice to
+                  <select value={to[id] || ar?.id || ''} onChange={e => setTo({ ...to, [id]: e.target.value })}>
+                    {contacts.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
+                  </select>
+                </label>
+                <div className="row">
+                  <button className="btn secondary" type="button" disabled={!(note[id] ?? '').trim()} onClick={() => decide(l, 'accept_as_billed')}>Accept as billed</button>
+                  <button className="btn" type="button" disabled={!(note[id] ?? '').trim()} onClick={() => decide(l, 'pay_agreed_dispute_rest')}>Pay agreed, dispute the rest</button>
+                </div>
+              </form>
+            )}
+          </div>
+        );
+      })}
+      {decisions.filter(d => d.decision === 'accept_as_billed').map(d => (
+        <p key={d.id} className="small muted" style={{ marginBottom: 0 }}>Accepted as billed: {money(cents(d.amount_cents))} ({d.note}).</p>
+      ))}
+      {stillOpen > 0 && <p style={{ marginBottom: 0 }}><strong>Still open: {money(stillOpen)}</strong> until they correct the invoice or agree a credit.</p>}
       <Outcome r={result} />
     </section>
   );

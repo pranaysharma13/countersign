@@ -20,13 +20,15 @@ const AUTHORISED = ['AUTHORISED_FIXED', 'AUTHORISED_RATE_USAGE_MISSING'];
 const CR_CLASSIFICATIONS = [...AUTHORISED, 'PROPOSED', 'DECLINED', 'AMBIGUOUS', 'UNRELATED'];
 const SUPPLIER_ACCEPTANCE = ['none', 'proposed', 'accepted', 'declined'];
 const LINE_KINDS = ['material', 'extra', 'waiting', 'fuel', 'tax', 'freight', 'other'];
-const COMMERCIAL_STATUS = ['pending', 'matches', 'differences_under_review', 'contract_review'];
+const COMMERCIAL_STATUS = ['pending', 'matches', 'differences_under_review', 'contract_review', 'partially_disputed'];
 export const HOLD_CODES = ['CONTRACT_REVIEW', 'PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING',
   'DUPLICATE_REVIEW', 'EXTRACTION_REVIEW', 'RECEIPT_NOT_VERIFIED', 'PAYEE_CHANGE_PENDING', 'APPROVAL_STALE',
   'PROMPT_INJECTION', 'SUPPLIER_RISK'];
+// §9.9: money holds clear only through a corrected revision or the owner's decide_disputed_line, never resolve_hold.
+export const MONEY_HOLDS = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING'];
 // §9.3: the owner may resolve only these with resolve_hold. The rest clear only through their own event.
-export const OWNER_RESOLVABLE_HOLDS = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING',
-  'DUPLICATE_REVIEW', 'EXTRACTION_REVIEW', 'CONTRACT_REVIEW', 'PROMPT_INJECTION', 'SUPPLIER_RISK'];
+export const OWNER_RESOLVABLE_HOLDS = ['DUPLICATE_REVIEW', 'EXTRACTION_REVIEW', 'CONTRACT_REVIEW', 'PROMPT_INJECTION', 'SUPPLIER_RISK'];
+const SETTLEMENT_DECISIONS = ['accept_as_billed', 'pay_agreed_dispute_rest'];
 // §9.8.2: holds carried onto a corrected revision. A correction doesn't prove receipt, verify a payee or clear a risk flag.
 const CARRY_OVER_HOLDS = ['RECEIPT_NOT_VERIFIED', 'PAYEE_CHANGE_PENDING', 'SUPPLIER_RISK'];
 
@@ -80,9 +82,9 @@ function moduleHold(c: Call, revision_id: string, code: string, amount_cents: bi
   return true;
 }
 
-function closeHold(c: Call, id: string, status: 'resolved' | 'superseded', note: string) {
+function closeHold(c: Call, id: string, status: 'resolved' | 'superseded' | 'disputed', note: string, from = ['open']) {
   const h = c.ctx.db.hold.id.find(id);
-  if (!h || h.status !== 'open') return;
+  if (!h || !from.includes(h.status)) return;
   c.ctx.db.hold.id.update({ ...h, status, resolved_by_role: c.role, resolution_note: note, resolved_at_iso: iso(c) });
   audit(c, 'hold', id, { status: h.status }, { status }, note);
 }
@@ -425,7 +427,7 @@ function remainingCeiling(ctx: Ctx, purchase: Purchase): bigint | null {
   // Only settled invoices use quantity up: an unscoped price change could still reach one that's billed but unpaid.
   let paid = 0n;
   for (const inv of [...ctx.db.invoice.iter()]) {
-    if (inv.purchase_id !== purchase.id || inv.payment_status !== 'settled' || !inv.active_revision_id) continue;
+    if (inv.purchase_id !== purchase.id || !['settled', 'partially_settled'].includes(inv.payment_status) || !inv.active_revision_id) continue;
     for (const l of [...ctx.db.invoice_line.revision_id.filter(inv.active_revision_id)]) {
       if (l.kind === 'material' && l.unit === purchase.unit) paid += l.quantity_milli;
     }
@@ -545,6 +547,15 @@ export function record_invoice_revision(ctx: Ctx, sender: Identity, request_id: 
           moduleHold(c, id, h.code, h.amount_cents, h.reason, h.evidence_json);
         }
       }
+      // §9.9: disputed holds and the owner's active decisions end with the old revision; the new one is assessed from scratch.
+      for (const h of [...ctx.db.hold.revision_id.filter(old.id)]) {
+        if (h.status === 'disputed') closeHold(c, h.id, 'superseded', `superseded by revision ${id}`, ['disputed']);
+      }
+      for (const d of [...ctx.db.settlement_decision.revision_id.filter(old.id)]) {
+        if (d.status !== 'active') continue;
+        ctx.db.settlement_decision.id.update({ ...d, status: 'superseded' });
+        audit(c, 'settlement_decision', d.id, { status: 'active' }, { status: 'superseded' }, `superseded by revision ${id}`);
+      }
       for (const ap of activeApprovalsForInvoice(ctx, invoice_id)) makeStale(c, ap.id, 'revision superseded');
     }
     // A payee change still pending applies to every new revision too.
@@ -645,14 +656,15 @@ export function resolve_hold(ctx: Ctx, sender: Identity, request_id: string, id:
   return handle(ctx, sender, 'resolve_hold', request_id, ['owner'], c => {
     const h = ctx.db.hold.id.find(id);
     if (!h) return invalid(`hold ${id} not found`);
-    if (h.status !== 'open') return invalid(`hold ${id} is ${h.status}`);
-    if (!note.trim()) return invalid('a note is required to resolve a hold');
-    if (!OWNER_RESOLVABLE_HOLDS.includes(h.code)) {
+    if (!OWNER_RESOLVABLE_HOLDS.includes(h.code)) {  // §9.9: a money hold, whatever its status, is never cleared by hand
       const how = h.code === 'RECEIPT_NOT_VERIFIED' ? 'the receiver attesting receipt'
         : h.code === 'PAYEE_CHANGE_PENDING' ? 'verifying the payee through a contact on file'
-          : 'a new payment approval';
+          : MONEY_HOLDS.includes(h.code) ? 'a corrected invoice, or the owner deciding each disputed line in the app'
+            : 'a new payment approval';
       return deny(c, `${h.code} can only be cleared by ${how}`, 'hold', id);
     }
+    if (h.status !== 'open') return invalid(`hold ${id} is ${h.status}`);
+    if (!note.trim()) return invalid('a note is required to resolve a hold');
     closeHold(c, id, 'resolved', note);
     return ok();
   });
@@ -860,6 +872,8 @@ export function blockedReasons(ctx: Ctx, proposal_id: string, expected_fingerpri
   // 6. deposit allocation fits
   const alloc = BigInt(ref.deposit_allocation_cents || '0');
   if (alloc > 0n && alloc > depositRemaining(ctx, inv.purchase_id)) reasons.push('deposit allocation exceeds the remaining deposit');
+  // §9.9: never pay short before the supplier is told
+  if (unsentNotices(ctx, inv.id).length) reasons.push('notice to supplier not sent');
   return reasons;
 }
 
@@ -930,9 +944,15 @@ export function onSupplierPayment(c: Call, proposal_id: string, phase: 'submitte
   const p = c.ctx.db.proposal.id.find(proposal_id);
   const ref = p ? refOf(p.evidence_json) : null;
   if (!ref) return;
-  touchInvoice(c, ref.invoice_id, { payment_status: phase,
-    next_owner_role: phase === 'settled' ? '' : phase === 'failed' ? 'owner' : 'gateway',
-    next_action: phase === 'settled' ? 'Paid' : phase === 'failed' ? 'Payment failed; review' : 'Settling' });
+  // §9.9: with an active "pay agreed, dispute the rest" decision the agreed part is paid and the rest stays open
+  const disputed = activeDecisions(c.ctx, ref.invoice_id).filter(d => d.decision === 'pay_agreed_dispute_rest');
+  const open = disputed.reduce((t, d) => t + d.amount_cents, 0n);
+  const status = phase === 'settled' && disputed.length ? 'partially_settled' : phase;
+  touchInvoice(c, ref.invoice_id, { payment_status: status,
+    next_owner_role: status === 'settled' ? '' : status === 'partially_settled' ? 'purchasing' : phase === 'failed' ? 'owner' : 'gateway',
+    next_action: status === 'settled' ? 'Paid'
+      : status === 'partially_settled' ? `Agreed amount paid; ${usd(open)} still disputed: wait for a corrected invoice or an agreed credit`
+        : phase === 'failed' ? 'Payment failed; review' : 'Settling' });
   if (phase === 'settled') {
     const ap = c.ctx.db.payment_approval.id.find(`appr_${proposal_id}`);
     if (ap && ap.status === 'active') {
@@ -962,6 +982,131 @@ export function record_deposit_allocation(ctx: Ctx, sender: Identity, request_id
     const row = { id, deposit_id, invoice_id, amount_cents, created_at: ctx.timestamp };
     ctx.db.deposit_allocation.insert(row);
     audit(c, 'deposit_allocation', id, null, row);
+    return ok();
+  });
+}
+
+// ======================= v2.2 settlement decisions on disputed lines (§9.9) =======================
+
+/** Cents as dollars for notices and next actions: 350000n -> "$3,500.00". */
+function usd(cents: bigint): string {
+  const neg = cents < 0n;
+  const a = neg ? -cents : cents;
+  const whole = (a / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return `${neg ? '-' : ''}$${whole}.${(a % 100n).toString().padStart(2, '0')}`;
+}
+
+function activeDecisions(ctx: Ctx, invoice_id: string) {
+  return [...ctx.db.settlement_decision.invoice_id.filter(invoice_id)].filter(d => d.status === 'active');
+}
+
+/** Notices of active "pay agreed, dispute the rest" decisions that haven't been sent. */
+function unsentNotices(ctx: Ctx, invoice_id: string): string[] {
+  return activeDecisions(ctx, invoice_id)
+    .filter(d => d.decision === 'pay_agreed_dispute_rest' && ctx.db.outbox.id.find(d.outbox_id)?.status !== 'sent')
+    .map(d => d.outbox_id);
+}
+
+/** Lines the latest assessment shows as disputed: a money hold_code and pending + variance > 0. Nothing else is read. */
+function disputedLines(ctx: Ctx, revision_id: string): Map<string, { hold_code: string; cents: bigint }> {
+  const out = new Map<string, { hold_code: string; cents: bigint }>();
+  let details: any;
+  try { details = JSON.parse(latestAssessment(ctx, revision_id)?.details_json || '{}'); } catch { return out; }
+  const cents = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) ? BigInt(v) : 0n);
+  for (const l of Array.isArray(details?.lines) ? details.lines : []) {
+    if (!l || typeof l !== 'object' || !MONEY_HOLDS.includes(l.hold_code)) continue;
+    const disputed = cents(l.pending_cents) + cents(l.variance_cents);
+    if (disputed > 0n) out.set(String(l.line_id), { hold_code: l.hold_code, cents: disputed });
+  }
+  return out;
+}
+
+export function decide_disputed_line(ctx: Ctx, sender: Identity, request_id: string,
+  id: string, invoice_line_id: string, decision: string, amount_cents: bigint, expected_fingerprint: string,
+  to_contact_id: string, note: string): Result {
+  return handle(ctx, sender, 'decide_disputed_line', request_id, ['owner'], c => {
+    if (ctx.db.settlement_decision.id.find(id)) return { outcome: 'duplicate', message: 'decision exists' };
+    // Everything is checked before anything is written (an invalid return doesn't roll back).
+    const err = firstErr(oneOf(decision, SETTLEMENT_DECISIONS, 'decision'), amount_cents > 0n ? null : 'amount_cents must be above zero');
+    if (err) return invalid(err);
+    const line = ctx.db.invoice_line.id.find(invoice_line_id);
+    if (!line) return invalid(`invoice line ${invoice_line_id} not found`);
+    const rev = ctx.db.invoice_revision.id.find(line.revision_id);
+    const inv = rev ? ctx.db.invoice.id.find(rev.invoice_id) : null;
+    if (!rev || !inv || rev.status !== 'active' || inv.active_revision_id !== rev.id) {
+      return invalid("the line isn't on its invoice's active revision");
+    }
+    const latest = latestAssessment(ctx, rev.id);
+    if (!latest) return invalid("the revision hasn't been assessed yet");
+    const disputed = disputedLines(ctx, rev.id);
+    const entry = disputed.get(invoice_line_id);
+    if (!entry) return invalid("the latest assessment doesn't show this line as disputed");
+    if (entry.cents !== amount_cents) return invalid(`the line's disputed amount is ${usd(entry.cents)}, not ${usd(amount_cents)}`);
+    if (activeDecisions(ctx, inv.id).some(d => d.invoice_line_id === invoice_line_id)) return invalid('this line already has an active decision');
+    if (!note.trim()) return invalid('a note is required');
+    const contact = to_contact_id ? ctx.db.supplier_contact.id.find(to_contact_id) : null;
+    if (decision === 'pay_agreed_dispute_rest') {
+      if (!contact || contact.supplier_id !== inv.supplier_id) return invalid("the notice goes to a contact of the invoice's supplier");
+    } else if (to_contact_id !== '') {
+      return invalid('accept_as_billed sends no notice; to_contact_id must be empty');
+    }
+    if (expected_fingerprint !== latest.fingerprint) return deny(c, 'the assessment changed; review it again', 'settlement_decision', id);
+    if (decision === 'accept_as_billed') {  // commits money, so it's within the caller's authority
+      const purchase = ctx.db.purchase.id.find(inv.purchase_id);
+      const auth = ctx.db.authority.identity.find(sender);
+      if (!auth || (auth.project_scope !== '*' && auth.project_scope !== purchase?.project_id)) {
+        return deny(c, `no authority on ${purchase?.project_id ?? 'this purchase'}`, 'settlement_decision', id);
+      }
+      if (amount_cents > auth.limit_cents) {
+        return deny(c, `${usd(amount_cents)} is above your approval limit of ${usd(auth.limit_cents)}`, 'settlement_decision', id);
+      }
+    }
+
+    let change_request_id = '', outbox_id = '';
+    if (decision === 'accept_as_billed') {
+      change_request_id = `cr_${id}`;
+      const cr = {
+        id: change_request_id, purchase_id: inv.purchase_id, kind: 'settlement',
+        description: `Settlement: ${line.description} accepted as billed`, amount_cents, rate_cents: 0n, rate_unit: '',
+        scope_json: json({ invoice_line_id, settlement_decision_id: id }), effective_from: '', original_sent_at_iso: '',
+        ingested_at_iso: '', classification: 'AUTHORISED_FIXED', supplier_acceptance: 'accepted',
+        supplier_acceptance_fragment_ids_json: line.source_fragment_ids_json,  // the supplier's own invoice line is its claim
+        requested_by_identity: '', internal_status: 'approved', decided_by_identity: c.sender_hex, decided_by_role: c.role,
+        decision_note: note, source_fragment_ids_json: line.source_fragment_ids_json, created_at: ctx.timestamp,
+      };
+      ctx.db.change_request.insert(cr);
+      audit(c, 'change_request', cr.id, null, cr, note);
+    } else {
+      outbox_id = `ob_${id}`;
+      const company = [...ctx.db.company.iter()][0]?.name ?? 'Accounts Payable';
+      const body = `Hello ${contact!.name},\n\n`
+        + `On invoice ${inv.invoice_number} we don't agree with this line:\n`
+        + `  ${line.description}: ${usd(amount_cents)} disputed.\n\n`
+        + "We're paying the agreed amount of the invoice now. The disputed amount stays open, and your original invoice stays on file.\n"
+        + 'Please send a corrected invoice or an agreed credit memo for it.\n\n'
+        + `${company}, Accounts Payable\n`;  // the owner's note stays internal
+      const ob = { id: outbox_id, invoice_id: inv.id, to_contact_id, to_address: contact!.email,
+        subject: `Invoice ${inv.invoice_number}: paying the agreed amount, ${usd(amount_cents)} disputed`, body, status: 'draft',
+        simulated: true, created_by_role: c.role, approved_by_role: '', delivery_ref: '', created_at: ctx.timestamp };
+      ctx.db.outbox.insert(ob);
+      audit(c, 'outbox', ob.id, null, ob);
+    }
+    const row = { id, invoice_id: inv.id, revision_id: rev.id, invoice_line_id, decision, amount_cents,
+      assessment_fingerprint: latest.fingerprint, change_request_id, outbox_id, note, decided_by_identity: c.sender_hex,
+      decided_by_role: c.role, status: 'active', created_at: ctx.timestamp };
+    ctx.db.settlement_decision.insert(row);
+    audit(c, 'settlement_decision', id, null, row, note);
+
+    // A money hold closes once every disputed line it covers is decided: resolved if all were accepted, otherwise
+    // disputed (it stays open money, but doesn't block approval). PO_CEILING covers no line: only a correction clears it.
+    const decided = new Map(activeDecisions(ctx, inv.id).map(d => [d.invoice_line_id, d.decision]));
+    for (const h of openHolds(ctx, rev.id)) {
+      if (!MONEY_HOLDS.includes(h.code)) continue;
+      const covered = [...disputed].filter(([, l]) => l.hold_code === h.code).map(([lid]) => lid);
+      if (!covered.length || covered.some(lid => !decided.has(lid))) continue;
+      closeHold(c, h.id, covered.every(lid => decided.get(lid) === 'accept_as_billed') ? 'resolved' : 'disputed', note);
+    }
+    insertJob(c, `job_reassess_${id}`, 'reassess_invoice', { invoice_id: inv.id });
     return ok();
   });
 }
