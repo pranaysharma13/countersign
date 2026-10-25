@@ -12,7 +12,7 @@ npm install
 npm run dev          # builds ../db/dist/local.mjs first, then serves http://localhost:3001
 ```
 
-With no other setup the app runs on **local demo data**: the real SpacetimeDB module running in-process (`db/local/backend.ts`), seeded with the SPEC §8 BayMix scenario. A small stand-in worker plays the agent, the supplier and the bank, and the UI labels all of it as simulated. This is also the offline fallback for judging.
+With no other setup the app runs on **local demo data**: the real SpacetimeDB module running in-process (`db/local/backend.ts`), replaying Python's `data/seeds/baymix_opening.json` so the screens show the same invoice **BM-23104** / PO **MF-PO-1031** as the live module. A small stand-in worker plays the agent, the supplier and the bank (it loads `baymix_correction.json` when purchasing sends the clarification), and the UI labels all of it as simulated. This is also the offline fallback for judging.
 
 To use the published module instead, create `web/.env.local`:
 
@@ -25,7 +25,10 @@ SPACETIMEDB_PURCHASING_TOKEN=...
 SPACETIMEDB_RECEIVER_TOKEN=...
 SPACETIMEDB_BOOKKEEPER_TOKEN=...
 DEMO_PIN=...                       # optional; required before any staff action when set
+NEXT_PUBLIC_CORE_URL=http://localhost:8000   # PDF preview; omit if core isn't running
 ```
+
+Deploy on Vercel with **Root Directory = `web`**. Set the same env vars (live URI, database, four tokens, optional PIN and core URL). Do not put tokens in `NEXT_PUBLIC_*`.
 
 ## The four views
 
@@ -67,7 +70,9 @@ Each row carries an honest label: `Fixture extraction` or `Read live by Claude`,
 ## Demo mode and roles
 The sidebar's "Acting as" switch sets the persona (owner, purchasing, superintendent, bookkeeper). It's stored in an http-only cookie and gated by `DEMO_PIN` when set. Tokens stay on the server: the browser calls `/api/call`, and the server calls the module as that persona. The module enforces every rule itself, so the UI can't grant extra power. In production each employee would sign in individually.
 
-**Reset demo** (owner, local mode only) restores the opening state.
+**Reset demo:** owner, local mode restores the in-process seed. On live it queues a `reset_demo` job for the Python worker.
+
+Extra screens: `/changes` (purchasing), `/receive/inv_bm23104` (superintendent, phone-first), `/sneak` (judge page).
 
 ## How it's built
 | Path | What |
@@ -77,4 +82,4 @@ The sidebar's "Acting as" switch sets the persona (owner, purchasing, superinten
 | `lib/client.ts` | `useTables()` polling hook, `call()` |
 | `components/parts.tsx` | Status words, the five-status strip, hold chips, evidence chips and source quotes |
 
-**Not done yet:** a separate phone-first receiver screen (receipt is on the invoice case for now), the purchasing screen for change requests, the "Sneak a charge past it" judge page (`sneak_charge`), and live subscriptions through generated SpacetimeDB bindings (needs `spacetime generate`; polling until then).
+**Not done yet:** live table subscriptions through generated SpacetimeDB bindings (`spacetime generate` + `spacetimedb/react`). Screens still poll once a second. CONTRACT v2.2 (`decide_disputed_line`) is not in the module.

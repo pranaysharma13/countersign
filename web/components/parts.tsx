@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
-import type { Row, Tables } from '@/lib/client';
-import { day, HOLD_LABEL } from '@/lib/format';
+import { call, newId, type CallResult, type Row, type Tables } from '@/lib/client';
+import { day, HOLD_LABEL, qty, ROLE_LABEL, when } from '@/lib/format';
+import { fileHref } from '@/lib/files';
 
 type Tone = 'ok' | 'hold' | 'stop' | 'idle' | 'act';
 const STATUS: Record<string, Record<string, [string, Tone]>> = {
@@ -76,7 +77,14 @@ export function Evidence({ ids, t }: { ids: string[]; t: Tables }) {
       {shown && (
         <blockquote className="quote">
           “{shown.text}”
-          <div className="src">{sourceOf(shown, t)}</div>
+          <div className="src">
+            {sourceOf(shown, t)}
+            {(() => {
+              const doc = t.document?.find(d => d.id === shown.document_id);
+              const href = fileHref(doc?.source_file_id, shown.page);
+              return href ? <> · <a href={href} target="_blank" rel="noreferrer">Open {doc?.filename ?? 'file'}</a></> : null;
+            })()}
+          </div>
         </blockquote>
       )}
     </div>
@@ -91,4 +99,47 @@ export function Outcome({ r }: { r: { outcome: string; message: string } | null 
   if (!r) return null;
   if (r.outcome === 'ok' || r.outcome === 'duplicate') return <div className="notice ok" role="status">Done{r.message ? `: ${r.message}` : '.'}</div>;
   return <div className="notice stop" role="alert">Refused: {r.message}</div>;
+}
+
+/** Superintendent attestation. Same rules as the invoice case; also used on the phone receipt page. */
+export function ReceiptForm({ inv, rev, t }: { inv: Row; rev?: Row; t: Tables }) {
+  const material = t.invoice_line.filter(l => l.revision_id === rev?.id && l.kind === 'material');
+  const billed = material.reduce((s, l) => s + l.quantity_milli, 0);
+  const unit = material[0]?.unit ?? 'cy';
+  const atts = t.receipt_attestation.filter(a => a.invoice_id === inv.id);
+  const [q, setQ] = useState(billed ? String(billed / 1000) : '');
+  const [reason, setReason] = useState('');
+  const [result, setResult] = useState<CallResult | null>(null);
+  return (
+    <section className="sheet pad" aria-labelledby="receipt">
+      <h2 id="receipt">Receipt</h2>
+      <p className="small" style={{ marginTop: 0 }}>
+        Countersign can&apos;t see what was delivered. Receipt is a signed statement by the superintendent, labeled as manually confirmed.
+        {billed > 0 && <> Billed: <strong>{qty(billed, unit)}</strong>.</>}
+      </p>
+      {atts.map(a => (
+        <div key={a.id} className="notice ok small" style={{ marginBottom: 8 }}>
+          <strong>{String(a.label).replace('_', ' ').toLowerCase()}</strong>: {qty(a.quantity_milli, a.unit)} ({a.scope}). “{a.reason}” {ROLE_LABEL[a.attested_by_role]}, {when(a.created_at)}
+        </div>
+      ))}
+      {inv.receipt_status !== 'manually_confirmed' && (
+        <form className="row" onSubmit={async e => {
+          e.preventDefault();
+          setResult(await call('attest_receipt', {
+            id: newId('att'), invoice_id: inv.id, scope: 'All deliveries on this invoice',
+            quantity_milli: Math.round(Number(q) * 1000), unit, reason,
+          }));
+        }}>
+          <label className="f" style={{ width: 130 }}>Quantity received
+            <input type="number" min="0" step="0.001" value={q} onChange={e => setQ(e.target.value)} placeholder={billed ? String(billed / 1000) : ''} />
+          </label>
+          <label className="f" style={{ flex: 1, minWidth: 200 }}>How you know
+            <input type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Checked against the pour log" />
+          </label>
+          <button className="btn secondary" type="submit" disabled={!q || !reason.trim()} style={{ alignSelf: 'flex-end' }}>Confirm receipt (superintendent)</button>
+        </form>
+      )}
+      <Outcome r={result} />
+    </section>
+  );
 }

@@ -4,9 +4,10 @@ import { use, useState } from 'react';
 import { useTables, type Row, type Tables } from '@/lib/client';
 import { money, day, ids, qty, ROLE_LABEL } from '@/lib/format';
 import { Evidence, Loading, sourceOf } from '@/components/parts';
+import { fileHref } from '@/lib/files';
 
 const TABLES = ['purchase', 'supplier', 'supplier_contact', 'project', 'term', 'change_request', 'deposit', 'deposit_allocation',
-  'document', 'source_fragment', 'email_message', 'authority', 'actor', 'invoice'];
+  'document', 'source_file', 'source_fragment', 'email_message', 'authority', 'actor', 'invoice'];
 
 const CLASS_WORD: Record<string, string> = {
   AUTHORISED_FIXED: 'Authorised', AUTHORISED_RATE_USAGE_MISSING: 'Rate authorised, usage unproven', PROPOSED: 'Only proposed',
@@ -127,6 +128,7 @@ function Sources({ pur, t }: { pur: Row; t: Tables }) {
             {d.filename}
           </button>
           <span className="small muted"> {d.kind}</span>
+          {fileHref(d.source_file_id) && <> · <a href={fileHref(d.source_file_id)!} target="_blank" rel="noreferrer">Open file</a></>}
           {open === d.id && t.source_fragment.filter(f => f.document_id === d.id).map(f => (
             <blockquote key={f.id} className="quote">“{f.text}”<div className="src">{sourceOf(f, t)}</div></blockquote>
           ))}

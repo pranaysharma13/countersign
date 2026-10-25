@@ -152,7 +152,12 @@ tbody tr.link:hover td { background: var(--paper); }
 .notice.ok { background: var(--ok-bg); color: var(--ok); }
 .notice.hold { background: var(--hold-bg); color: var(--hold); }
 .notice ul { margin: 6px 0 0; padding-left: 18px; }
-textarea, input[type='text'], input[type='number'] { font: inherit; padding: 8px 10px; border: 1px solid var(--rule); border-radius: var(--radius-s); background: var(--sheet); color: var(--ink); width: 100%; }
+textarea, input[type='text'], input[type='number'], select { font: inherit; padding: 8px 10px; border: 1px solid var(--rule); border-radius: var(--radius-s); background: var(--sheet); color: var(--ink); width: 100%; }
+.receive h1 { font-size: 26px; }
+@media (max-width: 860px) {
+  .receive .btn { min-height: 44px; padding: 12px 16px; }
+  .receive input { min-height: 44px; }
+}
 label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2); }
 
 /* ---------- timeline & mail ---------- */
