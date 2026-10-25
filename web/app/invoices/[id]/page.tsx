@@ -69,7 +69,7 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
       <div className="split">
         <div className="stack">
           {assessment ? <Reconciliation a={assessment} rev={rev!} holds={holds} /> : <div className="sheet pad muted">Still checking this bill.</div>}
-          {assessment && <Ledger a={assessment} holds={holds} t={t} />}
+          {assessment && <Ledger a={assessment} holds={holds} t={t} invoiceId={id} />}
           <Holds holds={holds} inv={inv} pur={pur} t={t} />
           <DisputedLines inv={inv} a={assessment} t={t} />
           <Revisions revs={revs} active={inv.active_revision_id} />
@@ -138,7 +138,7 @@ function Reconciliation({ a, rev, holds }: { a: Row; rev: Row; holds: Row[] }) {
   );
 }
 
-function Ledger({ a, holds, t }: { a: Row; holds: Row[]; t: Tables }) {
+function Ledger({ a, holds, t, invoiceId }: { a: Row; holds: Row[]; t: Tables; invoiceId: string }) {
   const lines = assessmentLines(a.details_json);
   const over = holds.find(h => h.code === 'PO_CEILING');
   const total = (k: 'claimed_cents' | 'accepted_cents' | 'pending_cents' | 'variance_cents') =>
@@ -165,6 +165,7 @@ function Ledger({ a, holds, t }: { a: Row; holds: Row[]; t: Tables }) {
                     {over && overAmt > 0 && <div className="calc">{ceilingCopy(over.evidence_json, over.reason)}</div>}
                     {l.uncertainty && <div className="calc">{plainTerms(l.uncertainty)}</div>}
                     <Evidence ids={l.fragment_ids} t={t} />
+                    <Why invoiceId={invoiceId} lineId={l.line_id} t={t} />
                   </td>
                   <td className="num">{money(l.claimed_cents)}</td>
                   <td className="num">{money(l.accepted_cents)}</td>
@@ -326,6 +327,35 @@ function DisputedLines({ inv, a, t }: { inv: Row; a?: Row; t: Tables }) {
       {stillOpen > 0 && <p style={{ marginBottom: 0 }}><strong>Still open: {money(stillOpen)}</strong> until they correct the invoice or agree a credit.</p>}
       <Outcome r={result} />
     </section>
+  );
+}
+
+/** A cited explanation of one line, from its own source documents (Claude, or a labelled fixture). Read-only. */
+function Why({ invoiceId, lineId, t }: { invoiceId: string; lineId: string; t: Tables }) {
+  const [state, setState] = useState<{ loading?: boolean; data?: Row; error?: string } | null>(null);
+  if (!lineId) return null;
+  const load = async () => {
+    setState({ loading: true });
+    try {
+      const r = await fetch(`/api/why/${encodeURIComponent(invoiceId)}?line=${encodeURIComponent(lineId)}`);
+      const d = await r.json();
+      setState(r.ok && d.status !== 'unavailable' ? { data: d } : { error: d.reason || d.message || d.detail || 'No explanation available.' });
+    } catch {
+      setState({ error: 'No explanation available.' });
+    }
+  };
+  if (!state) return <button className="btn secondary" type="button" style={{ marginTop: 8 }} onClick={load}>Why?</button>;
+  if (state.loading) return <div className="small muted" style={{ marginTop: 8 }}>Reading the sources…</div>;
+  if (state.error) return <div className="small muted" style={{ marginTop: 8 }}>{state.error}</div>;
+  const d = state.data!;
+  return (
+    <div className="calc" style={{ marginTop: 8 }}>
+      {(d.segments as Row[]).map((seg, i) => (
+        <span key={i}>{seg.text}{(seg.citations as Row[]).length > 0 && (
+          <Evidence ids={[...new Set((seg.citations as Row[]).flatMap(c => c.fragment_ids as string[]))]} t={t} />)}</span>
+      ))}
+      <div className="small muted">{d.mode === 'fixture' ? 'Fixture explanation (no model call)' : `Explained by Claude (${d.model})`} · {d.note}</div>
+    </div>
   );
 }
 

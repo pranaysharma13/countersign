@@ -71,7 +71,7 @@ export const parse = <T,>(json: string, fallback: T): T => { try { return JSON.p
 
 /** Assessment details: the old local seed stored a line array; Python's seed stores `{ lines: [...] }` with `description`. */
 export interface AssessmentLine {
-  line: string; claimed_cents: number; accepted_cents: number; pending_cents: number; variance_cents: number;
+  line_id: string; line: string; claimed_cents: number; accepted_cents: number; pending_cents: number; variance_cents: number;
   calculation: string; fragment_ids: string[]; status: string; uncertainty?: string;
 }
 export function assessmentLines(detailsJson: string): AssessmentLine[] {
@@ -82,6 +82,7 @@ export function assessmentLines(detailsJson: string): AssessmentLine[] {
     const l = (row && typeof row === 'object') ? row as Record<string, unknown> : {};
     const status = String(l.status ?? '');
     return {
+      line_id: String(l.line_id ?? ''),
       line: String(l.line ?? l.description ?? ''),
       claimed_cents: Number(l.claimed_cents) || 0,
       accepted_cents: Number(l.accepted_cents) || 0,
