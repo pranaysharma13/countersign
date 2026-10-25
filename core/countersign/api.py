@@ -10,12 +10,14 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from . import reducers as R
 from .config import FILES_DIR
 from .ids import sha8, sha256_hex
 from .store import get_store, one
+from .supplier_docs import file_bytes
+from .supplier_world import PRIMARY_DOCS
 
 app = FastAPI(title="Countersign core")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3001", "http://127.0.0.1:3001"],
@@ -23,9 +25,46 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3001", "http
 store = get_store()
 
 
+def _seed_doc(source_file_id: str, filename: str = "") -> object | None:
+    if filename:
+        found = next((d for d in PRIMARY_DOCS if d.filename == filename), None)
+        if found:
+            return found
+    linked = next((d for d in store.rows("document") if d.get("source_file_id") == source_file_id), None)
+    if linked:
+        return next((d for d in PRIMARY_DOCS if d.id == linked["id"]), None)
+    return next((d for d in PRIMARY_DOCS if d.id == source_file_id), None)
+
+
+@app.get("/", response_class=HTMLResponse)
+def index() -> str:
+    rows = [(s["id"], s.get("filename") or s["id"]) for s in store.rows("source_file")]
+    if not rows:
+        rows = [(d.id, d.filename) for d in PRIMARY_DOCS]
+    items = "".join(
+        f'<li><a href="/files/{sid}">{name}</a> <span style="color:#666">{sid}</span></li>'
+        for sid, name in rows
+    )
+    return (
+        "<!doctype html><meta charset=utf-8><title>Countersign files</title>"
+        "<body style='font:16px system-ui;max-width:40rem;margin:2rem'>"
+        "<h1>Source files</h1><p>Open a document, or use these links from the invoice.</p>"
+        f"<ul>{items}</ul></body>"
+    )
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    from .config import settings
+    return {
+        "status": "ok",
+        "ai_mode": settings.ai_mode,
+        "mocks": "on" if settings.use_mocks else "off",
+        "nessie": "configured" if settings.nessie_api_key else "missing",
+        "crs": "configured" if settings.crs_username else "missing",
+        "apify": "configured" if settings.apify_token else "missing",
+        "claude": "configured" if settings.anthropic_api_key else "missing",
+    }
 
 
 @app.post("/upload")
@@ -51,12 +90,17 @@ async def upload(file: UploadFile = File(...), from_address: str = Form(""), sub
     return {"work_item_id": wi_id, "source_file_id": src_id}
 
 
-@app.get("/files/{source_file_id}")
-def get_file(source_file_id: str) -> FileResponse:
+@app.get("/files/{source_file_id}", response_model=None)
+def get_file(source_file_id: str):
     src = one(store, "source_file", id=source_file_id)
-    if src is None:
-        raise HTTPException(404, "unknown file")
-    path = Path(src["storage_path"]).resolve()
-    if FILES_DIR.resolve() not in path.parents or not path.exists():
-        raise HTTPException(404, "file not available")
-    return FileResponse(path, media_type="application/pdf")
+    storage = (src or {}).get("storage_path") or ""
+    if storage:
+        path = Path(storage).resolve()
+        if path.exists() and path.is_file():
+            return FileResponse(path, media_type="application/pdf")
+    doc = _seed_doc(source_file_id, (src or {}).get("filename") or "")
+    if doc is None:
+        raise HTTPException(404, "unknown file" if src is None else "file not available")
+    data = file_bytes(doc)
+    media = "message/rfc822" if doc.email else "application/pdf"
+    return Response(content=data, media_type=media, headers={"Content-Disposition": f'inline; filename="{doc.filename}"'})

@@ -31,7 +31,28 @@ Start with [SPEC.md](SPEC.md), then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 ## Setup
 
 1. Copy `.env.example` to `.env` and fill in your keys. Never commit `.env`.
-2. Per-folder setup lives in each folder's README (`core/README.md` for the Python side).
+2. Per-folder setup lives in each folder's README (`core/README.md`, `web/README.md`).
+
+## Run the demo
+
+Three processes. Tokens stay in `.env` / `web/.env.local`.
+
+```bash
+# App — http://localhost:3001
+cd web && npm install && npm run dev
+
+# File preview — http://localhost:8000
+uv run --project core uvicorn countersign.api:app --port 8000
+
+# Worker (extraction, reassessment, simulated pay, sneak jobs)
+uv run --project core python scripts/run_worker.py
+```
+
+Without `DATA_SOURCE=live` the app uses the in-process module and the BayMix seed (invoice **BM-23104**, PO **MF-PO-1031**). For the published module, set `DATA_SOURCE=live` plus the four staff tokens in `web/.env.local`.
+
+`USE_MOCKS=true` (default) uses fake Nessie, CRS and Apify. `AI_MODE=fixture` (default) uses labelled extractions and does not call Claude. Set `USE_MOCKS=false` and `AI_MODE=live` only when those keys are present.
+
+Screens: work queue `/`, invoice `/invoices/inv_bm23104`, purchase `/purchases/pur_baymix_oak`, changes `/changes`, receive `/receive/inv_bm23104`, sneak `/sneak`.
 
 ## Sponsors used
 

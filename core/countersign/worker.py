@@ -20,11 +20,16 @@ from . import reducers as R
 from . import supplier_gateway
 from . import supplier_pipeline as v2
 from .attacks import ATTACK_TYPES, make_attack, make_legit_case
-from .ids import short_uuid
+from .ids import hold_id, short_uuid
 from .pipeline import ingest, pay_proposal
 from .scorecard import run_offline
-from .store import Store
+from .store import Store, one
 from .world import build_world
+
+_SNEAK_HOLD = {
+    "price": "PRICE_VARIANCE", "extra": "PROPOSED_CHARGE", "waiting": "PROPOSED_CHARGE",
+    "fuel": "PROPOSED_CHARGE", "bank_change": "PAYEE_CHANGE_PENDING", "injection": "PROMPT_INJECTION",
+}
 
 WORKER_ROLES = {"agent", "gateway", "sync"}
 _world = build_world()
@@ -134,7 +139,23 @@ HANDLERS: dict[str, Callable[[Store, dict[str, Any]], Any]] = {
     "reassess_invoice": lambda s, p: v2.reassess(s, p["invoice_id"], force=True),
     "send_outbox": lambda s, p: v2.send_outbox(s, p["outbox_id"]),
     "pay_supplier": lambda s, p: supplier_gateway.pay_supplier(s, p["proposal_id"]),
+    "sneak_charge": lambda s, p: _sneak(s, p),
 }
+
+
+def _sneak(store: Store, p: dict[str, Any]) -> dict[str, Any]:
+    """Judge page: open the matching hold. The note is data. Nothing is paid."""
+    inv = one(store, "invoice") or next(iter(store.rows("invoice")), None)
+    if not inv or not inv.get("active_revision_id"):
+        return {"status": "no_invoice"}
+    kind = str(p.get("kind") or "extra")
+    code = _SNEAK_HOLD.get(kind, "PROPOSED_CHARGE")
+    hid = hold_id(inv["active_revision_id"], f"sneak_{p.get('_job_id') or kind}")
+    note = str(p.get("note") or f"Judge submitted a {kind}. Treated as data, not an instruction.")
+    res = R.open_hold(store, "agent", hid, inv["active_revision_id"], code, int(p.get("amount_cents") or 0), note,
+                      {"kind": kind, "job_id": p.get("_job_id")})
+    return {"status": res.outcome, "hold_id": hid, "code": code, "message": res.message}
+
 
 MAX_ATTEMPTS = 3  # the module's limit (CONTRACT §9.5 retries)
 
@@ -172,6 +193,7 @@ def run_job(store: Store, job: dict[str, Any]) -> bool | None:
     payload: dict[str, Any] = {}
     try:
         payload = json.loads(job.get("payload_json") or "{}")
+        payload["_job_id"] = job["id"]
         handler = HANDLERS.get(job["kind"])
         if handler is None:
             raise NotImplementedError(f"job kind {job['kind']} isn't implemented yet")

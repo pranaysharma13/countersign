@@ -72,7 +72,7 @@ The sidebar's "Acting as" switch sets the persona (owner, purchasing, superinten
 
 **Reset demo:** owner, local mode restores the in-process seed. On live it queues a `reset_demo` job for the Python worker.
 
-Extra screens: `/changes` (purchasing), `/receive/inv_bm23104` (superintendent, phone-first), `/sneak` (judge page).
+Extra screens: `/changes` (purchasing), `/receive/inv_bm23104` (superintendent, phone-first), `/sneak` (judge page). Evidence chips open the PDF or email at `{NEXT_PUBLIC_CORE_URL}/files/{source_file_id}` — start the Python file API on port 8000. Sneak jobs need the Python worker (`sneak_charge` opens a hold; nothing is paid).
 
 ## How it's built
 | Path | What |
