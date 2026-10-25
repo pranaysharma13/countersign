@@ -28,6 +28,8 @@ ROLES = {
     "agent": "Countersign agent",
     "gateway": "Payment gateway",
     "sync": "Intake & sync",
+    "purchasing": "Purchasing approver (demo)",  # v2: approves change requests within a limit
+    "receiver": "Superintendent (demo)",  # v2: attests receipt
 }
 
 
@@ -64,6 +66,8 @@ def main() -> int:
     print("\n# ---- send to the TypeScript developer for web/.env.local ----")
     print(f"SPACETIMEDB_OWNER_TOKEN={tokens['owner']}")
     print(f"SPACETIMEDB_BOOKKEEPER_TOKEN={tokens['bookkeeper']}")
+    print(f"SPACETIMEDB_PURCHASING_TOKEN={tokens['purchasing']}")
+    print(f"SPACETIMEDB_RECEIVER_TOKEN={tokens['receiver']}")
     return 0
 
 
