@@ -17,7 +17,7 @@ from typing import Any, Callable
 from . import reducers as R
 from .checks import CheckOutcome
 from .ids import hold_id
-from .money import fmt, fmt_qty
+from .money import extend_up, fmt, fmt_qty
 from .store import Store, dumps, one
 
 POLICY_VERSION = "commercial-2026-10-24.1"
@@ -52,6 +52,7 @@ class LineResult:
     calculation: str = ""
     uncertainty: str = ""
     fragment_ids: list[str] = field(default_factory=list)
+    awaiting_decision_by: str = ""  # the supplier confirmed it; only our in-app decision is missing (role with authority)
 
 
 @dataclass
@@ -70,6 +71,7 @@ class InvoiceBundle:
     payee_profiles: list[dict[str, Any]] = field(default_factory=list)
     document: dict[str, Any] | None = None
     others: list[dict[str, Any]] = field(default_factory=list)  # same supplier: {"invoice","revision","lines","document"}
+    authorities: list[dict[str, Any]] = field(default_factory=list)  # who may decide changes, and up to what amount
 
 
 @dataclass
@@ -210,11 +212,30 @@ def _charge_line(b: InvoiceBundle, l: dict[str, Any], r: LineResult) -> None:
         r.uncertainty = f"The rate {fmt(rate)}/{cr['rate_unit']} is agreed, but nothing proves {fmt_qty(qty, l['unit'])} was used."
         return
     r.status, r.hold_code, r.pending_cents = "pending", "PROPOSED_CHARGE", r.claimed_cents
+    if cls == "PROPOSED" and cr["supplier_acceptance"] == "accepted" and cr["internal_status"] == "pending":
+        # Only we can decide this one: nothing goes to the supplier about it.
+        r.awaiting_decision_by = decider(b, _exposure(cr, l))
+        r.uncertainty = (f"The supplier confirmed this charge in writing; it needs an in-app decision by "
+                         f"{r.awaiting_decision_by} (within their limit).")
+        return
     rule = _accepted_term(b, "extra_charge_rule")
     r.uncertainty = {"DECLINED": "This charge was declined.",
                      "AMBIGUOUS": "The emails don't clearly agree to this charge."}.get(
         cls, "Mentioned as possible, but never agreed in writing or approved.") + \
         (f" Quote terms: \"{rule['text']}\"" if rule else "")
+
+
+def _exposure(cr: dict[str, Any], l: dict[str, Any]) -> int:
+    rate = int(cr["rate_cents"])
+    return int(cr["amount_cents"]) + (extend_up(int(l["quantity_milli"]), rate) if rate else 0)
+
+
+def decider(b: InvoiceBundle, amount_cents: int) -> str:
+    """Who has authority for this amount: the smallest sufficient limit wins (purchasing before the owner)."""
+    project = (b.purchase or {}).get("project_id", "")
+    able = [a for a in b.authorities if a["role"] in {"purchasing", "owner"} and int(a["limit_cents"]) >= amount_cents
+            and a["project_scope"] in {"*", project}]
+    return min(able, key=lambda a: (int(a["limit_cents"]), a["role"]))["role"] if able else "owner"
 
 
 def assess_line(b: InvoiceBundle, l: dict[str, Any]) -> LineResult:
@@ -451,6 +472,7 @@ def fingerprint(b: InvoiceBundle) -> str:
         "policy_version": POLICY_VERSION, "invoice": _identity(b.invoice),
         **{k: _canon(getattr(b, k)) for k in ("revision", "lines", "purchase", "terms", "change_requests", "deposits",
                                                "allocations", "attestations", "payee_profiles")},
+        "authorities": sorted((a["role"], int(a["limit_cents"]), a["project_scope"]) for a in b.authorities),
         "document_sha256": (b.document or {}).get("sha256", ""),
         "others": [{"invoice": _identity(o["invoice"]), "revision": _canon(o["revision"]), "lines": _canon(o["lines"]),
                     "document_sha256": (o.get("document") or {}).get("sha256", "")} for o in b.others],
@@ -463,16 +485,21 @@ def _clarification_points(lines: list[LineResult], holds: list[HoldSpec]) -> lis
     for r in lines:
         if r.status == "variance":
             points.append(f"{r.description}: {r.calculation}. {r.uncertainty}".strip())
-        elif r.status == "pending" and r.hold_code in {"PROPOSED_CHARGE", "USAGE_EVIDENCE_MISSING"}:
+        elif r.status == "pending" and r.hold_code in {"PROPOSED_CHARGE", "USAGE_EVIDENCE_MISSING"} and not r.awaiting_decision_by:
             points.append(f"{r.description} ({fmt(r.pending_cents)}): {r.uncertainty}")
     if points:
         points.append("Please send a corrected invoice or an agreed credit memo. We'll keep your original invoice on file.")
     return points
 
 
-def _next(status: str, codes: set[str], under_review: int, proposed: int) -> tuple[str, str]:
+def _next(status: str, codes: set[str], under_review: int, proposed: int, lines: list[LineResult]) -> tuple[str, str]:
     if "DUPLICATE_REVIEW" in codes or "EXTRACTION_REVIEW" in codes or "CONTRACT_REVIEW" in codes:
         return "owner", "Review the flagged invoice details before anything else."
+    waiting = [r for r in lines if r.awaiting_decision_by]
+    if waiting:  # decide our side first, so the supplier gets one complete email afterwards
+        who = "owner" if any(r.awaiting_decision_by == "owner" for r in waiting) else waiting[0].awaiting_decision_by
+        what = "; ".join(f"{r.description} ({fmt(r.claimed_cents)})" for r in waiting)
+        return who, f"Decide in the app: {what}. The supplier confirmed it; nothing goes to the supplier until it's decided."
     if status == "differences_under_review":
         return "purchasing", f"Ask the supplier for a corrected invoice or an agreed credit for the {fmt(under_review)} under review."
     if "RECEIPT_NOT_VERIFIED" in codes:
@@ -503,8 +530,10 @@ def assess(b: InvoiceBundle) -> Assessment:
     # Never silently pay less: all of the balance requested, or nothing and a request for a correction.
     proposed = balance if status == "matches" and authorised == claimed and claimed - applied == balance else 0
     under_review = pending + variance
-    owner, action = _next(status, codes, under_review, proposed)
-    summary = (f"Claimed {fmt(claimed)}: {fmt(authorised)} authorised, {fmt(variance)} price variance, {fmt(pending)} pending. "
+    owner, action = _next(status, codes, under_review, proposed, lines)
+    ours = sum(r.pending_cents for r in lines if r.awaiting_decision_by)
+    summary = (f"Claimed {fmt(claimed)}: {fmt(authorised)} authorised, {fmt(variance)} price variance, {fmt(pending)} pending"
+               + (f" ({fmt(ours)} of it waits for our own decision). " if ours else ". ")
                + (f"{fmt(under_review)} under review (not savings until the supplier agrees)." if under_review
                   else f"Everything claimed is authorised; {fmt(proposed)} proposed after the {fmt(applied)} deposit."))
     return Assessment(
@@ -552,6 +581,7 @@ def bundle_from_store(store: Store, invoice_id: str) -> InvoiceBundle:
         allocations=_sorted([a for d in deposits for a in store.rows("deposit_allocation", deposit_id=d["id"])]),
         attestations=_sorted(store.rows("receipt_attestation", invoice_id=invoice_id)),
         payee_profiles=_sorted(store.rows("payee_profile", supplier_id=inv["supplier_id"])),
+        authorities=sorted(store.rows("authority"), key=lambda a: (a["role"], str(a["identity"]))),
         document=one(store, "document", id=rev["document_id"]), others=others)
 
 

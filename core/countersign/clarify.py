@@ -59,7 +59,10 @@ def _point(b: InvoiceBundle, r: LineResult) -> str:
 
 
 def draft(b: InvoiceBundle, a: Assessment, contact: dict[str, Any]) -> tuple[str, str] | None:
-    """(subject, body), or None when there's nothing to ask."""
+    """(subject, body), or None when there's nothing to ask, or when a line still waits for our own
+    in-app decision (the supplier then gets one complete email once we've decided)."""
+    if any(r.awaiting_decision_by for r in a.lines):
+        return None
     disputed = [r for r in a.lines if r.variance_cents or r.pending_cents]
     if not disputed:
         return None

@@ -296,3 +296,27 @@ def test_a_line_naming_an_unread_change_waits_but_a_surprise_charge_is_recorded(
     waiting_line = next(l for l in s2.rows("invoice_line", revision_id=REV1_ID) if l["kind"] == "waiting")
     assert waiting_line["linked_change_request_id"] == ""
     assert "PROPOSED_CHARGE" in {h["code"] for h in s2.rows("hold", revision_id=REV1_ID)}
+
+
+def test_purchasing_approves_the_weekend_charge_after_the_invoice_arrives(tmp_path):
+    s = FakeStore()
+    seed_setup(s)
+    for doc in (QUOTE, PO, WEEKEND_1, WEEKEND_2, WEEKEND_3, WAITING_1):
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    assert R.record_deposit(s, "sync", DEPOSIT.id, PURCHASE_ID, BAYMIX.id, DEPOSIT.amount_cents, "settled", DEPOSIT.transfer_ref).ok
+    receive(s, INVOICE_R1, tmp_path)
+    worker.drain(s)
+    a = latest(s, REV1_ID)
+    assert a["variance_cents"] + a["pending_cents"] == 492_500  # $3,500 + $225 + $1,200 waiting for our decision
+    assert s.rows("invoice", id=INVOICE_ID)[0]["next_owner_role"] == "purchasing"
+    assert s.rows("outbox") == []  # nothing to the supplier while only we can decide
+
+    assert R.decide_change_request(s, "purchasing", WEEKEND_CR_ID, True, "Saturday pour requested by Granite Line").ok
+    worker.drain(s)  # the sweep reassesses: the decision changed an input
+    a = latest(s, REV1_ID)
+    assert a["variance_cents"] + a["pending_cents"] == 372_500  # $3,725 under review
+    ob = s.rows("outbox", id=KEY["clarification"]["outbox_id"])[0]
+    disputed = [ln for ln in ob["body"].splitlines() if ln[:2] in {"1.", "2.", "3."}]
+    assert len(disputed) == 2 and not any("Weekend" in ln for ln in disputed)
+    assert "These lines are correct: Weekend delivery, Saturday Oct 10 pour ($1,200.00)." in ob["body"]
