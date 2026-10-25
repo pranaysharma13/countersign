@@ -1,0 +1,94 @@
+{
+  "document_id": "doc_cb_inv_8802",
+  "document_kind": "invoice",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "supplier_name": {
+      "value": "Cedar & Bolt Lumber",
+      "quote": "Cedar & Bolt Lumber",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l1"
+      ]
+    },
+    "invoice_number": {
+      "value": "CB-8802",
+      "quote": "INVOICE CB-8802",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l3"
+      ]
+    },
+    "invoice_date": {
+      "value": "2026-10-22",
+      "quote": "Invoice date: 2026-10-22",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l4"
+      ]
+    },
+    "due_date": {
+      "value": "2026-11-06",
+      "quote": "Due date: 2026-11-06 (Net 15)",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l5"
+      ]
+    },
+    "po_number": {
+      "value": "MF-PO-1044",
+      "quote": "Your PO: MF-PO-1044    Quote: CBQ-880",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l8"
+      ]
+    },
+    "currency": {
+      "value": "USD",
+      "quote": "Gross amount: $4,180.00",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l13"
+      ]
+    },
+    "gross_cents": {
+      "value": 418000,
+      "quote": "Gross amount: $4,180.00",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l13"
+      ]
+    },
+    "balance_requested_cents": {
+      "value": 418000,
+      "quote": "Balance due: $4,180.00",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l14"
+      ]
+    },
+    "remit_account_last4": {
+      "value": "5531",
+      "quote": "Remit to: Cedar & Bolt Lumber, Redwood Merchant Bank, account ending 5531",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l17"
+      ]
+    },
+    "tax_cents": {
+      "value": null,
+      "missing_reason": "No tax line on this invoice; no tax rate is assumed."
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "CDX plywood 4x8 3/4 in.",
+      "quantity_milli": 200000,
+      "unit": "sheet",
+      "unit_price_cents": 2090,
+      "amount_cents": 418000,
+      "links": {
+        "term_code": "unit_price"
+      },
+      "quote": "1     CDX plywood 4x8 3/4 in.                     200.000  sheet $20.90        $4,180.00",
+      "fragments": [
+        "frag_cb_inv_8802_p1_l11"
+      ]
+    }
+  ]
+}

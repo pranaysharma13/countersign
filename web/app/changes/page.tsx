@@ -21,8 +21,8 @@ export default function Changes() {
     <div className="stack">
       <div className="head">
         <div>
-          <h1>Change requests</h1>
-          <p className="lede">Purchasing decides these in the app, within their limit. An email that says “approved” is never an approval. The requester cannot decide their own request.</p>
+          <h1>Price or extra-work asks</h1>
+          <p className="lede">The buyer decides these here, within their limit. An email that says “approved” does not count. The person who asked cannot decide their own ask.</p>
         </div>
       </div>
       <section className="sheet" aria-labelledby="open">

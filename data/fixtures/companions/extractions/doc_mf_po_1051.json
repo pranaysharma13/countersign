@@ -1,0 +1,74 @@
+{
+  "document_id": "doc_mf_po_1051",
+  "document_kind": "po",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "po_number": {
+      "value": "MF-PO-1051",
+      "quote": "PURCHASE ORDER MF-PO-1051",
+      "fragments": [
+        "frag_mf_po_1051_p1_l3"
+      ]
+    },
+    "po_date": {
+      "value": "2026-10-06",
+      "quote": "PO date: 2026-10-06",
+      "fragments": [
+        "frag_mf_po_1051_p1_l4"
+      ]
+    },
+    "supplier_name": {
+      "value": "Northline Rebar",
+      "quote": "Supplier: Northline Rebar, 410 Harbor Ave, Oakland, CA 94607",
+      "fragments": [
+        "frag_mf_po_1051_p1_l5"
+      ]
+    },
+    "project_name": {
+      "value": "Oakview Lane Fourplex",
+      "quote": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA",
+      "fragments": [
+        "frag_mf_po_1051_p1_l6"
+      ]
+    },
+    "not_to_exceed_cents": {
+      "value": 250000,
+      "quote": "PO total, not to exceed: $2,500.00",
+      "fragments": [
+        "frag_mf_po_1051_p1_l11"
+      ]
+    },
+    "incorporates_quote": {
+      "value": "NLQ-19",
+      "quote": "Terms: Northline Rebar Quote NLQ-19 and its Terms and Conditions of Sale.",
+      "fragments": [
+        "frag_mf_po_1051_p1_l12"
+      ]
+    },
+    "supplier_acknowledged_on": {
+      "value": "2026-10-06",
+      "quote": "Northline Rebar acknowledges and accepts purchase order MF-PO-1051 on the terms of Quote NLQ-19. Acknowledged by: Tomas Reed, Sales, Northline Rebar    Date: 2026-10-06",
+      "fragments": [
+        "frag_mf_po_1051_p1_l16",
+        "frag_mf_po_1051_p1_l17"
+      ]
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "Grade 60 rebar #5, cut and bent",
+      "quantity_milli": 2000,
+      "unit": "ton",
+      "unit_price_cents": 125000,
+      "amount_cents": 250000,
+      "quote": "1     Grade 60 rebar #5, cut and bent             2.000    ton   $1,250.00     $2,500.00",
+      "fragments": [
+        "frag_mf_po_1051_p1_l9"
+      ]
+    }
+  ]
+}

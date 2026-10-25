@@ -1,0 +1,94 @@
+{
+  "document_id": "doc_pf_inv_77",
+  "document_kind": "invoice",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "supplier_name": {
+      "value": "Peak Form Supply",
+      "quote": "Peak Form Supply",
+      "fragments": [
+        "frag_pf_inv_77_p1_l1"
+      ]
+    },
+    "invoice_number": {
+      "value": "PF-77",
+      "quote": "INVOICE PF-77",
+      "fragments": [
+        "frag_pf_inv_77_p1_l3"
+      ]
+    },
+    "invoice_date": {
+      "value": "2026-10-23",
+      "quote": "Invoice date: 2026-10-23",
+      "fragments": [
+        "frag_pf_inv_77_p1_l4"
+      ]
+    },
+    "due_date": {
+      "value": "2026-11-07",
+      "quote": "Due date: 2026-11-07 (Net 15)",
+      "fragments": [
+        "frag_pf_inv_77_p1_l5"
+      ]
+    },
+    "po_number": {
+      "value": "MF-PO-1084",
+      "quote": "Your PO: MF-PO-1084    Quote: PFQ-8",
+      "fragments": [
+        "frag_pf_inv_77_p1_l8"
+      ]
+    },
+    "currency": {
+      "value": "USD",
+      "quote": "Gross amount: $1,650.00",
+      "fragments": [
+        "frag_pf_inv_77_p1_l13"
+      ]
+    },
+    "gross_cents": {
+      "value": 165000,
+      "quote": "Gross amount: $1,650.00",
+      "fragments": [
+        "frag_pf_inv_77_p1_l13"
+      ]
+    },
+    "balance_requested_cents": {
+      "value": 165000,
+      "quote": "Balance due: $1,650.00",
+      "fragments": [
+        "frag_pf_inv_77_p1_l14"
+      ]
+    },
+    "remit_account_last4": {
+      "value": "4470",
+      "quote": "Remit to: Peak Form Supply, Summit Forms Bank, account ending 4470",
+      "fragments": [
+        "frag_pf_inv_77_p1_l17"
+      ]
+    },
+    "tax_cents": {
+      "value": null,
+      "missing_reason": "No tax line on this invoice; no tax rate is assumed."
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "Steel-faced form panel 2x8",
+      "quantity_milli": 30000,
+      "unit": "panel",
+      "unit_price_cents": 5500,
+      "amount_cents": 165000,
+      "links": {
+        "term_code": "unit_price"
+      },
+      "quote": "1     Steel-faced form panel 2x8                   30.000   panel $55.00        $1,650.00",
+      "fragments": [
+        "frag_pf_inv_77_p1_l11"
+      ]
+    }
+  ]
+}

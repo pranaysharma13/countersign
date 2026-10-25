@@ -32,7 +32,7 @@ export default function PurchaseRecord({ params }: { params: Promise<{ id: strin
     <div className="stack">
       <div className="head">
         <div>
-          <div className="small muted"><Link href="/">Work queue</Link> / {sup?.name}</div>
+          <div className="small muted"><Link href="/">Bills</Link> / {sup?.name}</div>
           <h1>{pur.po_number}: {pur.description}</h1>
           <p className="lede">{sup?.name} for {proj?.name ?? pur.project_id}. {valid ? `Prices fixed through ${day(valid.effective_to)}.` : ''}</p>
         </div>

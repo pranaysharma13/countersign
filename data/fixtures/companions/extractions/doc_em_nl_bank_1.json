@@ -1,0 +1,27 @@
+{
+  "document_id": "doc_em_nl_bank_1",
+  "document_kind": "email",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "subject": {
+      "value": "Updated remittance account for invoice NL-441",
+      "quote": "Please remit invoice NL-441 to our new Harbor Wire Bank account ending 7703.",
+      "fragments": [
+        "frag_em_nl_bank_1_p0_l3"
+      ]
+    },
+    "requested_last4": {
+      "value": "7703",
+      "quote": "Please remit invoice NL-441 to our new Harbor Wire Bank account ending 7703.",
+      "fragments": [
+        "frag_em_nl_bank_1_p0_l3"
+      ]
+    }
+  },
+  "change_requests": [],
+  "acceptances": [],
+  "internal_approval_claims": []
+}

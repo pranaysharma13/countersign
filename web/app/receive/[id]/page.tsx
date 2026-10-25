@@ -12,7 +12,7 @@ export default function Receive({ params }: { params: Promise<{ id: string }> })
   const { data: t, error } = useTables(TABLES);
   if (!t) return <Loading error={error} />;
   const inv = t.invoice.find(i => i.id === id);
-  if (!inv) return <div className="empty">No invoice {id}. Check the <Link href="/">work queue</Link>.</div>;
+  if (!inv) return <div className="empty">No bill {id}. Check the <Link href="/">bills list</Link>.</div>;
   const rev = t.invoice_revision.find(r => r.id === inv.active_revision_id);
   const sup = t.supplier.find(s => s.id === inv.supplier_id);
   const material = t.invoice_line.filter(l => l.revision_id === rev?.id && l.kind === 'material');
@@ -23,16 +23,15 @@ export default function Receive({ params }: { params: Promise<{ id: string }> })
       <div className="head">
         <div>
           <div className="small muted"><Link href={`/invoices/${id}`}>{sup?.name} · {inv.invoice_number}</Link></div>
-          <h1>Confirm receipt</h1>
+          <h1>Did this arrive?</h1>
           <p className="lede">
-            For the superintendent on site. This is a signed statement, labeled manually confirmed.
-            Countersign cannot prove what was delivered.
-            {billed > 0 && <> Billed on this invoice: <strong>{qty(billed, material[0]?.unit ?? 'cy')}</strong>.</>}
+            For someone on site.
+            {billed > 0 && <> They billed: <strong>{qty(billed, material[0]?.unit ?? 'cy')}</strong>.</>}
           </p>
         </div>
         <Status kind="receipt" value={inv.receipt_status} />
       </div>
-      <p className="next"><strong>Acting as {ROLE_LABEL.receiver}.</strong> Switch the demo persona to Luis Ortega before confirming.</p>
+      <p className="next"><strong>Switch to {ROLE_LABEL.receiver} (Luis Ortega)</strong> before you confirm.</p>
       <ReceiptForm inv={inv} rev={rev} t={t} />
     </div>
   );

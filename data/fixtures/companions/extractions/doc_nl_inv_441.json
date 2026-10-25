@@ -1,0 +1,94 @@
+{
+  "document_id": "doc_nl_inv_441",
+  "document_kind": "invoice",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "supplier_name": {
+      "value": "Northline Rebar",
+      "quote": "Northline Rebar",
+      "fragments": [
+        "frag_nl_inv_441_p1_l1"
+      ]
+    },
+    "invoice_number": {
+      "value": "NL-441",
+      "quote": "INVOICE NL-441",
+      "fragments": [
+        "frag_nl_inv_441_p1_l3"
+      ]
+    },
+    "invoice_date": {
+      "value": "2026-10-21",
+      "quote": "Invoice date: 2026-10-21",
+      "fragments": [
+        "frag_nl_inv_441_p1_l4"
+      ]
+    },
+    "due_date": {
+      "value": "2026-11-20",
+      "quote": "Due date: 2026-11-20 (Net 30)",
+      "fragments": [
+        "frag_nl_inv_441_p1_l5"
+      ]
+    },
+    "po_number": {
+      "value": "MF-PO-1051",
+      "quote": "Your PO: MF-PO-1051    Quote: NLQ-19",
+      "fragments": [
+        "frag_nl_inv_441_p1_l8"
+      ]
+    },
+    "currency": {
+      "value": "USD",
+      "quote": "Gross amount: $2,500.00",
+      "fragments": [
+        "frag_nl_inv_441_p1_l13"
+      ]
+    },
+    "gross_cents": {
+      "value": 250000,
+      "quote": "Gross amount: $2,500.00",
+      "fragments": [
+        "frag_nl_inv_441_p1_l13"
+      ]
+    },
+    "balance_requested_cents": {
+      "value": 250000,
+      "quote": "Balance due: $2,500.00",
+      "fragments": [
+        "frag_nl_inv_441_p1_l14"
+      ]
+    },
+    "remit_account_last4": {
+      "value": "4188",
+      "quote": "Remit to: Northline Rebar, Ridge Credit Union, account ending 4188",
+      "fragments": [
+        "frag_nl_inv_441_p1_l17"
+      ]
+    },
+    "tax_cents": {
+      "value": null,
+      "missing_reason": "No tax line on this invoice; no tax rate is assumed."
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "Grade 60 rebar #5, cut and bent",
+      "quantity_milli": 2000,
+      "unit": "ton",
+      "unit_price_cents": 125000,
+      "amount_cents": 250000,
+      "links": {
+        "term_code": "unit_price"
+      },
+      "quote": "1     Grade 60 rebar #5, cut and bent             2.000    ton   $1,250.00     $2,500.00",
+      "fragments": [
+        "frag_nl_inv_441_p1_l11"
+      ]
+    }
+  ]
+}

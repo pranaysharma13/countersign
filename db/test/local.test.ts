@@ -5,15 +5,18 @@ import { LocalBackend } from '../local/backend';
 test('BayMix demo clicks through to $73,700 settled with AP at $0', () => {
   const b = new LocalBackend();
   const s = () => b.state(['invoice', 'hold', 'proposal', 'payment', 'ledger_line', 'invoice_revision', 'outbox', 'assessment']) as any;
-  const openHolds = () => s().hold.filter((h: any) => h.status === 'open' && h.revision_id === s().invoice[0].active_revision_id).map((h: any) => h.code).sort();
+  const bm = () => s().invoice.find((i: any) => i.id === 'inv_bm23104');
+  const openHolds = () => s().hold.filter((h: any) => h.status === 'open' && h.revision_id === bm().active_revision_id).map((h: any) => h.code).sort();
 
-  expect(s().invoice[0]).toMatchObject({ id: 'inv_bm23104', invoice_number: 'BM-23104', commercial_status: 'differences_under_review', receipt_status: 'required', payee_status: 'verified' });
+  expect(bm()).toMatchObject({ id: 'inv_bm23104', invoice_number: 'BM-23104', commercial_status: 'differences_under_review', receipt_status: 'required', payee_status: 'verified' });
   expect(openHolds()).toEqual(['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'RECEIPT_NOT_VERIFIED']);
   expect(s().outbox[0].status).toBe('draft');
+  expect(s().invoice.map((i: any) => i.id).sort()).toEqual(
+    ['inv_bm23104', 'inv_cb8802', 'inv_hp220', 'inv_nl441', 'inv_pf77', 'inv_rh55', 'inv_vs310']);
 
   // Purchasing sends the clarification → simulated supplier sends a corrected invoice.
   expect(b.call('purchasing', 'approve_outbox', ['ob_bm23104_r1_clarify']).outcome).toBe('ok');
-  expect(s().invoice[0].active_revision_id).toBe('rev_bm23104_r2');
+  expect(bm().active_revision_id).toBe('rev_bm23104_r2');
   expect(openHolds()).toEqual(['RECEIPT_NOT_VERIFIED']);
 
   // Owner can't skip the receipt; the superintendent confirms it.
@@ -22,13 +25,13 @@ test('BayMix demo clicks through to $73,700 settled with AP at $0', () => {
   expect(b.call('receiver', 'attest_receipt', ['att_1', 'inv_bm23104', 'Pours Oct 5–22', 500000, 'cy', 'Checked against pour log']).outcome).toBe('ok');
 
   // The stand-in agent proposes $73,700; the owner approves with the fingerprint; the gateway settles.
-  const p = s().proposal.find((x: any) => x.kind === 'supplier_payment' && x.status === 'pending');
+  const p = s().proposal.find((x: any) => x.work_item_id === 'wi_inv_bm23104' && x.kind === 'supplier_payment' && x.status === 'pending');
   expect(p.amount_cents).toBe(7370000);
   const fp = s().assessment.find((a: any) => a.revision_id === 'rev_bm23104_r2').fingerprint;
   const r = b.call('owner', 'approve_supplier_payment', [p.id, fp, 'Approved']);
   expect(r.outcome, r.message).toBe('ok');
-  expect(s().invoice[0].payment_status).toBe('settled');
-  expect(s().payment[0].amount_cents).toBe(7370000);
+  expect(bm().payment_status).toBe('settled');
+  expect(s().payment.find((x: any) => x.id === p.id).amount_cents).toBe(7370000);
   const ap = s().ledger_line.filter((l: any) => l.account === 'accounts_payable').reduce((t: number, l: any) => t + l.credit_cents - l.debit_cents, 0);
   expect(ap).toBe(0);
   const cash = s().ledger_line.filter((l: any) => l.account === 'cash').reduce((t: number, l: any) => t + l.credit_cents - l.debit_cents, 0);
@@ -39,7 +42,7 @@ test('reset restores the opening state', () => {
   const b = new LocalBackend();
   b.call('purchasing', 'approve_outbox', ['ob_bm23104_r1_clarify']);
   b.reset();
-  expect((b.state(['invoice']) as any).invoice[0].active_revision_id).toBe('rev_bm23104_r1');
+  expect((b.state(['invoice']) as any).invoice.find((i: any) => i.id === 'inv_bm23104').active_revision_id).toBe('rev_bm23104_r1');
 });
 
 test('judge sneak opens a hold and does not pay', () => {
@@ -48,5 +51,5 @@ test('judge sneak opens a hold and does not pay', () => {
   expect(r.outcome, r.message).toBe('ok');
   const hold = (b.state(['hold']) as any).hold.find((h: any) => h.id === 'hold_job_sneak_1');
   expect(hold).toMatchObject({ code: 'PROMPT_INJECTION', status: 'open' });
-  expect((b.state(['invoice']) as any).invoice[0].payment_status).toBe('not_ready');
+  expect((b.state(['invoice']) as any).invoice.find((i: any) => i.id === 'inv_bm23104').payment_status).toBe('not_ready');
 });

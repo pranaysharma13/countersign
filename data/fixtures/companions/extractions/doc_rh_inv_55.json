@@ -1,0 +1,106 @@
+{
+  "document_id": "doc_rh_inv_55",
+  "document_kind": "invoice",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "supplier_name": {
+      "value": "Redline Haul",
+      "quote": "Redline Haul",
+      "fragments": [
+        "frag_rh_inv_55_p1_l1"
+      ]
+    },
+    "invoice_number": {
+      "value": "RH-55",
+      "quote": "INVOICE RH-55",
+      "fragments": [
+        "frag_rh_inv_55_p1_l3"
+      ]
+    },
+    "invoice_date": {
+      "value": "2026-10-22",
+      "quote": "Invoice date: 2026-10-22",
+      "fragments": [
+        "frag_rh_inv_55_p1_l4"
+      ]
+    },
+    "due_date": {
+      "value": "2026-11-06",
+      "quote": "Due date: 2026-11-06 (Net 15)",
+      "fragments": [
+        "frag_rh_inv_55_p1_l5"
+      ]
+    },
+    "po_number": {
+      "value": "MF-PO-1095",
+      "quote": "Your PO: MF-PO-1095    Quote: RHQ-14",
+      "fragments": [
+        "frag_rh_inv_55_p1_l8"
+      ]
+    },
+    "currency": {
+      "value": "USD",
+      "quote": "Gross amount: $4,740.00",
+      "fragments": [
+        "frag_rh_inv_55_p1_l14"
+      ]
+    },
+    "gross_cents": {
+      "value": 474000,
+      "quote": "Gross amount: $4,740.00",
+      "fragments": [
+        "frag_rh_inv_55_p1_l14"
+      ]
+    },
+    "balance_requested_cents": {
+      "value": 474000,
+      "quote": "Balance due: $4,740.00",
+      "fragments": [
+        "frag_rh_inv_55_p1_l15"
+      ]
+    },
+    "remit_account_last4": {
+      "value": "9021",
+      "quote": "Remit to: Redline Haul, Switchback Credit Union, account ending 9021",
+      "fragments": [
+        "frag_rh_inv_55_p1_l18"
+      ]
+    },
+    "tax_cents": {
+      "value": null,
+      "missing_reason": "No tax line on this invoice; no tax rate is assumed."
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "Dump truck haul 12-yard",
+      "quantity_milli": 12000,
+      "unit": "load",
+      "unit_price_cents": 38000,
+      "amount_cents": 456000,
+      "links": {
+        "term_code": "unit_price"
+      },
+      "quote": "1     Dump truck haul 12-yard                      12.000   load  $380.00       $4,560.00",
+      "fragments": [
+        "frag_rh_inv_55_p1_l11"
+      ]
+    },
+    {
+      "kind": "fuel",
+      "description": "Fuel surcharge",
+      "quantity_milli": 1000,
+      "unit": "ea",
+      "unit_price_cents": 18000,
+      "amount_cents": 18000,
+      "quote": "2     Fuel surcharge                               1.000    ea    $180.00       $180.00",
+      "fragments": [
+        "frag_rh_inv_55_p1_l12"
+      ]
+    }
+  ]
+}

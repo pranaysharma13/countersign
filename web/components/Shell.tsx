@@ -6,8 +6,8 @@ import { refreshAll } from '@/lib/client';
 
 const PERSONAS = [
   { id: 'owner', label: 'Dana Marlow, owner' },
-  { id: 'purchasing', label: 'Jordan Pike, purchasing' },
-  { id: 'receiver', label: 'Luis Ortega, superintendent' },
+  { id: 'purchasing', label: 'Jordan Pike, buyer' },
+  { id: 'receiver', label: 'Luis Ortega, site' },
   { id: 'bookkeeper', label: 'Sam Okafor, bookkeeper' },
 ];
 
@@ -46,32 +46,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   const nav = [
-    { href: '/', label: 'Work queue', on: path === '/' },
-    { href: '/invoices/inv_bm23104', label: 'Invoice BM-23104', on: path === '/invoices/inv_bm23104' },
-    { href: '/invoices/inv_bm23104/approve', label: 'Approval review', on: path.endsWith('/approve') },
-    { href: '/purchases/pur_baymix_oak', label: 'Purchase MF-PO-1031', on: path.startsWith('/purchases') },
-    { href: '/changes', label: 'Change requests', on: path.startsWith('/changes') },
-    { href: '/receive/inv_bm23104', label: 'Confirm receipt', on: path.startsWith('/receive') },
-    { href: '/sneak', label: 'Sneak a charge', on: path.startsWith('/sneak') },
+    { href: '/', label: 'Bills', on: path === '/' },
+    { href: '/sneak', label: 'Try a sneak charge', on: path.startsWith('/sneak') },
   ];
 
   return (
     <div className="shell">
       <aside className="side">
-        <Link href="/" className="brand">Countersign<small>Marlow &amp; Finch Builders</small></Link>
+        <Link href="/" className="brand">Countersign<small>Check supplier bills</small></Link>
         <nav className="nav" aria-label="Main">
           {nav.map(n => <Link key={n.href} href={n.href} aria-current={n.on ? 'page' : undefined}>{n.label}</Link>)}
         </nav>
         <div className="who">
-          {s && (
-            <div className="mode">
-              {s.mode === 'local'
-                ? <><strong>Local demo data.</strong> Agent, supplier and bank are simulated in this app.</>
-                : <><strong>Live.</strong> SpacetimeDB module; agent runs in the Python worker.</>}
-            </div>
-          )}
           <label className="f">
-            Acting as (demo mode)
+            I am
             <select value={s?.persona ?? 'owner'} onChange={e => post({ persona: e.target.value })}>
               {PERSONAS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
@@ -82,7 +70,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <button className="btn secondary" type="submit">Unlock</button>
             </form>
           )}
-          {s?.persona === 'owner' && <button className="btn secondary" onClick={reset}>{s.mode === 'live' ? 'Queue live reset' : 'Reset demo'}</button>}
+          {s?.persona === 'owner' && s.mode === 'local' && <button className="btn secondary" onClick={reset}>Start over</button>}
           {err && <div className="notice stop" role="alert">{err}</div>}
         </div>
       </aside>
