@@ -1,0 +1,23 @@
+{
+  "document_id": "doc_mf_po_1031",
+  "document_kind": "po",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "fields": {
+    "po_number": {"value": "MF-PO-1031", "quote": "PURCHASE ORDER MF-PO-1031", "fragments": ["frag_mf_po_1031_p1_l3"]},
+    "po_date": {"value": "2026-10-01", "quote": "PO date: 2026-10-01", "fragments": ["frag_mf_po_1031_p1_l4"]},
+    "supplier_name": {"value": "BayMix Supply", "quote": "Supplier: BayMix Supply", "fragments": ["frag_mf_po_1031_p1_l5"]},
+    "project_name": {"value": "Oakview Lane Fourplex", "quote": "Project: Oakview Lane Fourplex", "fragments": ["frag_mf_po_1031_p1_l6"]},
+    "not_to_exceed_cents": {"value": 8250000, "quote": "PO total, not to exceed: $82,500.00", "fragments": ["frag_mf_po_1031_p1_l11"]},
+    "incorporates_quote": {"value": "BMQ-4417", "quote": "Terms: BayMix Quote BMQ-4417 and its Terms and Conditions of Sale.", "fragments": ["frag_mf_po_1031_p1_l12"]},
+    "supplier_acknowledged_on": {"value": "2026-10-01", "quote": "BayMix Supply acknowledges and accepts purchase order MF-PO-1031 on the terms of Quote BMQ-4417. Acknowledged by: Rosa Delgado, Sales Manager, BayMix Supply Date: 2026-10-01", "fragments": ["frag_mf_po_1031_p1_l18", "frag_mf_po_1031_p1_l19"]}
+  },
+  "lines": [
+    {"kind": "material", "description": "Ready-mix concrete 4,000 psi, mix BM-40-34", "quantity_milli": 500000, "unit": "cy",
+     "unit_price_cents": 16500, "amount_cents": 8250000,
+     "quote": "1 Ready-mix concrete 4,000 psi, mix BM-40-34 500.000 cy $165.00 $82,500.00",
+     "fragments": ["frag_mf_po_1031_p1_l9"]}
+  ],
+  "instructions_found": []
+}

@@ -1,0 +1,34 @@
+{
+  "document_id": "doc_bm_inv_23104_r2",
+  "document_kind": "invoice",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "fields": {
+    "supplier_name": {"value": "BayMix Supply", "quote": "BayMix Supply", "fragments": ["frag_bm_inv_23104_r2_p1_l1"]},
+    "invoice_number": {"value": "BM-23104", "quote": "CORRECTED INVOICE BM-23104 (REVISION 2)", "fragments": ["frag_bm_inv_23104_r2_p1_l3"]},
+    "revision": {"value": 2, "quote": "(REVISION 2)", "fragments": ["frag_bm_inv_23104_r2_p1_l3"]},
+    "invoice_date": {"value": "2026-10-23", "quote": "Invoice date: 2026-10-23", "fragments": ["frag_bm_inv_23104_r2_p1_l5"]},
+    "due_date": {"value": "2026-11-22", "quote": "Due date: 2026-11-22 (Net 30)", "fragments": ["frag_bm_inv_23104_r2_p1_l6"]},
+    "po_number": {"value": "MF-PO-1031", "quote": "Your PO: MF-PO-1031", "fragments": ["frag_bm_inv_23104_r2_p1_l9"]},
+    "currency": {"value": "USD", "quote": "Gross amount: $83,700.00", "fragments": ["frag_bm_inv_23104_r2_p1_l15"]},
+    "gross_cents": {"value": 8370000, "quote": "Gross amount: $83,700.00", "fragments": ["frag_bm_inv_23104_r2_p1_l15"]},
+    "deposit_shown_cents": {"value": 1000000, "quote": "Less deposit received: $10,000.00", "fragments": ["frag_bm_inv_23104_r2_p1_l16"]},
+    "balance_requested_cents": {"value": 7370000, "quote": "Balance due: $73,700.00", "fragments": ["frag_bm_inv_23104_r2_p1_l17"]},
+    "delivery_period": {"value": {"from": "2026-10-05", "to": "2026-10-22"}, "quote": "Deliveries: 2026-10-05 through 2026-10-22", "fragments": ["frag_bm_inv_23104_r2_p1_l20"]},
+    "remit_account_last4": {"value": "2290", "quote": "account ending 2290", "fragments": ["frag_bm_inv_23104_r2_p1_l21"]},
+    "supersedes": {"value": {"invoice_number": "BM-23104", "invoice_date": "2026-10-23"}, "quote": "This corrected invoice supersedes invoice BM-23104 dated 2026-10-23.", "fragments": ["frag_bm_inv_23104_r2_p1_l4"]},
+    "tax_cents": {"value": null, "missing_reason": "No tax line on this invoice; no tax rate is assumed."}
+  },
+  "lines": [
+    {"kind": "material", "description": "Ready-mix concrete 4,000 psi, mix BM-40-34", "quantity_milli": 500000, "unit": "cy",
+     "unit_price_cents": 16500, "amount_cents": 8250000, "links": {"term_code": "unit_price"},
+     "quote": "1 Ready-mix concrete 4,000 psi, mix BM-40-34 500.000 cy $165.00 $82,500.00",
+     "fragments": ["frag_bm_inv_23104_r2_p1_l12"]},
+    {"kind": "extra", "description": "Weekend delivery, Saturday Oct 10 pour", "quantity_milli": 1000, "unit": "ea",
+     "unit_price_cents": 120000, "amount_cents": 120000, "links": {"change_request_ref": "baymix_weekend_oct10"},
+     "quote": "2 Weekend delivery, Saturday Oct 10 pour 1.000 ea $1,200.00 $1,200.00",
+     "fragments": ["frag_bm_inv_23104_r2_p1_l13"]}
+  ],
+  "instructions_found": []
+}

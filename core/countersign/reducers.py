@@ -281,3 +281,56 @@ def record_supplier_acceptance(s: Store, role: str, change_request_id: str, supp
 
 def decide_change_request(s: Store, role: str, id: str, approve: bool, note: str = "") -> Result:
     return s.call(role, "decide_change_request", id, approve, note)
+
+
+# 9.4 Invoices and assessment
+def record_invoice(
+    s: Store, role: str, id: str, supplier_id: str, purchase_id: str, invoice_number: str, invoice_date: str,
+    due_date: str, currency: str = "USD",
+) -> Result:
+    return s.call(role, "record_invoice", id, supplier_id, purchase_id, invoice_number, invoice_date, due_date, currency)
+
+
+def record_invoice_revision(
+    s: Store, role: str, id: str, invoice_id: str, revision: int, document_id: str, gross_cents: int,
+    deposit_shown_cents: int, balance_requested_cents: int, supersedes_revision_id: str = "",
+) -> Result:
+    return s.call(role, "record_invoice_revision", id, invoice_id, revision, document_id, gross_cents, deposit_shown_cents,
+                  balance_requested_cents, supersedes_revision_id)
+
+
+def record_invoice_line(
+    s: Store, role: str, id: str, revision_id: str, kind: str, description: str, quantity_milli: int, unit: str,
+    unit_price_cents: int, amount_cents: int, linked_term_id: str, linked_change_request_id: str, source_fragment_ids: Any,
+) -> Result:
+    return s.call(role, "record_invoice_line", id, revision_id, kind, description, quantity_milli, unit, unit_price_cents,
+                  amount_cents, linked_term_id, linked_change_request_id, _j(source_fragment_ids))
+
+
+def record_assessment(
+    s: Store, id: str, revision_id: str, version: int, fingerprint: str, policy_version: str, claimed_cents: int,
+    authorised_cents: int, pending_cents: int, variance_cents: int, deposit_available_cents: int,
+    proposed_payment_cents: int, commercial_status: str, summary: str, details: Any, next_action: str,
+) -> Result:
+    return s.call("agent", "record_assessment", id, revision_id, version, fingerprint, policy_version, claimed_cents,
+                  authorised_cents, pending_cents, variance_cents, deposit_available_cents, proposed_payment_cents,
+                  commercial_status, summary, _j(details), next_action)
+
+
+def open_hold(s: Store, role: str, id: str, revision_id: str, code: str, amount_cents: int, reason: str, evidence: Any) -> Result:
+    return s.call(role, "open_hold", id, revision_id, code, amount_cents, reason, _j(evidence))
+
+
+def resolve_hold(s: Store, role: str, id: str, note: str) -> Result:
+    return s.call(role, "resolve_hold", id, note)
+
+
+# 9.4 People in the loop
+def attest_receipt(
+    s: Store, id: str, invoice_id: str, scope: str, quantity_milli: int, unit: str, reason: str, role: str = "receiver",
+) -> Result:
+    return s.call(role, "attest_receipt", id, invoice_id, scope, quantity_milli, unit, reason)
+
+
+def decide_payee_profile(s: Store, role: str, id: str, approve: bool, verified_via_contact_id: str, note: str = "") -> Result:
+    return s.call(role, "decide_payee_profile", id, approve, verified_via_contact_id, note)
