@@ -23,6 +23,11 @@ from .store import Result, Store, dumps, one
 from .supplier_docs import normalize_ws
 
 FIXTURE_DIR = DATA_DIR / "fixtures" / "baymix_primary" / "extractions"
+
+
+class NotYet(RuntimeError):
+    """Something this document depends on isn't on file yet (its purchase, the proposal it accepts...).
+    The job fails and the module retries it; when retries run out, the document goes to review."""
 EVIDENCE_LISTS = ("terms", "lines", "change_requests", "acceptances", "internal_approval_claims")
 
 
@@ -165,6 +170,11 @@ def record_email_extraction(store: Store, ext: dict[str, Any], purchase_id: str)
     if problems:
         raise ValueError(f"{ext['document_id']}: evidence problems: {problems}")
     msg = one(store, "email_message", document_id=ext["document_id"]) or {}
+    proposed_here = {change_request_id(cr["ref"]) for cr in ext.get("change_requests", [])}
+    for acc in ext.get("acceptances", []):
+        cr_id = change_request_id(acc["ref"])
+        if cr_id not in proposed_here and one(store, "change_request", id=cr_id) is None:
+            raise NotYet(f"{cr_id} isn't on file yet: the email proposing it hasn't been read")
     for cr in ext.get("change_requests", []):
         _ok(R.propose_change_request(store, "agent", change_request_id(cr["ref"]), purchase_id, cr["kind"], cr["description"],
                                      cr["amount_cents"], cr["rate_cents"], cr["rate_unit"], cr.get("scope", {}),
@@ -187,6 +197,10 @@ def record_invoice_extraction(store: Store, ext: dict[str, Any], purchase_id: st
     v = values(ext)
     purchase = one(store, "purchase", id=purchase_id)
     assert purchase is not None
+    named = {change_request_id(l["links"]["change_request_ref"]) for l in ext["lines"] if l.get("links", {}).get("change_request_ref")}
+    missing = sorted(cr for cr in named if one(store, "change_request", id=cr) is None)
+    if missing:  # a line names a change we haven't read yet; a line naming none is recorded unlinked (a surprise charge)
+        raise NotYet(f"invoice lines name {', '.join(missing)}, not on file yet")
     number = str(v["invoice_number"])
     already = one(store, "invoice_revision", document_id=ext["document_id"])
     if already is not None:  # this very document was recorded before (a retried job): same ids, lines topped up below
@@ -213,8 +227,6 @@ def record_invoice_extraction(store: Store, ext: dict[str, Any], purchase_id: st
         links = line.get("links", {})
         term = term_id(purchase_id, links["term_code"]) if links.get("term_code") else ""
         cr = change_request_id(links["change_request_ref"]) if links.get("change_request_ref") else ""
-        if cr and one(store, "change_request", id=cr) is None:
-            cr = ""  # linked to something we never recorded: the assessment treats it as unagreed
         _ok(R.record_invoice_line(store, "agent", f"ln_{revision_id.removeprefix('rev_')}_{i}", revision_id, line["kind"],
                                   line["description"], line["quantity_milli"], line["unit"], line["unit_price_cents"],
                                   line["amount_cents"], term, cr, line["fragments"]), f"line {i}")

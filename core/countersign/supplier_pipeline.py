@@ -15,15 +15,14 @@ from . import reducers as R
 from .clarify import record_draft
 from .commercial import Assessment, assess, bundle_from_store, record
 from .config import settings
-from .extractions import (find_fixture, purchase_id_for, record_email_extraction, record_invoice_extraction,
+from .extractions import (NotYet, find_fixture, purchase_id_for, record_email_extraction, record_invoice_extraction,
                           record_purchase, validated, values)
 from .ids import hold_id, sha8
 from .money import fmt
 from .store import Store, one
 
 
-class NotYet(RuntimeError):
-    """A transient gap (e.g. the purchase isn't on file yet): the job fails and the module retries it."""
+__all__ = ["NotYet", "process_document", "reassess", "reassess_stale", "send_outbox", "give_up_document"]
 
 
 def ai_mode() -> str:
@@ -34,19 +33,18 @@ def _step(store: Store, invoice_id: str, kind: str, title: str, detail: Any = No
     R.log_agent_step(store, f"wi_{invoice_id}", kind, title, detail or {})
 
 
-def _run_failed(store: Store, document_id: str, error: str) -> None:
-    R.record_extraction_run(store, f"run_{document_id.removeprefix('doc_')}_failed_{sha8(error)}", document_id,
-                            ai_mode(), "none", "", "failed", error, {})
+def needs_review(store: Store, document_id: str, reason: str) -> dict[str, Any]:
+    """Put the document in front of a person: an `invalid` run sets document.status = needs_review
+    (the module and the reference agree on that), with the reason as its error."""
+    R.record_extraction_run(store, f"run_{document_id.removeprefix('doc_')}_review_{sha8(reason)}", document_id,
+                            ai_mode(), "none", "", "invalid", f"Needs review: {reason}", {})
+    return {"document_id": document_id, "status": "needs_review", "reason": reason}
 
 
 def _extraction(store: Store, document_id: str) -> dict[str, Any] | None:
     if ai_mode() != "fixture":
-        _run_failed(store, document_id, "Live extraction arrives in step C; set AI_MODE=fixture.")
         return None
-    ext = find_fixture(document_id)
-    if ext is None:
-        _run_failed(store, document_id, "No labelled extraction for this document (AI_MODE=fixture). A person needs to review it.")
-    return ext
+    return find_fixture(document_id)
 
 
 def _ok_runs(store: Store, kind: str) -> list[dict[str, Any]]:
@@ -82,7 +80,7 @@ def _email(store: Store, ext: dict[str, Any]) -> dict[str, Any]:
     domains = [_domain(msg.get("from_address", ""))] + [_domain(a) for a in msg.get("to_addresses", "").split(",")]
     supplier = next((s for d in domains for s in store.rows("supplier") if d and s["email_domain"] == d), None)
     if supplier is None:
-        return {"status": "needs_review", "reason": "the email isn't from or to a supplier on file"}
+        return needs_review(store, ext["document_id"], "the email isn't from or to a supplier on file")
     if not ext.get("change_requests") and not ext.get("acceptances"):
         claims = ext.get("internal_approval_claims", [])
         return {"status": "nothing_to_record", "ignored_approval_claims": len(claims)}
@@ -90,7 +88,8 @@ def _email(store: Store, ext: dict[str, Any]) -> dict[str, Any]:
     if not open_:
         raise NotYet(f"no purchase on file yet for {supplier['name']}")
     if len(open_) > 1:
-        return {"status": "needs_review", "reason": f"{supplier['name']} has {len(open_)} open purchases; a person links this email"}
+        return needs_review(store, ext["document_id"],
+                            f"{supplier['name']} has {len(open_)} open purchases; a person decides which one this email is about")
     claims = record_email_extraction(store, ext, open_[0]["id"])
     return {"status": "recorded", "purchase_id": open_[0]["id"], "change_requests": len(ext.get("change_requests", [])),
             "acceptances": len(ext.get("acceptances", [])), "ignored_approval_claims": len(claims)}
@@ -99,8 +98,12 @@ def _email(store: Store, ext: dict[str, Any]) -> dict[str, Any]:
 def _invoice(store: Store, ext: dict[str, Any]) -> dict[str, Any]:
     po_number = values(ext).get("po_number")
     matches = [p for p in store.rows("purchase") if p["po_number"] == po_number] if po_number else []
-    if len(matches) != 1:
-        return {"status": "needs_review", "reason": f"no single purchase with PO number {po_number!r}; never guessed"}
+    if not po_number:
+        return needs_review(store, ext["document_id"], "the invoice shows no PO number; it's never linked by guesswork")
+    if not matches:
+        raise NotYet(f"no purchase with PO number {po_number} on file yet")
+    if len(matches) > 1:
+        return needs_review(store, ext["document_id"], f"{len(matches)} purchases have PO number {po_number}")
     invoice_id, revision_id = record_invoice_extraction(store, ext, matches[0]["id"])
     _step(store, invoice_id, "plan", f"Read {ext['document_id']} ({ext.get('mode', 'live')} extraction) and linked it to "
           f"PO {po_number}", {"revision_id": revision_id, "label": ext.get("label", "")})
@@ -112,19 +115,21 @@ def process_document(store: Store, document_id: str) -> dict[str, Any]:
         return {"status": "needs_review", "reason": f"unknown document {document_id}"}
     ext = _extraction(store, document_id)
     if ext is None:
-        return {"document_id": document_id, "status": "needs_review", "mode": ai_mode()}
+        return needs_review(store, document_id, "no labelled extraction for this document (AI_MODE=fixture)"
+                            if ai_mode() == "fixture" else "live extraction isn't available")
     problems = validated(store, ext)
     if problems:  # nothing from an extraction with bad evidence is recorded
         return {"document_id": document_id, "status": "needs_review", "problems": problems}
     handler = {"quote": _purchase, "po": _purchase, "email": _email, "invoice": _invoice}.get(ext["document_kind"])
     if handler is None:
-        return {"document_id": document_id, "status": "needs_review", "reason": f"unhandled kind {ext['document_kind']}"}
+        return needs_review(store, document_id, f"a {ext['document_kind']} document isn't something Countersign records")
     return {"document_id": document_id, **handler(store, ext)}
 
 
 def give_up_document(store: Store, document_id: str, error: str) -> None:
-    """Out of retries: the document is failed, and an invoice revision it backs goes to extraction review."""
-    _run_failed(store, document_id, f"Gave up after retries: {error}")
+    """Out of retries, whatever the document type: it goes to review, and an invoice revision it backs
+    gets EXTRACTION_REVIEW."""
+    needs_review(store, document_id, f"gave up after retries ({error})")
     for rev in store.rows("invoice_revision", document_id=document_id, status="active"):
         R.open_hold(store, "agent", hold_id(rev["id"], "EXTRACTION_REVIEW"), rev["id"], "EXTRACTION_REVIEW", 0,
                     f"Reading this document failed after retries ({error}). A person needs to check it.", {"document_id": document_id})

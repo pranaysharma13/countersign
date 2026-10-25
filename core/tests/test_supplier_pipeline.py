@@ -109,7 +109,7 @@ def test_a_file_without_a_labelled_extraction_goes_to_review(tmp_path):
     doc_id = intake.ingest(s, "scan.pdf", pdf, files_dir=tmp_path)
     assert doc_id.startswith("doc_") and s.rows("source_fragment", document_id=doc_id)  # cut into line fragments
     worker.drain(s)
-    assert s.rows("document", id=doc_id)[0]["status"] == "failed"
+    assert s.rows("document", id=doc_id)[0]["status"] == "needs_review"
     assert json.loads(s.rows("job", id=intake.job_id(doc_id))[0]["result_json"])["status"] == "needs_review"
     assert s.rows("invoice") == []  # nothing guessed, nothing payable
 
@@ -164,7 +164,7 @@ def test_a_crash_midway_is_retried_without_duplicates(tmp_path, monkeypatch):
 def test_out_of_retries_puts_the_invoice_in_front_of_a_person(tmp_path, monkeypatch):
     s = FakeStore()
     seed_setup(s)
-    for doc in (QUOTE, PO):
+    for doc in (QUOTE, PO, WEEKEND_1, WEEKEND_3, WAITING_1):
         receive(s, doc, tmp_path)
         worker.drain(s)
 
@@ -179,7 +179,7 @@ def test_out_of_retries_puts_the_invoice_in_front_of_a_person(tmp_path, monkeypa
         worker.drain(s)
     job = s.rows("job", id=intake.job_id(INVOICE_R1.id))[0]
     assert (job["status"], job["attempts"]) == ("failed", 3)
-    assert s.rows("document", id=INVOICE_R1.id)[0]["status"] == "failed"
+    assert s.rows("document", id=INVOICE_R1.id)[0]["status"] == "needs_review"
     review = s.rows("hold", id=hold_id(REV1_ID, "EXTRACTION_REVIEW"))[0]
     assert review["status"] == "open" and "assessment store unreachable" in review["reason"]
 
@@ -198,3 +198,125 @@ def test_an_email_before_its_purchase_waits_and_retries(tmp_path):
     worker.drain(s)
     assert s.rows("job", id=intake.job_id(WEEKEND_1.id))[0]["status"] == "done"
     assert s.rows("change_request", id=WEEKEND_CR_ID)
+
+
+def run_out_of_retries(s):
+    for wait in (0, 10, 20):
+        s.advance(wait)
+        worker.drain(s)
+
+
+def test_an_invoice_before_its_po_waits_then_links(tmp_path):
+    s = FakeStore()
+    seed_setup(s)
+    receive(s, INVOICE_R1, tmp_path)
+    worker.drain(s)
+    job = s.rows("job", id=intake.job_id(INVOICE_R1.id))[0]
+    assert job["status"] == "queued" and "no purchase with PO number MF-PO-1031" in job["error"]
+    for doc in (QUOTE, PO, WEEKEND_1, WEEKEND_3, WAITING_1):
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    s.advance(10)
+    worker.drain(s)
+    assert s.rows("job", id=intake.job_id(INVOICE_R1.id))[0]["status"] == "done"
+    assert s.rows("invoice", id=INVOICE_ID)
+
+
+@pytest.mark.parametrize("doc", [INVOICE_R1, WEEKEND_1], ids=["invoice", "email"])
+def test_out_of_retries_leaves_any_document_visibly_needing_review(doc, tmp_path):
+    s = FakeStore()
+    seed_setup(s)
+    receive(s, doc, tmp_path)  # its purchase never arrives
+    run_out_of_retries(s)
+    assert s.rows("job", id=intake.job_id(doc.id))[0]["status"] == "failed"
+    assert s.rows("document", id=doc.id)[0]["status"] == "needs_review"
+    review = max(s.rows("extraction_run", document_id=doc.id, status="invalid"), key=lambda r: r["id"])
+    assert "gave up after retries" in review["error"] and "NotYet" in review["error"]
+
+
+def test_an_acceptance_before_its_proposal_waits(tmp_path):
+    s = FakeStore()
+    seed_setup(s)
+    for doc in (QUOTE, PO, WEEKEND_3):  # BayMix's confirmation is read before its proposal
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    job = s.rows("job", id=intake.job_id(WEEKEND_3.id))[0]
+    assert job["status"] == "queued" and f"{WEEKEND_CR_ID} isn't on file yet" in job["error"]
+    receive(s, WEEKEND_1, tmp_path)
+    worker.drain(s)
+    s.advance(10)
+    worker.drain(s)
+    assert s.rows("change_request", id=WEEKEND_CR_ID)[0]["supplier_acceptance"] == "accepted"
+
+
+def test_an_email_with_two_open_purchases_needs_review(tmp_path):
+    s = FakeStore()
+    seed_setup(s)
+    for doc in (QUOTE, PO):
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    assert R.upsert_purchase(s, "sync", "pur_baymix_other", BAYMIX.id, "prj_oak", "Grout", "cy", "MF-PO-2000", "", "").ok
+    receive(s, WEEKEND_1, tmp_path)
+    worker.drain(s)
+    assert s.rows("document", id=WEEKEND_1.id)[0]["status"] == "needs_review"
+    assert s.rows("change_request") == []  # never linked by guesswork
+
+
+def test_a_line_naming_an_unread_change_waits_but_a_surprise_charge_is_recorded(tmp_path, monkeypatch):
+    s = FakeStore()
+    seed_setup(s)
+    for doc in (QUOTE, PO, WEEKEND_1, WEEKEND_3):  # the waiting-charge email hasn't been read yet
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    receive(s, INVOICE_R1, tmp_path)
+    worker.drain(s)
+    assert "cr_baymix_waiting" in s.rows("job", id=intake.job_id(INVOICE_R1.id))[0]["error"]
+    receive(s, WAITING_1, tmp_path)
+    worker.drain(s)
+    s.advance(10)
+    worker.drain(s)
+    waiting_line = next(l for l in s.rows("invoice_line", revision_id=REV1_ID) if l["kind"] == "waiting")
+    assert waiting_line["linked_change_request_id"] == WAITING_CR_ID
+
+    # A charge the extraction links to no change at all is a surprise charge: recorded unlinked, disputed.
+    s2 = FakeStore()
+    seed_setup(s2)
+    real = extractions.find_fixture
+
+    def no_link(document_id, *a):
+        ext = copy.deepcopy(real(document_id, *a))
+        if ext and ext["document_kind"] == "invoice":
+            ext["lines"][2]["links"] = {}
+        return ext
+
+    monkeypatch.setattr(supplier_pipeline, "find_fixture", no_link)
+    for doc in (QUOTE, PO, WEEKEND_1, WEEKEND_3, INVOICE_R1):
+        receive(s2, doc, tmp_path)
+        worker.drain(s2)
+    waiting_line = next(l for l in s2.rows("invoice_line", revision_id=REV1_ID) if l["kind"] == "waiting")
+    assert waiting_line["linked_change_request_id"] == ""
+    assert "PROPOSED_CHARGE" in {h["code"] for h in s2.rows("hold", revision_id=REV1_ID)}
+
+
+def test_purchasing_approves_the_weekend_charge_after_the_invoice_arrives(tmp_path):
+    s = FakeStore()
+    seed_setup(s)
+    for doc in (QUOTE, PO, WEEKEND_1, WEEKEND_2, WEEKEND_3, WAITING_1):
+        receive(s, doc, tmp_path)
+        worker.drain(s)
+    assert R.record_deposit(s, "sync", DEPOSIT.id, PURCHASE_ID, BAYMIX.id, DEPOSIT.amount_cents, "settled", DEPOSIT.transfer_ref).ok
+    receive(s, INVOICE_R1, tmp_path)
+    worker.drain(s)
+    a = latest(s, REV1_ID)
+    assert a["variance_cents"] + a["pending_cents"] == 492_500  # $3,500 + $225 + $1,200 waiting for our decision
+    assert s.rows("invoice", id=INVOICE_ID)[0]["next_owner_role"] == "purchasing"
+    assert s.rows("outbox") == []  # nothing to the supplier while only we can decide
+
+    assert R.decide_change_request(s, "purchasing", WEEKEND_CR_ID, True, "Saturday pour requested by Granite Line").ok
+    worker.drain(s)  # the sweep reassesses: the decision changed an input
+    a = latest(s, REV1_ID)
+    assert a["variance_cents"] + a["pending_cents"] == 372_500  # $3,725 under review
+    ob = s.rows("outbox", id=KEY["clarification"]["outbox_id"])[0]
+    disputed = [ln for ln in ob["body"].splitlines() if ln[:2] in {"1.", "2.", "3."}]
+    assert len(disputed) == 2 and not any("Weekend" in ln for ln in disputed)
+    assert "These lines are correct: Weekend delivery, Saturday Oct 10 pour ($1,200.00)." in ob["body"]

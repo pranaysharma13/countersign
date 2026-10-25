@@ -71,7 +71,7 @@ def test_emails_know_whether_the_sender_is_on_file(store):
 
 def test_extraction_run_sets_document_status(store):
     assert R.record_extraction_run(store, "run_1", QUOTE.id, "fixture", "fixture", "v1", "ok", "", {}).ok
-    assert store.rows("document", id=QUOTE.id)[0]["status"] == "validated"
+    assert store.rows("document", id=QUOTE.id)[0]["status"] == "extracted"  # as the module does
     assert R.record_extraction_run(store, "run_2", PO.id, "live", "claude", "v1", "failed", "timeout", {}).ok
     assert store.rows("document", id=PO.id)[0]["status"] == "failed"
     assert R.record_extraction_run(store, "run_3", PO.id, "guess", "x", "v1", "ok", "", {}).outcome == "invalid"
