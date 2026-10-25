@@ -1,0 +1,44 @@
+{
+  "scenario": "baymix_primary",
+  "note": "Ground truth for tests and the scorecard (SPEC §8-9). Never an input to extraction or assessment. Money in integer cents, quantities in thousandths.",
+  "labelled_fields": {
+    "doc_bm_quote": {"quote_number": "BMQ-4417", "unit": "cy", "unit_price_cents": 16500, "max_quantity_milli": 500000,
+                     "valid_from": "2026-10-01", "valid_through": "2026-10-31", "deposit_cents": 1000000,
+                     "has_price_change_rule": true, "has_fuel_surcharge_rule": true},
+    "doc_mf_po_1031": {"po_number": "MF-PO-1031", "not_to_exceed_cents": 8250000, "incorporates_quote": "BMQ-4417",
+                       "supplier_acknowledged_on": "2026-10-01"},
+    "doc_bm_inv_23104_r1": {"invoice_number": "BM-23104", "invoice_date": "2026-10-23", "po_number": "MF-PO-1031",
+                            "gross_cents": 8742500, "deposit_shown_cents": 1000000, "balance_requested_cents": 7742500,
+                            "lines": [{"kind": "material", "quantity_milli": 500000, "unit": "cy", "unit_price_cents": 17200, "amount_cents": 8600000},
+                                      {"kind": "extra", "quantity_milli": 1000, "unit": "ea", "unit_price_cents": 120000, "amount_cents": 120000},
+                                      {"kind": "waiting", "quantity_milli": 90000, "unit": "min", "unit_price_cents": 250, "amount_cents": 22500}]},
+    "doc_bm_inv_23104_r2": {"invoice_number": "BM-23104", "supersedes": "BM-23104", "gross_cents": 8370000,
+                            "deposit_shown_cents": 1000000, "balance_requested_cents": 7370000,
+                            "lines": [{"kind": "material", "quantity_milli": 500000, "unit": "cy", "unit_price_cents": 16500, "amount_cents": 8250000},
+                                      {"kind": "extra", "quantity_milli": 1000, "unit": "ea", "unit_price_cents": 120000, "amount_cents": 120000}]}
+  },
+  "change_requests": {
+    "cr_baymix_weekend_oct10": {"classification": "AUTHORISED_FIXED", "amount_cents": 120000, "supplier_acceptance": "accepted",
+                                "approved_in_app_by": "purchasing"},
+    "cr_baymix_waiting": {"classification": "PROPOSED", "supplier_acceptance": "proposed", "rate_cents": null,
+                          "rate_missing_reason": "no rate or usage stated"}
+  },
+  "revision_1": {
+    "claimed_cents": 8742500, "balance_requested_cents": 7742500,
+    "authorised_cents": 8370000, "variance_cents": 350000, "pending_cents": 22500, "under_review_cents": 372500,
+    "deposit_available_cents": 1000000, "proposed_payment_cents": 0, "conditional_payment_cents": 7370000,
+    "commercial_status": "differences_under_review",
+    "holds": {"PRICE_VARIANCE": 350000, "PROPOSED_CHARGE": 22500, "RECEIPT_NOT_VERIFIED": 0},
+    "lines": {"material": "variance", "extra": "accepted", "waiting": "pending"}
+  },
+  "revision_2": {
+    "claimed_cents": 8370000, "balance_requested_cents": 7370000,
+    "authorised_cents": 8370000, "variance_cents": 0, "pending_cents": 0, "under_review_cents": 0,
+    "deposit_available_cents": 1000000, "proposed_payment_cents": 7370000,
+    "commercial_status": "matches",
+    "holds_before_receipt": {"RECEIPT_NOT_VERIFIED": 0},
+    "holds_after_receipt": {}
+  },
+  "settlement": {"deposit_cents": 1000000, "bill_posted_cents": 8370000, "settled_cents": 7370000,
+                 "accounts_payable_end_cents": 0, "supplier_prepayment_end_cents": 0, "cash_out_cents": 8370000}
+}

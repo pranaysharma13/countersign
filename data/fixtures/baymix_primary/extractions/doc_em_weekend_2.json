@@ -1,0 +1,15 @@
+{
+  "document_id": "doc_em_weekend_2",
+  "document_kind": "email",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "email": {"message_id": "em_weekend_2", "thread_id": "thr_weekend"},
+  "change_requests": [],
+  "acceptances": [],
+  "internal_approval_claims": [
+    {"ref": "baymix_weekend_oct10", "quote": "I've approved it on our side.", "fragments": ["frag_em_weekend_2_p0_l4"],
+     "note": "An email saying 'approved' is not an in-app decision by an authorized person; it does not count."}
+  ],
+  "instructions_found": []
+}
