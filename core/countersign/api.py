@@ -32,7 +32,7 @@ from .supplier_world import PRIMARY_DOCS, VARIANT_DOCS
 
 ALL_DOCS = PRIMARY_DOCS + COMPANION_DOCS + SANDBOX_DOCS + VARIANT_DOCS
 
-app = FastAPI(title="Countersign core")
+app = FastAPI(title="Clerk core")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3001", "http://127.0.0.1:3001"],
                    allow_methods=["GET", "POST"], allow_headers=["*"])
 store = get_store()
@@ -72,7 +72,7 @@ def index() -> str:
         for sid, name in rows
     )
     return (
-        "<!doctype html><meta charset=utf-8><title>Countersign files</title>"
+        "<!doctype html><meta charset=utf-8><title>Clerk files</title>"
         "<body style='font:16px system-ui;max-width:40rem;margin:2rem'>"
         "<h1>Source files</h1><p>Open a document, or use these links from the invoice.</p>"
         f"<ul>{items}</ul></body>"

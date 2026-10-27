@@ -304,7 +304,7 @@ def process_document(store: Store, document_id: str) -> dict[str, Any]:
         return needs_review(store, document_id, f"text aimed at an automated system, treated as data: \"{injected[0][:160]}\"")
     handler = {"quote": _purchase, "po": _purchase, "email": _email}.get(kind)
     if handler is None:
-        return needs_review(store, document_id, f"a {kind} document isn't something Countersign records")
+        return needs_review(store, document_id, f"a {kind} document isn't something Clerk records")
     return {"document_id": document_id, **handler(store, ext)}
 
 

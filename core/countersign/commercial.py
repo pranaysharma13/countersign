@@ -493,7 +493,7 @@ def check_receipt(b: InvoiceBundle, lines: list[LineResult]) -> tuple[CheckOutco
         return CheckOutcome("receipt", "pass", "Receipt of " + ", ".join(fmt_qty(q, u) for u, q in needed.items()) +
                             " attested by the superintendent (MANUALLY_CONFIRMED, not machine-verified).", ev, "audit"), []
     missing = ", ".join(fmt_qty(q - attested.get(u, 0), u) for u, q in needed.items() if attested.get(u, 0) < q) or "the billed material"
-    summary = f"Nobody has attested receipt of {missing}. Countersign can't verify deliveries; the superintendent must confirm."
+    summary = f"Nobody has attested receipt of {missing}. Clerk can't verify deliveries; the superintendent must confirm."
     return CheckOutcome("receipt", "fail", summary, ev, "audit"), [HoldSpec("RECEIPT_NOT_VERIFIED", 0, summary, ev)]
 
 

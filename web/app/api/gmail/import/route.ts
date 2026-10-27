@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   try {
     r = await fetch(`${coreBase()}/intake`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Countersign-Intake': '1' },
+      headers: { 'Content-Type': 'application/json', 'x-countersign-intake': '1' /* header names are case-insensitive; the name is unchanged */ },
       body: JSON.stringify({ source: 'gmail', message_id: id, raw_base64url: raw.raw, received_at_iso: raw.receivedAtIso }),
       cache: 'no-store',
     });
