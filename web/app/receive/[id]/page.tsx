@@ -25,8 +25,8 @@ export default function Receive({ params }: { params: Promise<{ id: string }> })
           <div className="small muted"><Link href={`/invoices/${id}`}>{sup?.name} · {inv.invoice_number}</Link></div>
           <h1>Did this arrive?</h1>
           <p className="lede">
-            For someone on site.
-            {billed > 0 && <> They billed: <strong>{qty(billed, material[0]?.unit ?? 'cy')}</strong>.</>}
+            Luis confirms what landed on Oakview.
+            {billed > 0 && <> They billed <strong>{qty(billed, material[0]?.unit ?? 'cy')}</strong>.</>}
           </p>
         </div>
         <Status kind="receipt" value={inv.receipt_status} />

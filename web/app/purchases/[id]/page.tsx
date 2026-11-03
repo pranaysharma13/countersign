@@ -60,7 +60,7 @@ export default function PurchaseRecord({ params }: { params: Promise<{ id: strin
           <section className="sheet" aria-labelledby="changes">
             <div className="pad" style={{ paddingBottom: 0 }}><h2 id="changes">Changes since</h2>
               <p className="small muted" style={{ marginTop: -4 }}>A proposal isn't an acceptance. A change counts only when a person approved it in the app, within their limit, and the supplier agreed.</p></div>
-            <div className="scroll"><table>
+            <div className="scroll"><table className="decided-table">
               <thead><tr><th>Change</th><th className="num">Amount</th><th>Our approval</th><th>Supplier</th></tr></thead>
               <tbody>{changes.map(c => <ChangeRow key={c.id} c={c} t={t} />)}</tbody>
             </table></div>

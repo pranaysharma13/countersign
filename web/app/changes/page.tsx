@@ -33,7 +33,7 @@ export default function Changes() {
       </section>
       <section className="sheet" aria-labelledby="done">
         <div className="pad" style={{ paddingBottom: 0 }}><h2 id="done">Already decided</h2></div>
-        <div className="scroll"><table>
+        <div className="scroll"><table className="decided-table">
           <thead><tr><th>Change</th><th className="num">Amount</th><th>Our decision</th><th>Supplier</th></tr></thead>
           <tbody>{decided.map(c => {
             const pur = t.purchase.find(p => p.id === c.purchase_id);

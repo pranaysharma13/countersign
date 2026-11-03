@@ -2,19 +2,28 @@ import type { Row } from './client';
 
 // Money is integer cents end to end; formatting is the only place it becomes text.
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-export const money = (cents: number | null | undefined) => (cents == null ? '—' : usd.format(cents / 100));
+export const money = (cents: number | null | undefined) => (cents == null ? '-' : usd.format(cents / 100));
 export const qty = (milli: number, unit: string) =>
   `${(milli / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 })} ${unit === 'cy' ? 'yd³' : unit}`;
 
-export function ceilingCopy(evidenceJson: string, fallback: string): string {
+export function ceilingFacts(evidenceJson: string): { billed: string; cap: string; extra: string; unit: string } | null {
   let ev: Record<string, unknown> = {};
   try { ev = JSON.parse(evidenceJson || '{}'); } catch { ev = {}; }
   const billed = Number(ev.this_invoice_milli) || 0;
   const cap = Number(ev.ceiling_milli) || 0;
   const unit = String(ev.unit || '');
-  if (billed > 0 && cap > 0 && unit) {
-    return `The purchase order allows ${qty(cap, unit)}. This invoice bills ${qty(billed, unit)}.`;
-  }
+  if (billed <= 0 || cap <= 0 || !unit) return null;
+  return {
+    billed: qty(billed, unit),
+    cap: qty(cap, unit),
+    extra: qty(Math.max(0, billed - cap), unit),
+    unit,
+  };
+}
+
+export function ceilingCopy(evidenceJson: string, fallback: string): string {
+  const f = ceilingFacts(evidenceJson);
+  if (f) return `The purchase order allows ${f.cap}. This invoice bills ${f.billed}.`;
   return fallback;
 }
 const PLURAL_SKIP = new Set(['cy', 'yd³', 'each', 'ea', 'lot', 'ls']);
@@ -44,7 +53,7 @@ export const when = (micros: number) =>
 export const time = (micros: number) =>
   new Date(micros / 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 export const day = (iso: string) =>
-  iso ? new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+  iso ? new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-';
 
 export function daysUntil(iso: string, now = new Date()): number | null {
   if (!iso) return null;
@@ -74,7 +83,7 @@ export const parse = <T,>(json: string, fallback: T): T => { try { return JSON.p
 /** Assessment details: the old local seed stored a line array; Python's seed stores `{ lines: [...] }` with `description`. */
 export interface AssessmentLine {
   line_id: string; line: string; claimed_cents: number; accepted_cents: number; pending_cents: number; variance_cents: number;
-  calculation: string; fragment_ids: string[]; status: string; uncertainty?: string;
+  calculation: string; fragment_ids: string[]; status: string; hold_code?: string; uncertainty?: string;
 }
 export function assessmentLines(detailsJson: string): AssessmentLine[] {
   const raw = parse<unknown>(detailsJson, []);
@@ -93,9 +102,27 @@ export function assessmentLines(detailsJson: string): AssessmentLine[] {
       calculation: String(l.calculation ?? ''),
       fragment_ids: Array.isArray(l.fragment_ids) ? l.fragment_ids.map(String) : [],
       status: status === 'variance' ? 'under_review' : status,
+      hold_code: l.hold_code ? String(l.hold_code) : undefined,
       uncertainty: l.uncertainty ? String(l.uncertainty) : undefined,
     };
   });
+}
+
+/** One short paragraph for the Why fold. Numbers come from the assessment, not from a prompt. */
+export function lineWhy(l: AssessmentLine): string {
+  const extra = (l.variance_cents || 0) + (l.pending_cents || 0);
+  const calc = l.calculation ? plainCalc(l.calculation).replace(/\s+/g, ' ').trim() : '';
+  const hold = l.hold_code ? (HOLD_DETAIL[l.hold_code] ?? '') : '';
+  if (extra <= 0 && l.status !== 'pending' && l.status !== 'under_review') {
+    return calc || `They asked ${money(l.claimed_cents)}. We accept ${money(l.accepted_cents)}.`;
+  }
+  return [
+    `They asked ${money(l.claimed_cents)}. We accept ${money(l.accepted_cents)}.`,
+    extra > 0 ? `${money(extra)} is not agreed.` : '',
+    calc,
+    hold,
+    l.uncertainty ? plainTerms(l.uncertainty) : '',
+  ].filter(Boolean).join(' ');
 }
 
 /** Judge submissions from the Sneak page land on this fictional supplier; they are not the company's bills. */
@@ -119,7 +146,7 @@ export const HOLD_LABEL: Record<string, string> = {
 export const HOLD_DETAIL: Record<string, string> = {
   PROMPT_INJECTION: 'This PDF included a line written for an automated system, not for a person. Clerk treated it as printed text and did not follow it. The line items still stand on their own.',
   PAYEE_CHANGE_PENDING: 'They asked us to pay a different bank account than the one already on file.',
-  PO_CEILING: 'The purchase order has a cap. This bill goes over it.',
+  PO_CEILING: 'The purchase order has a quantity cap. This bill goes over it. Only a corrected invoice or a written change clears it.',
   PROPOSED_CHARGE: 'This extra was mentioned. Nobody agreed to it in the app.',
   SUPPLIER_RISK: 'A public record on this supplier needs a person to look at it before anyone pays.',
   PRICE_VARIANCE: 'The unit price is higher than the quote or the purchase order.',
@@ -149,10 +176,29 @@ export function safeReason(text: string): string {
   return text;
 }
 
+/** Module denials stay in CONTRACT language. This is what a person should read. */
+export function plainDenied(message: string): string {
+  const m = message || '';
+  if (/decide_disputed_line/i.test(m)) return 'Only Dana can accept or dispute a line. Switch I am to Dana, Owner.';
+  if (/approve_supplier_payment|reject_supplier_payment/i.test(m)) return 'Only Dana can pay. Switch I am to Dana, Owner.';
+  if (/decide_payee/i.test(m)) return 'Only Dana can confirm a new bank after the call.';
+  if (/attest_receipt/i.test(m)) return 'Only Site can confirm a delivery. Switch I am to Luis, Site.';
+  if (/resolve_hold/i.test(m)) return 'Only Dana can record that review.';
+  if (/approve_outbox/i.test(m)) return 'Buyer or Dana can send this letter. Switch I am to Jordan, Buyer.';
+  if (/may not call/i.test(m)) return 'That action is not allowed for the person you are signed in as.';
+  return m;
+}
+
 export const ROLE_LABEL: Record<string, string> = {
   owner: 'Owner', purchasing: 'Buyer', receiver: 'Site', bookkeeper: 'Books', agent: 'Clerk',
-  gateway: 'Bank transfer', sync: 'Inbox', supplier: 'Supplier', admin: 'Setup', '': '—',
+  gateway: 'Bank transfer', sync: 'Inbox', supplier: 'Supplier', admin: 'Setup', '': '-',
 };
+
+/** The person a builder should look for. Dana is the only owner in this demo. */
+export function nextWho(role: string): string {
+  if (role === 'owner') return 'Dana';
+  return ROLE_LABEL[role] ?? (role || 'Someone');
+}
 
 export interface BillLike {
   next_owner_role: string;
@@ -160,6 +206,8 @@ export interface BillLike {
   payment_status: string;
   commercial_status: string;
   approval_status: string;
+  payee_status: string;
+  receipt_status: string;
 }
 
 /** A table row read as a bill: a missing or non-string field reads as '' (rows come from any data source). */
@@ -168,6 +216,7 @@ function asBill(row: BillLike | Row): BillLike {
   return {
     next_owner_role: s(row.next_owner_role), next_action: s(row.next_action), payment_status: s(row.payment_status),
     commercial_status: s(row.commercial_status), approval_status: s(row.approval_status),
+    payee_status: s(row.payee_status), receipt_status: s(row.receipt_status),
   };
 }
 
@@ -182,12 +231,16 @@ export function billStory(row: BillLike | Row, holds: readonly ({ code: string }
   if (inv.payment_status === 'partially_settled') return 'We paid the part we agreed. The rest stays disputed until they correct the invoice or agree a credit.';
   const codes = holdCodes(holds);
   if (codes.has('PROMPT_INJECTION')) return 'This invoice included a hidden instruction. We ignored it. The line items still match the order.';
-  if (codes.has('PAYEE_CHANGE_PENDING')) return 'They asked us to send money to a new bank account.';
+  if (codes.has('PAYEE_CHANGE_PENDING') || inv.payee_status === 'change_pending' || inv.payee_status === 'unverified') {
+    return 'They asked us to send money to a new bank account.';
+  }
   if (codes.has('PO_CEILING')) return 'They billed more than the purchase order allows.';
   if (codes.has('PROPOSED_CHARGE')) return 'They added an extra charge that was never agreed.';
   if (codes.has('SUPPLIER_RISK')) return 'A public-records flag is on this supplier.';
   if (codes.has('PRICE_VARIANCE')) return 'The price is higher than what was agreed.';
-  if (codes.has('RECEIPT_NOT_VERIFIED')) return 'The job site has not confirmed the delivery yet.';
+  if (codes.has('RECEIPT_NOT_VERIFIED') || inv.receipt_status === 'required') {
+    return 'The job site has not confirmed the delivery yet.';
+  }
   if (inv.commercial_status === 'matches' && inv.approval_status === 'none') return 'Looks right. Waiting for the owner to approve.';
   return inv.next_action;
 }
@@ -197,12 +250,23 @@ export function nextStep(row: BillLike | Row, holds: readonly ({ code: string } 
   if (inv.payment_status === 'settled') return { role: '', action: 'Nothing left to do.' };
   if (inv.payment_status === 'partially_settled') return { role: 'purchasing', action: 'Wait for a corrected invoice or an agreed credit for the disputed amount.' };
   const codes = holdCodes(holds);
-  if (codes.has('PROMPT_INJECTION')) return { role: 'owner', action: 'Record that the hidden instruction was ignored, then review the line items.' };
+  if (codes.has('PROMPT_INJECTION')) return { role: 'owner', action: 'Note that the hidden line was ignored.' };
   if (codes.has('SUPPLIER_RISK')) return { role: 'owner', action: 'Read the supplier flag before anyone pays.' };
-  if (codes.has('PAYEE_CHANGE_PENDING')) return { role: 'owner', action: 'Call someone already on file. Confirm the new account.' };
-  if (codes.has('PO_CEILING') || codes.has('PROPOSED_CHARGE') || codes.has('PRICE_VARIANCE')) {
-    return { role: 'purchasing', action: 'Ask the supplier to correct the bill, or the owner can accept the extra.' };
+  if (codes.has('PAYEE_CHANGE_PENDING') || inv.payee_status === 'change_pending' || inv.payee_status === 'unverified') {
+    return { role: 'owner', action: 'Call the number already on file.' };
   }
-  if (codes.has('RECEIPT_NOT_VERIFIED')) return { role: 'receiver', action: 'Confirm what arrived on site.' };
+  if (codes.has('PO_CEILING')) {
+    return { role: 'purchasing', action: 'Ask the supplier for a corrected invoice or a written change for the extra quantity.' };
+  }
+  if (codes.has('PROPOSED_CHARGE') || codes.has('PRICE_VARIANCE')) {
+    return { role: 'purchasing', action: 'Ask the supplier to correct the bill, or Dana can accept the extra.' };
+  }
+  if (codes.has('RECEIPT_NOT_VERIFIED') || inv.receipt_status === 'required') {
+    return { role: 'receiver', action: 'Confirm what arrived on site.' };
+  }
+  const payish = /pay|approve/i.test(inv.next_action);
+  if (inv.next_owner_role === 'agent' && payish) return { role: 'owner', action: 'Pay this bill.' };
+  if (inv.next_owner_role === 'agent') return { role: '', action: 'Clerk is still checking this bill.' };
+  if (inv.next_owner_role === 'owner' && payish) return { role: 'owner', action: 'Pay this bill.' };
   return { role: inv.next_owner_role, action: inv.next_action };
 }

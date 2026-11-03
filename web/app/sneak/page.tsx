@@ -50,8 +50,8 @@ export default function SneakCharge() {
         <div>
           <h1>Sneak a charge past it</h1>
           <p className="lede">
-            Your charge becomes a real invoice from a fictional sandbox supplier and goes through the same checks as every
-            invoice. The checks decide which holds open. It never touches BayMix&apos;s invoice, and nothing is paid from this page.
+            Your charge becomes an invoice from a fictional sandbox supplier and goes through the same checks as BayMix or Northline.
+            The checks open the holds. It does not touch BayMix&apos;s invoice. Nothing is paid from this page.
           </p>
         </div>
       </div>

@@ -2,22 +2,26 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useTables } from '@/lib/client';
-import { isSandbox, money, ROLE_LABEL, HOLD_LABEL, HOLD_DETAIL, billStory, nextStep, daysUntil, dueWord } from '@/lib/format';
+import { isSandbox, money, nextWho, HOLD_LABEL, HOLD_DETAIL, billStory, nextStep, daysUntil, dueWord } from '@/lib/format';
 import { personaOf } from '@/lib/personas';
 import { usePersona } from '@/lib/usePersona';
 import { Loading } from '@/components/parts';
 import { DueChart } from '@/components/DueChart';
+import { Hear } from '@/components/Hear';
+import { HonestStrip, useHonestSnap } from '@/components/Honest';
+import { queueSpeech } from '@/lib/voice';
 
 const TURN: Record<string, { title: string; lede: string; none: string }> = {
-  owner: { title: 'Your turn', lede: 'Say yes or no, or clear a stop only you can clear.', none: 'Nothing needs your yes or no right now.' },
-  purchasing: { title: 'Your turn', lede: 'Ask the supplier to fix these bills.', none: 'No bill needs to go back to a supplier.' },
-  receiver: { title: 'Your turn', lede: 'Confirm what arrived on site.', none: 'Every delivery on these bills is confirmed.' },
-  bookkeeper: { title: 'Every bill', lede: 'You can read everything. You do not approve or pay.', none: 'No bills yet.' },
+  owner: { title: 'Your turn', lede: 'Approve, reject, or record a review only you can record.', none: 'Nothing needs Dana right now.' },
+  purchasing: { title: 'Your turn', lede: 'Send the supplier a correction on these bills.', none: 'No bill needs to go back to a supplier.' },
+  receiver: { title: 'Your turn', lede: 'Confirm what arrived on Oakview.', none: 'Every delivery on these bills is confirmed.' },
+  bookkeeper: { title: 'Every bill', lede: 'You can read everything. You cannot approve or pay.', none: 'No bills yet.' },
 };
 
 export default function Bills() {
-  const { data: t, error } = useTables(['invoice', 'invoice_revision', 'supplier', 'purchase', 'project', 'hold']);
+  const { data: t, error } = useTables(['invoice', 'invoice_revision', 'supplier', 'purchase', 'project', 'hold', 'payee_profile']);
   const persona = usePersona();
+  const honest = useHonestSnap();
   const [q, setQ] = useState('');
   const everything = useMemo(() => [...(t?.invoice ?? [])].sort((a, b) => (a.due_date < b.due_date ? -1 : 1)), [t]);
   const invoices = useMemo(() => everything.filter(i => !isSandbox(i)), [everything]);
@@ -65,20 +69,39 @@ export default function Bills() {
     const holds = holdsOf(inv);
     const next = nextStep(inv, holds);
     const due = dueWord(inv.due_date);
+    const payee = (t.payee_profile ?? []).find(p => p.supplier_id === inv.supplier_id && p.status === 'verified');
     return (
-      <Link key={inv.id} href={`/invoices/${inv.id}`} className={`tile${inv.id === featuredId ? ' featured' : ''}`}>
+      <Link
+        key={inv.id}
+        href={`/invoices/${inv.id}`}
+        className={`tile${inv.id === featuredId ? ' featured' : ''}`}
+        itemScope
+        itemType="https://schema.org/Invoice"
+        data-invoice-id={String(inv.id)}
+        data-invoice-number={String(inv.invoice_number)}
+        data-supplier={String(sup?.name ?? '')}
+        data-cents={Number(rev?.balance_requested_cents) || 0}
+        data-hold={holds[0] ? String(holds[0].code) : ''}
+        data-next-role={next.role || ''}
+        data-payment-status={String(inv.payment_status)}
+        data-last4={payee ? String(payee.last4) : ''}
+      >
         <div className="tile-top">
           <div className="avatar">{(sup?.name ?? '?').slice(0, 1)}</div>
           {inv.payment_status === 'settled'
             ? <span className="chip ok">Cleared</span>
             : <span className={`chip ${due.tone}`}>{due.label}</span>}
         </div>
-        <div className="tile-name">{sup?.name ?? inv.supplier_id}</div>
-        <div className="small muted">{inv.invoice_number} · {proj?.name ?? 'No job'}</div>
-        <div className="tile-amt">{money(rev?.balance_requested_cents)}</div>
+        <div className="tile-name" itemProp="provider">{sup?.name ?? inv.supplier_id}</div>
+        <div className="small muted"><span itemProp="identifier">{inv.invoice_number}</span> · {proj?.name ?? 'No job'}{payee ? ` · ····${payee.last4}` : ''}</div>
+        <div className="tile-amt" itemProp="totalPaymentDue">{money(rev?.balance_requested_cents)}</div>
         <p className="tile-story">{billStory(inv, holds)}</p>
         <div className="tile-next">
-          {next.role ? `${ROLE_LABEL[next.role] ?? next.role} · ${next.action}` : next.action}
+          {next.role ? `${nextWho(next.role)} · ${next.action}` : next.action}
+          {inv.payment_status !== 'settled' && (() => {
+            const age = daysUntil(inv.invoice_date);
+            return age != null && age < 0 ? ` · Waiting ${-age} day${age === -1 ? '' : 's'}` : '';
+          })()}
         </div>
       </Link>
     );
@@ -91,15 +114,38 @@ export default function Bills() {
           <h1>{me ? `${me.name.split(' ')[0]}’s bills` : 'Bills'}</h1>
           <p className="lede">{turn.lede}</p>
         </div>
-        <input
-          className="search"
-          type="search"
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="Search a supplier or number"
-          aria-label="Search bills"
-        />
+        <div className="row" style={{ alignItems: 'flex-end' }}>
+          <Hear
+            label="Hear my queue"
+            text={queueSpeech(
+              (persona === 'bookkeeper' ? unpaid.filter(matches) : mine.filter(i => i.payment_status !== 'settled'))
+                .slice(0, 8)
+                .map(inv => {
+                  const next = nextStep(inv, holdsOf(inv));
+                  const rev = t.invoice_revision.find(r => r.id === inv.active_revision_id);
+                  return {
+                    supplier: String(t.supplier.find(s => s.id === inv.supplier_id)?.name ?? 'Supplier'),
+                    number: String(inv.invoice_number),
+                    who: next.role ? nextWho(next.role) : 'Someone',
+                    action: next.action,
+                    amount: money(rev?.balance_requested_cents),
+                  };
+                }),
+              turn.none,
+            )}
+          />
+          <input
+            className="search"
+            type="search"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Search a supplier or number"
+            aria-label="Search bills"
+          />
+        </div>
       </div>
+
+      {honest && <HonestStrip snap={honest} />}
 
       <div className="pipe">
         <div className="pipe-cell"><span>{readOnly ? 'Not paid yet' : 'Your turn'}</span><b>{readOnly ? unpaid.length : mineCount}</b></div>
@@ -139,8 +185,8 @@ export default function Bills() {
       )}
 
       <section className="tile lime learn">
-        <div className="card-kicker">Learning</div>
-        <h2>What we caught</h2>
+        <div className="card-kicker">Open holds</div>
+        <h2>Why these bills stopped</h2>
         {lessons.length === 0 ? (
           <p className="small">Nothing is blocking.</p>
         ) : (

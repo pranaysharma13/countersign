@@ -1,6 +1,7 @@
 import 'server-only';
 import { timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
+import { cookieBase, publicOrigin } from './site';
 
 // Gmail, read-only. Tokens live only in an httpOnly cookie on this server's responses; they're never logged,
 // never put in NEXT_PUBLIC_*, and never sent to the browser's JavaScript.
@@ -28,8 +29,10 @@ export class GmailError extends Error {
   }
 }
 
-export function gmailRedirect(): string {
-  return (process.env.GMAIL_REDIRECT_URI || 'http://localhost:3001/api/gmail/callback').trim();
+export function gmailRedirect(req?: Request): string {
+  const set = (process.env.GMAIL_REDIRECT_URI || '').trim();
+  if (set) return set;
+  return `${publicOrigin(req)}/api/gmail/callback`;
 }
 
 /** What's wrong with the Gmail settings, without ever showing a value. */
@@ -37,7 +40,7 @@ export function gmailConfigProblem(): string | null {
   const id = (process.env.GMAIL_CLIENT_ID || '').trim();
   const secret = (process.env.GMAIL_CLIENT_SECRET || '').trim();
   if (!id || !secret) {
-    return 'Add GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET to web/.env.local (not the root .env), then restart the web app.';
+    return 'Add GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET to this host (or web/.env.local), then restart.';
   }
   if (id.startsWith('AIza') || secret.startsWith('AIza')) {
     return 'GMAIL_CLIENT_ID or GMAIL_CLIENT_SECRET holds a Google API key (it starts with AIza). Gmail needs an OAuth client: ' +
@@ -47,7 +50,7 @@ export function gmailConfigProblem(): string | null {
     return "GMAIL_CLIENT_ID doesn't look like an OAuth client ID: it should end in .apps.googleusercontent.com.";
   }
   if (!/^https?:\/\/[^/]+\/api\/gmail\/callback$/.test(gmailRedirect())) {
-    return 'GMAIL_REDIRECT_URI must end in /api/gmail/callback, for example http://localhost:3001/api/gmail/callback.';
+    return 'GMAIL_REDIRECT_URI must end in /api/gmail/callback, for example https://your-domain/api/gmail/callback.';
   }
   return null;
 }
@@ -56,14 +59,14 @@ export function gmailConfigured(): boolean {
   return gmailConfigProblem() === null;
 }
 
-export function cookieOptions(maxAge: number) {
-  return { httpOnly: true, sameSite: 'lax' as const, path: '/', maxAge, secure: gmailRedirect().startsWith('https://') };
+export function cookieOptions(maxAge: number, req?: Request) {
+  return cookieBase(req, { maxAge });
 }
 
-export function authUrl(state: string): string {
+export function authUrl(state: string, req?: Request): string {
   const u = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   u.searchParams.set('client_id', (process.env.GMAIL_CLIENT_ID || '').trim());
-  u.searchParams.set('redirect_uri', gmailRedirect());
+  u.searchParams.set('redirect_uri', gmailRedirect(req));
   u.searchParams.set('response_type', 'code');
   u.searchParams.set('scope', SCOPES);
   u.searchParams.set('access_type', 'offline');
@@ -139,8 +142,8 @@ async function tokenRequest(body: Record<string, string>): Promise<Record<string
   return j;
 }
 
-export async function exchangeCode(code: string): Promise<GmailTokens> {
-  const j = await tokenRequest({ code, grant_type: 'authorization_code', redirect_uri: gmailRedirect() });
+export async function exchangeCode(code: string, req?: Request): Promise<GmailTokens> {
+  const j = await tokenRequest({ code, grant_type: 'authorization_code', redirect_uri: gmailRedirect(req) });
   if (!String(j.scope || '').split(' ').includes(READ_SCOPE)) {
     throw new GmailError("Google didn't grant read access to Gmail. Connect again and tick \"View your email messages and " +
       "settings\" on Google's screen.", 'scope_missing', 403);

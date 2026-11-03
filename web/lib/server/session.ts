@@ -1,15 +1,35 @@
-// Demo-mode personas. The persona lives in a cookie; when DEMO_PIN is set, a matching PIN cookie is
-// required before any staff action. This is labeled demo mode in the UI: in production each employee
-// signs in individually.
+// People sign in through Supabase when keys are set. The four desks remain
+// a cookie fallback so a judge can still open the books without an account.
 import 'server-only';
 import { cookies } from 'next/headers';
+import { roleFromLogin } from '@/lib/authRole';
 import { STAFF, type Persona } from './backend';
+import { supabaseUser } from './supabase';
 
-export async function currentPersona(): Promise<{ persona: Persona; unlocked: boolean }> {
-  const c = await cookies();
-  const p = c.get('cs_persona')?.value as Persona | undefined;
-  const persona = p && STAFF.includes(p as any) ? p : 'owner';
+export type AuthKind = 'supabase' | 'desk';
+
+export async function currentPersona(): Promise<{
+  persona: Persona;
+  unlocked: boolean;
+  auth: AuthKind;
+  email: string | null;
+}> {
   const pin = process.env.DEMO_PIN;
-  const unlocked = !pin || c.get('cs_pin')?.value === pin;
-  return { persona, unlocked };
+  const c = await cookies();
+  const pinOk = !pin || c.get('cs_pin')?.value === pin;
+
+  const user = await supabaseUser();
+  if (user) {
+    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const app = (user.app_metadata ?? {}) as Record<string, unknown>;
+    const persona = roleFromLogin({
+      email: user.email,
+      role: String(app.role || meta.role || ''),
+    });
+    return { persona, unlocked: true, auth: 'supabase', email: user.email ?? null };
+  }
+
+  const p = c.get('cs_persona')?.value;
+  const persona = STAFF.find(id => id === p) ?? 'owner';
+  return { persona, unlocked: pinOk, auth: 'desk', email: null };
 }

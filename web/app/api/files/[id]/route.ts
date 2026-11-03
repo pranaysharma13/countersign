@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { coreBase, coreUnavailable } from '@/lib/server/core';
 
 export const dynamic = 'force-dynamic';
-
-function coreBase(): string {
-  return (process.env.NEXT_PUBLIC_CORE_URL || process.env.CORE_URL || 'http://localhost:8000').replace(/\/$/, '');
-}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!id) return NextResponse.json({ message: 'missing file' }, { status: 400 });
-  const name = req.nextUrl.searchParams.get('name') || '';
   const base = coreBase();
+  if (!base) return NextResponse.json({ message: coreUnavailable('Document preview') }, { status: 404 });
+  const name = req.nextUrl.searchParams.get('name') || '';
   const tries = [`${base}/files/${encodeURIComponent(id)}`];
   if (name) tries.push(`${base}/files/${encodeURIComponent(id)}?name=${encodeURIComponent(name)}`);
   for (const url of tries) {

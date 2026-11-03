@@ -4,14 +4,15 @@ import { useState } from 'react';
 import { PERSONAS, initials } from '@/lib/personas';
 import { refreshAll, useTables, type Row, type Tables } from '@/lib/client';
 import { money, HOLD_LABEL, daysUntil, isSandbox } from '@/lib/format';
+import { Mark } from '@/components/Mark';
 
 const MONEY_HOLD = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING', 'PO_CEILING'];
 const SEVERITY = ['PROMPT_INJECTION', 'PAYEE_CHANGE_PENDING', 'PO_CEILING', 'PROPOSED_CHARGE', 'PRICE_VARIANCE', 'DUPLICATE_REVIEW'];
 const CATCH_COPY: Record<string, string> = {
-  PROMPT_INJECTION: 'A line in the invoice told the checker to approve it. Clerk ignored it and stopped the bill.',
+  PROMPT_INJECTION: 'A line in the invoice told the checker to approve it. clerk.ai ignored it and stopped the bill.',
   PAYEE_CHANGE_PENDING: 'The supplier asked to be paid into a new account. Nothing moves until someone calls a number on file.',
   PO_CEILING: 'The invoice bills more than the purchase order allows. The extra waits for a corrected invoice.',
-  PROPOSED_CHARGE: 'A charge that was never agreed in writing. It is held, not paid.',
+  PROPOSED_CHARGE: 'A charge that was never agreed in writing. The extra stays on hold.',
   PRICE_VARIANCE: 'The unit price is higher than the accepted quote.',
   DUPLICATE_REVIEW: 'This looks like a bill we have already seen.',
 };
@@ -41,9 +42,9 @@ export default function Landing() {
   }
 
   return (
-    <div className="cover">
+    <div className="cover land">
       <header className="cover-top">
-        <div className="mark">Clerk</div>
+        <Mark size="cover" />
         <div className="inbox-on"><span className="dot ok" /> ap@marlowfinch.example</div>
       </header>
 
@@ -51,10 +52,20 @@ export default function Landing() {
         <div className="home-left">
           <div className="cover-hero">
             <p className="card-kicker">Marlow &amp; Finch Builders</p>
-            <h1>Check the bill.<br />Then you decide.</h1>
+            <h1>Agents do the work.<br />You glance. You approve.</h1>
             <p className="lede">
-              Every supplier bill is read against its quote, purchase order and emails. A hidden instruction or a new bank account stops here.
+              clerk.ai reads each supplier bill against the quote, the purchase order, and the mail. A hidden instruction or a new bank account stops the bill here.
             </p>
+            <ul className="cover-facts">
+              <li>
+                <strong>Quote and purchase order own the numbers</strong>
+                Unit price and cap come from papers already on file, not from the invoice text.
+              </li>
+              <li>
+                <strong>A new last-4 in email is a hold</strong>
+                clerk.ai calls the number already on the quote. Dana still has to approve. clerk.ai cannot pay.
+              </li>
+            </ul>
           </div>
 
           <section className="home-people" aria-labelledby="who">

@@ -1,5 +1,5 @@
 // File preview: same-origin /api/files proxies the Python file API on port 8000.
-// Prefer the document id — seed PDFs resolve that way. source_file_id is the fallback.
+// Prefer the document id. Seed PDFs resolve that way. source_file_id is the fallback.
 
 export function fileHref(
   ref?: string | { id?: string | null; source_file_id?: string | null } | null,
@@ -11,8 +11,7 @@ export function fileHref(
   return page && Number(page) > 0 ? `${url}#page=${page}` : url;
 }
 
-/** The audit export for one invoice, as CSV, from the Python API (port 8000 unless NEXT_PUBLIC_CORE_URL says otherwise). */
+/** Same-origin proxy to the Python audit export. */
 export function auditHref(invoiceId: string): string {
-  const base = (process.env.NEXT_PUBLIC_CORE_URL || 'http://localhost:8000').replace(/\/$/, '');
-  return `${base}/invoices/${encodeURIComponent(invoiceId)}/audit?format=csv`;
+  return `/api/audit/${encodeURIComponent(invoiceId)}`;
 }
