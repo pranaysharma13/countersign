@@ -5,7 +5,10 @@ from countersign.companion_seed import COMPANION_SEED, export_companion_seed, se
 from countersign.companion_world import (CEDAR_GROSS_CENTS, CEDAR_INVOICE_ID, COMPANION_DOCS, HARBOR_INVOICE_ID,
                                          HP_GROSS_CENTS, INJECT_TEXT, NL_GROSS_CENTS, NORTHLINE_INVOICE_ID,
                                          PEAK_INVOICE_ID, PF_GROSS_CENTS, REDLINE_INVOICE_ID, RH_FUEL_CENTS,
-                                         RH_GROSS_CENTS, RH_MATERIAL_CENTS, VALLEY_INVOICE_ID, VS_GROSS_CENTS)
+                                         RH_GROSS_CENTS, RH_MATERIAL_CENTS, VALLEY_INVOICE_ID, VS_GROSS_CENTS,
+                                         BAYLINE_INVOICE_ID, BE_GROSS_CENTS, DELTA_INVOICE_ID, DP_FUEL_CENTS,
+                                         DP_GROSS_CENTS, DP_PUMP_CENTS, RD_GROSS_CENTS, RD_QUOTED_CENTS,
+                                         RIDGEWAY_INVOICE_ID)
 from countersign.extractions import evidence_problems, load_fixture
 from countersign.fake_store import FakeStore
 from countersign.ids import hold_id
@@ -117,3 +120,45 @@ def test_companions_are_a_realistic_queue_and_leave_baymix_alone():
     assert not any(p["work_item_id"] == f"wi_{PEAK_INVOICE_ID}" and p["status"] == "pending"
                    for p in store.rows("proposal"))
     assert HP_GROSS_CENTS == 74_000
+
+
+def _open_holds(store, inv):
+    return {h["code"]: h["amount_cents"] for h in store.rows("hold", revision_id=inv["active_revision_id"], status="open")}
+
+
+def _no_pending_proposal(store, invoice_id):
+    return not any(p["work_item_id"] == f"wi_{invoice_id}" and p["status"] == "pending" for p in store.rows("proposal"))
+
+
+def test_new_companions_each_show_one_distinct_catch():
+    store = FakeStore()
+    seed_setup(store)
+    replay(store, export_companion_seed())
+
+    rd = store.rows("invoice", id=RIDGEWAY_INVOICE_ID)[0]
+    assert rd["invoice_number"] == "RD-612"
+    assert rd["receipt_status"] == "manually_confirmed"
+    assert RD_GROSS_CENTS - RD_QUOTED_CENTS == 25_500
+    assert _open_holds(store, rd) == {"PRICE_VARIANCE": 25_500}
+    rd_asm = max(store.rows("assessment", revision_id=rd["active_revision_id"]), key=lambda a: a["version"])
+    assert rd_asm["authorised_cents"] == RD_QUOTED_CENTS
+    assert rd_asm["proposed_payment_cents"] == 0
+    assert _no_pending_proposal(store, RIDGEWAY_INVOICE_ID)
+
+    be = store.rows("invoice", id=BAYLINE_INVOICE_ID)[0]
+    assert be["invoice_number"] == "BE-1209"
+    assert be["commercial_status"] == "matches"
+    assert be["receipt_status"] == "required"
+    assert _open_holds(store, be) == {"RECEIPT_NOT_VERIFIED": 0}
+    assert store.rows("invoice_revision", id=be["active_revision_id"])[0]["balance_requested_cents"] == BE_GROSS_CENTS
+    assert _no_pending_proposal(store, BAYLINE_INVOICE_ID)
+
+    dp = store.rows("invoice", id=DELTA_INVOICE_ID)[0]
+    assert dp["invoice_number"] == "DP-418"
+    assert dp["receipt_status"] == "manually_confirmed"
+    assert _open_holds(store, dp) == {"USAGE_EVIDENCE_MISSING": DP_FUEL_CENTS}
+    dp_asm = max(store.rows("assessment", revision_id=dp["active_revision_id"]), key=lambda a: a["version"])
+    assert dp_asm["authorised_cents"] == DP_PUMP_CENTS
+    assert dp_asm["pending_cents"] == DP_FUEL_CENTS
+    assert DP_PUMP_CENTS + DP_FUEL_CENTS == DP_GROSS_CENTS == 354_600
+    assert _no_pending_proposal(store, DELTA_INVOICE_ID)

@@ -73,6 +73,42 @@
   },
   {
     "role": "sync",
+    "reducer": "upsert_supplier",
+    "args": {
+      "id": "sup_ridgeway",
+      "name": "Ridgeway Drywall Supply",
+      "email_domain": "ridgeway-drywall.example",
+      "phone_on_file": "(510) 555-0183",
+      "crs_ref": "crs_test_business_08",
+      "status": "active"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier",
+    "args": {
+      "id": "sup_bayline",
+      "name": "Bayline Electric Supply",
+      "email_domain": "bayline-electric.example",
+      "phone_on_file": "(510) 555-0186",
+      "crs_ref": "crs_test_business_03",
+      "status": "active"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier",
+    "args": {
+      "id": "sup_delta",
+      "name": "Delta Pump Services",
+      "email_domain": "delta-pump.example",
+      "phone_on_file": "(510) 555-0189",
+      "crs_ref": "crs_test_business_04",
+      "status": "active"
+    }
+  },
+  {
+    "role": "sync",
     "reducer": "upsert_supplier_contact",
     "args": {
       "id": "ctc_cedar_mei",
@@ -228,6 +264,84 @@
     }
   },
   {
+    "role": "sync",
+    "reducer": "upsert_supplier_contact",
+    "args": {
+      "id": "ctc_rd_jun",
+      "supplier_id": "sup_ridgeway",
+      "name": "Jun Park",
+      "email": "jun.park@ridgeway-drywall.example",
+      "phone": "(510) 555-0183",
+      "title": "Sales",
+      "pre_established": true
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier_contact",
+    "args": {
+      "id": "ctc_rd_ar",
+      "supplier_id": "sup_ridgeway",
+      "name": "Ridgeway Accounts Receivable",
+      "email": "ar@ridgeway-drywall.example",
+      "phone": "(510) 555-0184",
+      "title": "Accounts Receivable",
+      "pre_established": true
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier_contact",
+    "args": {
+      "id": "ctc_be_priya",
+      "supplier_id": "sup_bayline",
+      "name": "Priya Nand",
+      "email": "priya.nand@bayline-electric.example",
+      "phone": "(510) 555-0186",
+      "title": "Counter Sales",
+      "pre_established": true
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier_contact",
+    "args": {
+      "id": "ctc_be_ar",
+      "supplier_id": "sup_bayline",
+      "name": "Bayline Accounts Receivable",
+      "email": "ar@bayline-electric.example",
+      "phone": "(510) 555-0187",
+      "title": "Accounts Receivable",
+      "pre_established": true
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier_contact",
+    "args": {
+      "id": "ctc_dp_marco",
+      "supplier_id": "sup_delta",
+      "name": "Marco Ruiz",
+      "email": "marco.ruiz@delta-pump.example",
+      "phone": "(510) 555-0189",
+      "title": "Dispatch",
+      "pre_established": true
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "upsert_supplier_contact",
+    "args": {
+      "id": "ctc_dp_ar",
+      "supplier_id": "sup_delta",
+      "name": "Delta Pump Accounts Receivable",
+      "email": "ar@delta-pump.example",
+      "phone": "(510) 555-0190",
+      "title": "Accounts Receivable",
+      "pre_established": true
+    }
+  },
+  {
     "role": "admin",
     "reducer": "add_payee_profile",
     "args": {
@@ -302,6 +416,45 @@
       "account_ref": "acct_peak_v1",
       "last4": "4470",
       "bank_name": "Summit Forms Bank",
+      "requested_via": "seed"
+    }
+  },
+  {
+    "role": "admin",
+    "reducer": "add_payee_profile",
+    "args": {
+      "id": "sup_ridgeway:v1",
+      "supplier_id": "sup_ridgeway",
+      "version": 1,
+      "account_ref": "acct_ridgeway_v1",
+      "last4": "2619",
+      "bank_name": "Millbrook Savings Bank",
+      "requested_via": "seed"
+    }
+  },
+  {
+    "role": "admin",
+    "reducer": "add_payee_profile",
+    "args": {
+      "id": "sup_bayline:v1",
+      "supplier_id": "sup_bayline",
+      "version": 1,
+      "account_ref": "acct_bayline_v1",
+      "last4": "8350",
+      "bank_name": "Estuary Commercial Bank",
+      "requested_via": "seed"
+    }
+  },
+  {
+    "role": "admin",
+    "reducer": "add_payee_profile",
+    "args": {
+      "id": "sup_delta:v1",
+      "supplier_id": "sup_delta",
+      "version": 1,
+      "account_ref": "acct_delta_v1",
+      "last4": "5108",
+      "bank_name": "Levee Federal Credit Union",
       "requested_via": "seed"
     }
   },
@@ -6549,6 +6702,3111 @@
       "amount_cents": 0,
       "reason": "CRS reports a civil judgment of $12,400.00 filed 2025-11-03 (creditor: Electrical supply house). Payment is held for the owner.",
       "evidence_json": "{\"crs_ref\":\"crs_test_business_02\",\"fragment_ids\":[\"frag_pf_inv_77_p1_l1\"],\"judgment\":{\"amount_cents\":1240000,\"creditor\":\"Electrical supply house\",\"filed\":\"2025-11-03\",\"type\":\"civil judgment\"}}"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_fee1024a",
+      "kind": "seed",
+      "filename": "Ridgeway_Quote_RDQ-61.pdf",
+      "sha256": "fee1024adcc8b712bc097ac2fdfcde8d20f8d27a53b4b5a03784c846418053a8",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_rd_quote",
+      "kind": "quote",
+      "source_file_id": "src_fee1024a",
+      "sha256": "fee1024adcc8b712bc097ac2fdfcde8d20f8d27a53b4b5a03784c846418053a8",
+      "filename": "Ridgeway_Quote_RDQ-61.pdf",
+      "pages": 2
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l1",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Ridgeway Drywall Supply"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l2",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "Gypsum board and framing - 77 Mill Road, San Lorenzo, CA 94580 - (510) 555-0183"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l3",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "QUOTATION RDQ-61"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l4",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "Quote date: 2026-10-07"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l5",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Customer: Marlow & Finch Builders, attn. Jordan Pike (Purchasing)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l6",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l8",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Product: Type X gypsum board, 4 ft x 12 ft x 5/8 in., fire rated"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l9",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "Maximum quantity: 300 sheets, delivered to the project"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l10",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Unit price: $14.25 per sheet, delivered"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l11",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "Price validity: fixed for deliveries from 2026-10-09 through 2026-10-31"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l12",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "Extended maximum: 300 sheets x $14.25 = $4,275.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l13",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Payment terms: Net 15 days from invoice date"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l14",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "Not included: boom-truck stocking above the second floor"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l16",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "This quote incorporates the Ridgeway Drywall Supply Terms and Conditions of Sale on page 2."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l18",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-09"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p1_l19",
+      "document_id": "doc_rd_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 19,
+      "line_end": 19,
+      "text": "Issued for Ridgeway Drywall Supply: Jun Park, Sales"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p2_l1",
+      "document_id": "doc_rd_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "TERMS AND CONDITIONS OF SALE (part of Quote RDQ-61)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p2_l3",
+      "document_id": "doc_rd_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "1. Price changes. Any price change requires mutual written agreement of buyer and seller"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p2_l4",
+      "document_id": "doc_rd_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "before the affected deliveries."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p2_l6",
+      "document_id": "doc_rd_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "2. Additional charges. Charges not listed in this quote apply only when both parties agree"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p2_l7",
+      "document_id": "doc_rd_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 7,
+      "line_end": 7,
+      "text": "to them in writing before the work."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p2_l9",
+      "document_id": "doc_rd_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "3. Payment instructions. Seller will not change its payment instructions by email alone."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_quote_p2_l10",
+      "document_id": "doc_rd_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Buyer will confirm any change by calling seller at the phone number on this quote."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_e57796ab",
+      "kind": "seed",
+      "filename": "MarlowFinch_PO_MF-PO-1106.pdf",
+      "sha256": "e57796ab46cb919d5b93e638113e72214ffb950b0684b266626c3ea8427fa129",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_mf_po_1106",
+      "kind": "po",
+      "source_file_id": "src_e57796ab",
+      "sha256": "e57796ab46cb919d5b93e638113e72214ffb950b0684b266626c3ea8427fa129",
+      "filename": "MarlowFinch_PO_MF-PO-1106.pdf",
+      "pages": 1
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l1",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Marlow & Finch Builders"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l2",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "General contractor - Fremont, CA - purchasing@marlowfinch.example"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l3",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "PURCHASE ORDER MF-PO-1106"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l4",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "PO date: 2026-10-09"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l5",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Supplier: Ridgeway Drywall Supply, 77 Mill Road, San Lorenzo, CA 94580"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l6",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l8",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Line  Description                                   Qty      Unit  Unit price    Amount"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l9",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "1     Type X gypsum board 4x12 5/8 in.             300.000  sheet $14.25        $4,275.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l11",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "PO total, not to exceed: $4,275.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l12",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "Terms: Ridgeway Drywall Supply Quote RDQ-61 and its Terms and Conditions of Sale."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l13",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Issued by: Jordan Pike, Purchasing, Marlow & Finch Builders"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l15",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 15,
+      "line_end": 15,
+      "text": "SUPPLIER ACKNOWLEDGMENT"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l16",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "Ridgeway Drywall Supply acknowledges and accepts purchase order MF-PO-1106 on the terms of Quote RDQ-61."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1106_p1_l17",
+      "document_id": "doc_mf_po_1106",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "Acknowledged by: Jun Park, Sales, Ridgeway Drywall Supply    Date: 2026-10-09"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_68757e71",
+      "kind": "seed",
+      "filename": "Ridgeway_Invoice_RD-612.pdf",
+      "sha256": "68757e717cb25917b2241156af305af816167a76729b3941e67422935bf24f3f",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_rd_inv_612",
+      "kind": "invoice",
+      "source_file_id": "src_68757e71",
+      "sha256": "68757e717cb25917b2241156af305af816167a76729b3941e67422935bf24f3f",
+      "filename": "Ridgeway_Invoice_RD-612.pdf",
+      "pages": 1
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l1",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Ridgeway Drywall Supply"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l2",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "Gypsum board and framing - 77 Mill Road, San Lorenzo, CA 94580 - ar@ridgeway-drywall.example"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l3",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "INVOICE RD-612"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l4",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "Invoice date: 2026-10-22"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l5",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Due date: 2026-11-06 (Net 15)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l6",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Bill to: Marlow & Finch Builders, Accounts Payable"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l7",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 7,
+      "line_end": 7,
+      "text": "Project: Oakview Lane Fourplex"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l8",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Your PO: MF-PO-1106    Quote: RDQ-61"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l10",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Line  Description                                   Qty      Unit  Unit price    Amount"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l11",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "1     Type X gypsum board 4x12 5/8 in.             300.000  sheet $15.10        $4,530.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l13",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Gross amount: $4,530.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l14",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "Balance due: $4,530.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l16",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "Delivered: 2026-10-21, Oakview Lane Fourplex, stocked floor by floor."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l17",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "Remit to: Ridgeway Drywall Supply, Millbrook Savings Bank, account ending 2619"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_rd_inv_612_p1_l18",
+      "document_id": "doc_rd_inv_612",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "Questions: ar@ridgeway-drywall.example, (510) 555-0184"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_rd_quote_4a33aea5",
+      "document_id": "doc_rd_quote",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_rd_quote\",\"document_kind\":\"quote\",\"fields\":{\"buyer_accepted_on\":{\"fragments\":[\"frag_rd_quote_p1_l18\"],\"quote\":\"Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-09\",\"value\":\"2026-10-09\"},\"incorporates_terms\":{\"fragments\":[\"frag_rd_quote_p1_l16\"],\"quote\":\"This quote incorporates the Ridgeway Drywall Supply Terms and Conditions of Sale on page 2.\",\"value\":true},\"product\":{\"fragments\":[\"frag_rd_quote_p1_l8\"],\"quote\":\"Product: Type X gypsum board, 4 ft x 12 ft x 5/8 in., fire rated\",\"value\":\"Type X gypsum board, 4 ft x 12 ft x 5/8 in., fire rated\"},\"project_name\":{\"fragments\":[\"frag_rd_quote_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA\",\"value\":\"Oakview Lane Fourplex\"},\"quote_date\":{\"fragments\":[\"frag_rd_quote_p1_l4\"],\"quote\":\"Quote date: 2026-10-07\",\"value\":\"2026-10-07\"},\"quote_number\":{\"fragments\":[\"frag_rd_quote_p1_l3\"],\"quote\":\"QUOTATION RDQ-61\",\"value\":\"RDQ-61\"},\"supplier_name\":{\"fragments\":[\"frag_rd_quote_p1_l1\"],\"quote\":\"Ridgeway Drywall Supply\",\"value\":\"Ridgeway Drywall Supply\"},\"unit\":{\"fragments\":[\"frag_rd_quote_p1_l9\"],\"quote\":\"Maximum quantity: 300 sheets, delivered to the project\",\"value\":\"sheet\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\",\"terms\":[{\"amount_cents\":1425,\"code\":\"unit_price\",\"effective_from\":\"2026-10-09\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_rd_quote_p1_l10\",\"frag_rd_quote_p1_l11\"],\"label\":\"Unit price, delivered\",\"quantity_milli\":0,\"quote\":\"Unit price: $14.25 per sheet, delivered Price validity: fixed for deliveries from 2026-10-09 through 2026-10-31\",\"scope\":{\"unit\":\"sheet\"}},{\"amount_cents\":0,\"code\":\"max_quantity\",\"effective_from\":\"2026-10-09\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_rd_quote_p1_l9\"],\"label\":\"Maximum quantity\",\"quantity_milli\":300000,\"quote\":\"Maximum quantity: 300 sheets, delivered to the project\",\"scope\":{\"unit\":\"sheet\"}},{\"amount_cents\":0,\"code\":\"valid_through\",\"effective_from\":\"2026-10-09\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_rd_quote_p1_l11\"],\"label\":\"Price validity\",\"quantity_milli\":0,\"quote\":\"Price validity: fixed for deliveries from 2026-10-09 through 2026-10-31\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"payment_terms\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_rd_quote_p1_l13\"],\"label\":\"Net 15\",\"quantity_milli\":0,\"quote\":\"Payment terms: Net 15 days from invoice date\",\"scope\":{\"net_days\":15}},{\"amount_cents\":0,\"code\":\"price_change_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_rd_quote_p2_l3\",\"frag_rd_quote_p2_l4\"],\"label\":\"Price changes need mutual written agreement\",\"quantity_milli\":0,\"quote\":\"1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"extra_charge_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_rd_quote_p2_l6\",\"frag_rd_quote_p2_l7\"],\"label\":\"Extra charges only when agreed in writing first\",\"quantity_milli\":0,\"quote\":\"2. Additional charges. Charges not listed in this quote apply only when both parties agree to them in writing before the work.\",\"scope\":{}}]}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_mf_po_1106_ab7e3c80",
+      "document_id": "doc_mf_po_1106",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_mf_po_1106\",\"document_kind\":\"po\",\"fields\":{\"incorporates_quote\":{\"fragments\":[\"frag_mf_po_1106_p1_l12\"],\"quote\":\"Terms: Ridgeway Drywall Supply Quote RDQ-61 and its Terms and Conditions of Sale.\",\"value\":\"RDQ-61\"},\"not_to_exceed_cents\":{\"fragments\":[\"frag_mf_po_1106_p1_l11\"],\"quote\":\"PO total, not to exceed: $4,275.00\",\"value\":427500},\"po_date\":{\"fragments\":[\"frag_mf_po_1106_p1_l4\"],\"quote\":\"PO date: 2026-10-09\",\"value\":\"2026-10-09\"},\"po_number\":{\"fragments\":[\"frag_mf_po_1106_p1_l3\"],\"quote\":\"PURCHASE ORDER MF-PO-1106\",\"value\":\"MF-PO-1106\"},\"project_name\":{\"fragments\":[\"frag_mf_po_1106_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA\",\"value\":\"Oakview Lane Fourplex\"},\"supplier_acknowledged_on\":{\"fragments\":[\"frag_mf_po_1106_p1_l16\",\"frag_mf_po_1106_p1_l17\"],\"quote\":\"Ridgeway Drywall Supply acknowledges and accepts purchase order MF-PO-1106 on the terms of Quote RDQ-61. Acknowledged by: Jun Park, Sales, Ridgeway Drywall Supply    Date: 2026-10-09\",\"value\":\"2026-10-09\"},\"supplier_name\":{\"fragments\":[\"frag_mf_po_1106_p1_l5\"],\"quote\":\"Supplier: Ridgeway Drywall Supply, 77 Mill Road, San Lorenzo, CA 94580\",\"value\":\"Ridgeway Drywall Supply\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":427500,\"description\":\"Type X gypsum board 4x12 5/8 in.\",\"fragments\":[\"frag_mf_po_1106_p1_l9\"],\"kind\":\"material\",\"quantity_milli\":300000,\"quote\":\"1     Type X gypsum board 4x12 5/8 in.             300.000  sheet $14.25        $4,275.00\",\"unit\":\"sheet\",\"unit_price_cents\":1425}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "upsert_purchase",
+    "args": {
+      "id": "pur_ridgeway_oak",
+      "supplier_id": "sup_ridgeway",
+      "project_id": "prj_oak",
+      "description": "Type X gypsum board, 4 ft x 12 ft x 5/8 in., fire rated",
+      "unit": "sheet",
+      "po_number": "MF-PO-1106",
+      "quote_document_id": "doc_rd_quote",
+      "po_document_id": "doc_mf_po_1106",
+      "status": "open"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_ridgeway_oak_unit_price",
+      "purchase_id": "pur_ridgeway_oak",
+      "code": "unit_price",
+      "label": "Unit price, delivered",
+      "amount_cents": 1425,
+      "quantity_milli": 0,
+      "text": "Unit price: $14.25 per sheet, delivered Price validity: fixed for deliveries from 2026-10-09 through 2026-10-31",
+      "scope_json": "{\"unit\":\"sheet\"}",
+      "effective_from": "2026-10-09",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_rd_quote_p1_l10\",\"frag_rd_quote_p1_l11\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_ridgeway_oak_max_quantity",
+      "purchase_id": "pur_ridgeway_oak",
+      "code": "max_quantity",
+      "label": "Maximum quantity",
+      "amount_cents": 0,
+      "quantity_milli": 300000,
+      "text": "Maximum quantity: 300 sheets, delivered to the project",
+      "scope_json": "{\"unit\":\"sheet\"}",
+      "effective_from": "2026-10-09",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_rd_quote_p1_l9\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_ridgeway_oak_valid_through",
+      "purchase_id": "pur_ridgeway_oak",
+      "code": "valid_through",
+      "label": "Price validity",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Price validity: fixed for deliveries from 2026-10-09 through 2026-10-31",
+      "scope_json": "{}",
+      "effective_from": "2026-10-09",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_rd_quote_p1_l11\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_ridgeway_oak_payment_terms",
+      "purchase_id": "pur_ridgeway_oak",
+      "code": "payment_terms",
+      "label": "Net 15",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Payment terms: Net 15 days from invoice date",
+      "scope_json": "{\"net_days\":15}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_rd_quote_p1_l13\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_ridgeway_oak_price_change_rule",
+      "purchase_id": "pur_ridgeway_oak",
+      "code": "price_change_rule",
+      "label": "Price changes need mutual written agreement",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_rd_quote_p2_l3\",\"frag_rd_quote_p2_l4\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_ridgeway_oak_extra_charge_rule",
+      "purchase_id": "pur_ridgeway_oak",
+      "code": "extra_charge_rule",
+      "label": "Extra charges only when agreed in writing first",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "2. Additional charges. Charges not listed in this quote apply only when both parties agree to them in writing before the work.",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_rd_quote_p2_l6\",\"frag_rd_quote_p2_l7\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_rd_inv_612_8b58eab4",
+      "document_id": "doc_rd_inv_612",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_rd_inv_612\",\"document_kind\":\"invoice\",\"fields\":{\"balance_requested_cents\":{\"fragments\":[\"frag_rd_inv_612_p1_l14\"],\"quote\":\"Balance due: $4,530.00\",\"value\":453000},\"currency\":{\"fragments\":[\"frag_rd_inv_612_p1_l13\"],\"quote\":\"Gross amount: $4,530.00\",\"value\":\"USD\"},\"due_date\":{\"fragments\":[\"frag_rd_inv_612_p1_l5\"],\"quote\":\"Due date: 2026-11-06 (Net 15)\",\"value\":\"2026-11-06\"},\"gross_cents\":{\"fragments\":[\"frag_rd_inv_612_p1_l13\"],\"quote\":\"Gross amount: $4,530.00\",\"value\":453000},\"invoice_date\":{\"fragments\":[\"frag_rd_inv_612_p1_l4\"],\"quote\":\"Invoice date: 2026-10-22\",\"value\":\"2026-10-22\"},\"invoice_number\":{\"fragments\":[\"frag_rd_inv_612_p1_l3\"],\"quote\":\"INVOICE RD-612\",\"value\":\"RD-612\"},\"po_number\":{\"fragments\":[\"frag_rd_inv_612_p1_l8\"],\"quote\":\"Your PO: MF-PO-1106    Quote: RDQ-61\",\"value\":\"MF-PO-1106\"},\"remit_account_last4\":{\"fragments\":[\"frag_rd_inv_612_p1_l17\"],\"quote\":\"Remit to: Ridgeway Drywall Supply, Millbrook Savings Bank, account ending 2619\",\"value\":\"2619\"},\"supplier_name\":{\"fragments\":[\"frag_rd_inv_612_p1_l1\"],\"quote\":\"Ridgeway Drywall Supply\",\"value\":\"Ridgeway Drywall Supply\"},\"tax_cents\":{\"missing_reason\":\"No tax line on this invoice; no tax rate is assumed.\",\"value\":null}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":453000,\"description\":\"Type X gypsum board 4x12 5/8 in.\",\"fragments\":[\"frag_rd_inv_612_p1_l11\"],\"kind\":\"material\",\"links\":{\"term_code\":\"unit_price\"},\"quantity_milli\":300000,\"quote\":\"1     Type X gypsum board 4x12 5/8 in.             300.000  sheet $15.10        $4,530.00\",\"unit\":\"sheet\",\"unit_price_cents\":1510}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice",
+    "args": {
+      "id": "inv_rd612",
+      "supplier_id": "sup_ridgeway",
+      "purchase_id": "pur_ridgeway_oak",
+      "invoice_number": "RD-612",
+      "invoice_date": "2026-10-22",
+      "due_date": "2026-11-06",
+      "currency": "USD"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_revision",
+    "args": {
+      "id": "rev_rd612_r1",
+      "invoice_id": "inv_rd612",
+      "revision": 1,
+      "document_id": "doc_rd_inv_612",
+      "gross_cents": 453000,
+      "deposit_shown_cents": 0,
+      "balance_requested_cents": 453000,
+      "supersedes_revision_id": ""
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_line",
+    "args": {
+      "id": "ln_rd612_r1_1",
+      "revision_id": "rev_rd612_r1",
+      "kind": "material",
+      "description": "Type X gypsum board 4x12 5/8 in.",
+      "quantity_milli": 300000,
+      "unit": "sheet",
+      "unit_price_cents": 1510,
+      "amount_cents": 453000,
+      "linked_term_id": "term_ridgeway_oak_unit_price",
+      "linked_change_request_id": "",
+      "source_fragment_ids_json": "[\"frag_rd_inv_612_p1_l11\"]"
+    }
+  },
+  {
+    "role": "receiver",
+    "reducer": "attest_receipt",
+    "args": {
+      "id": "att_rd_300",
+      "invoice_id": "inv_rd612",
+      "scope": "Drywall stocked floor by floor",
+      "quantity_milli": 300000,
+      "unit": "sheet",
+      "reason": "Counted 300 sheets of Type X against the delivery ticket"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_assessment",
+    "args": {
+      "id": "asm_rd612_r1_v1",
+      "revision_id": "rev_rd612_r1",
+      "version": 1,
+      "fingerprint": "fp_9fc609a1112468735fccc4fdadc1cbea",
+      "policy_version": "commercial-2026-10-24.1",
+      "claimed_cents": 453000,
+      "authorised_cents": 427500,
+      "pending_cents": 0,
+      "variance_cents": 25500,
+      "deposit_available_cents": 0,
+      "proposed_payment_cents": 0,
+      "commercial_status": "differences_under_review",
+      "summary": "Claimed $4,530.00: $4,275.00 authorised, $255.00 price variance, $0.00 pending. $255.00 under review (not savings until the supplier agrees).",
+      "details_json": "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $4,530.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":427500,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 300 sheet x $14.25 (accepted unit price) = $4,275.00; billed 300 sheet x $15.10 = $4,530.00; difference $255.00\",\"claimed_cents\":453000,\"classification\":\"\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Type X gypsum board 4x12 5/8 in.\",\"fragment_ids\":[\"frag_rd_inv_612_p1_l11\",\"frag_rd_quote_p1_l10\",\"frag_rd_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_rd612_r1_1\",\"pending_cents\":0,\"status\":\"variance\",\"uncertainty\":\"No accepted amendment covers this price. Quote terms: \\\"1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\\\"\",\"variance_cents\":25500}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Type X gypsum board 4x12 5/8 in.: Allowed 300 sheet x $14.25 (accepted unit price) = $4,275.00; billed 300 sheet x $15.10 = $4,530.00; difference $255.00\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"No extra charges billed.\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":300000,\"this_invoice_milli\":300000,\"unit\":\"sheet\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"300 sheet billed to date of 300 sheet allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":0,\"shown_cents\":0},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No deposit to apply.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{\"sheet\":300000},\"billed_milli\":{\"sheet\":300000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Receipt of 300 sheet attested by the superintendent (MANUALLY_CONFIRMED, not machine-verified).\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_ridgeway:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 2619 (sup_ridgeway:v1).\"}],\"clarification_points\":[\"Type X gypsum board 4x12 5/8 in.: Allowed 300 sheet x $14.25 (accepted unit price) = $4,275.00; billed 300 sheet x $15.10 = $4,530.00; difference $255.00. No accepted amendment covers this price. Quote terms: \\\"1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\\\"\",\"Please send a corrected invoice or an agreed credit memo. We'll keep your original invoice on file.\"],\"conditional_payment_cents\":427500,\"deposit_applied_cents\":0,\"holds\":[{\"amount_cents\":25500,\"code\":\"PRICE_VARIANCE\",\"evidence\":{\"fragment_ids\":[\"frag_rd_inv_612_p1_l11\",\"frag_rd_quote_p1_l10\",\"frag_rd_quote_p1_l11\"],\"line_ids\":[\"ln_rd612_r1_1\"]},\"reason\":\"Type X gypsum board 4x12 5/8 in.: Allowed 300 sheet x $14.25 (accepted unit price) = $4,275.00; billed 300 sheet x $15.10 = $4,530.00; difference $255.00\"}],\"inputs\":{\"allocations\":{},\"attestations\":{\"att_rd_300\":\"e928e6eecba68050\"},\"authorities\":{\"all\":\"7072307adb37490d\"},\"change_requests\":{},\"deposits\":{},\"document\":{\"doc_rd_inv_612\":\"68757e717cb25917b2241156af305af816167a76729b3941e67422935bf24f3f\"},\"invoice\":{\"inv_rd612\":\"f31180f665e9a373\"},\"lines\":{\"ln_rd612_r1_1\":\"1d474a4eee1e5ae5\"},\"others\":{},\"payee_profiles\":{\"sup_ridgeway:v1\":\"cc7c54081b68d4be\"},\"policy_version\":\"commercial-2026-10-24.1\",\"purchase\":{\"pur_ridgeway_oak\":\"73492bb2db0ae8ba\"},\"revision\":{\"rev_rd612_r1\":\"f4fcc213a2224236\"},\"terms\":{\"term_ridgeway_oak_extra_charge_rule\":\"da51331e0ea7be57\",\"term_ridgeway_oak_max_quantity\":\"f45a568823180b2f\",\"term_ridgeway_oak_payment_terms\":\"01f0b793fe28476d\",\"term_ridgeway_oak_price_change_rule\":\"61138b4fc509d106\",\"term_ridgeway_oak_unit_price\":\"058cf3b444cfbc35\",\"term_ridgeway_oak_valid_through\":\"0a1276dc629063b2\"}},\"lines\":[{\"accepted_cents\":427500,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 300 sheet x $14.25 (accepted unit price) = $4,275.00; billed 300 sheet x $15.10 = $4,530.00; difference $255.00\",\"claimed_cents\":453000,\"classification\":\"\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Type X gypsum board 4x12 5/8 in.\",\"fragment_ids\":[\"frag_rd_inv_612_p1_l11\",\"frag_rd_quote_p1_l10\",\"frag_rd_quote_p1_l11\"],\"hold_code\":\"PRICE_VARIANCE\",\"kind\":\"material\",\"line_id\":\"ln_rd612_r1_1\",\"pending_cents\":0,\"status\":\"variance\",\"uncertainty\":\"No accepted amendment covers this price. Quote terms: \\\"1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\\\"\",\"variance_cents\":25500}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":25500}",
+      "next_action": "Ask the supplier for a corrected invoice or an agreed credit for the $255.00 under review."
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "open_hold",
+    "args": {
+      "id": "hold_rev_rd612_r1_price_variance",
+      "revision_id": "rev_rd612_r1",
+      "code": "PRICE_VARIANCE",
+      "amount_cents": 25500,
+      "reason": "Type X gypsum board 4x12 5/8 in.: Allowed 300 sheet x $14.25 (accepted unit price) = $4,275.00; billed 300 sheet x $15.10 = $4,530.00; difference $255.00",
+      "evidence_json": "{\"fragment_ids\":[\"frag_rd_inv_612_p1_l11\",\"frag_rd_quote_p1_l10\",\"frag_rd_quote_p1_l11\"],\"line_ids\":[\"ln_rd612_r1_1\"]}"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_cfb4ff47",
+      "kind": "seed",
+      "filename": "Bayline_Quote_BEQ-120.pdf",
+      "sha256": "cfb4ff477a17a93fc40ca40b6cc4e23fa1239e8a4fbbbbb0665e1162ba2415be",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_be_quote",
+      "kind": "quote",
+      "source_file_id": "src_cfb4ff47",
+      "sha256": "cfb4ff477a17a93fc40ca40b6cc4e23fa1239e8a4fbbbbb0665e1162ba2415be",
+      "filename": "Bayline_Quote_BEQ-120.pdf",
+      "pages": 2
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l1",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Bayline Electric Supply"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l2",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "Electrical wholesale - 3100 Shoreline Blvd, Alameda, CA 94501 - (510) 555-0186"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l3",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "QUOTATION BEQ-120"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l4",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "Quote date: 2026-10-08"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l5",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Customer: Marlow & Finch Builders, attn. Jordan Pike (Purchasing)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l6",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l8",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Product: THHN copper building wire, 12 AWG, 500 ft spool"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l9",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "Maximum quantity: 20 spools, delivered to the project"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l10",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Unit price: $143.00 per spool, delivered"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l11",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "Price validity: fixed for deliveries from 2026-10-10 through 2026-10-31"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l12",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "Extended maximum: 20 spools x $143.00 = $2,860.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l13",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Payment terms: Net 30 days from invoice date"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l14",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "Not included: cut-to-length service, will-call pickup"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l16",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "This quote incorporates the Bayline Electric Supply Terms and Conditions of Sale on page 2."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l18",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-10"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p1_l19",
+      "document_id": "doc_be_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 19,
+      "line_end": 19,
+      "text": "Issued for Bayline Electric Supply: Priya Nand, Counter Sales"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p2_l1",
+      "document_id": "doc_be_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "TERMS AND CONDITIONS OF SALE (part of Quote BEQ-120)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p2_l3",
+      "document_id": "doc_be_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "1. Price changes. Any price change requires mutual written agreement of buyer and seller"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p2_l4",
+      "document_id": "doc_be_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "before the affected deliveries."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p2_l6",
+      "document_id": "doc_be_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "2. Additional charges. Charges not listed in this quote apply only when both parties agree"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p2_l7",
+      "document_id": "doc_be_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 7,
+      "line_end": 7,
+      "text": "to them in writing before the work."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p2_l9",
+      "document_id": "doc_be_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "3. Payment instructions. Seller will not change its payment instructions by email alone."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_quote_p2_l10",
+      "document_id": "doc_be_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Buyer will confirm any change by calling seller at the phone number on this quote."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_9e259596",
+      "kind": "seed",
+      "filename": "MarlowFinch_PO_MF-PO-1117.pdf",
+      "sha256": "9e259596f53ccc93248898e671d169a88df5bd996c2c3c2cd7bd85c9aa340515",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_mf_po_1117",
+      "kind": "po",
+      "source_file_id": "src_9e259596",
+      "sha256": "9e259596f53ccc93248898e671d169a88df5bd996c2c3c2cd7bd85c9aa340515",
+      "filename": "MarlowFinch_PO_MF-PO-1117.pdf",
+      "pages": 1
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l1",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Marlow & Finch Builders"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l2",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "General contractor - Fremont, CA - purchasing@marlowfinch.example"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l3",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "PURCHASE ORDER MF-PO-1117"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l4",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "PO date: 2026-10-10"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l5",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Supplier: Bayline Electric Supply, 3100 Shoreline Blvd, Alameda, CA 94501"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l6",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l8",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Line  Description                                   Qty      Unit  Unit price    Amount"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l9",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "1     THHN copper wire 12 AWG, 500 ft spool        20.000   spool $143.00       $2,860.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l11",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "PO total, not to exceed: $2,860.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l12",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "Terms: Bayline Electric Supply Quote BEQ-120 and its Terms and Conditions of Sale."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l13",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Issued by: Jordan Pike, Purchasing, Marlow & Finch Builders"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l15",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 15,
+      "line_end": 15,
+      "text": "SUPPLIER ACKNOWLEDGMENT"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l16",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "Bayline Electric Supply acknowledges and accepts purchase order MF-PO-1117 on the terms of Quote BEQ-120."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1117_p1_l17",
+      "document_id": "doc_mf_po_1117",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "Acknowledged by: Priya Nand, Counter Sales, Bayline Electric Supply    Date: 2026-10-10"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_4fc12cf7",
+      "kind": "seed",
+      "filename": "Bayline_Invoice_BE-1209.pdf",
+      "sha256": "4fc12cf7495c8e8c478ecfe7bd2d8c2c5fe29aac34fbdf5f8861850d75b1b07f",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_be_inv_1209",
+      "kind": "invoice",
+      "source_file_id": "src_4fc12cf7",
+      "sha256": "4fc12cf7495c8e8c478ecfe7bd2d8c2c5fe29aac34fbdf5f8861850d75b1b07f",
+      "filename": "Bayline_Invoice_BE-1209.pdf",
+      "pages": 1
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l1",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Bayline Electric Supply"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l2",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "Electrical wholesale - 3100 Shoreline Blvd, Alameda, CA 94501 - ar@bayline-electric.example"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l3",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "INVOICE BE-1209"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l4",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "Invoice date: 2026-10-23"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l5",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Due date: 2026-11-22 (Net 30)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l6",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Bill to: Marlow & Finch Builders, Accounts Payable"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l7",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 7,
+      "line_end": 7,
+      "text": "Project: Oakview Lane Fourplex"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l8",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Your PO: MF-PO-1117    Quote: BEQ-120"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l10",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Line  Description                                   Qty      Unit  Unit price    Amount"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l11",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "1     THHN copper wire 12 AWG, 500 ft spool        20.000   spool $143.00       $2,860.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l13",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Gross amount: $2,860.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l14",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "Balance due: $2,860.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l16",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "Shipped: 2026-10-22 by Bayline route truck to Oakview Lane Fourplex."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l17",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "Remit to: Bayline Electric Supply, Estuary Commercial Bank, account ending 8350"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_be_inv_1209_p1_l18",
+      "document_id": "doc_be_inv_1209",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "Questions: ar@bayline-electric.example, (510) 555-0187"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_be_quote_39fc50a7",
+      "document_id": "doc_be_quote",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_be_quote\",\"document_kind\":\"quote\",\"fields\":{\"buyer_accepted_on\":{\"fragments\":[\"frag_be_quote_p1_l18\"],\"quote\":\"Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-10\",\"value\":\"2026-10-10\"},\"incorporates_terms\":{\"fragments\":[\"frag_be_quote_p1_l16\"],\"quote\":\"This quote incorporates the Bayline Electric Supply Terms and Conditions of Sale on page 2.\",\"value\":true},\"product\":{\"fragments\":[\"frag_be_quote_p1_l8\"],\"quote\":\"Product: THHN copper building wire, 12 AWG, 500 ft spool\",\"value\":\"THHN copper building wire, 12 AWG, 500 ft spool\"},\"project_name\":{\"fragments\":[\"frag_be_quote_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA\",\"value\":\"Oakview Lane Fourplex\"},\"quote_date\":{\"fragments\":[\"frag_be_quote_p1_l4\"],\"quote\":\"Quote date: 2026-10-08\",\"value\":\"2026-10-08\"},\"quote_number\":{\"fragments\":[\"frag_be_quote_p1_l3\"],\"quote\":\"QUOTATION BEQ-120\",\"value\":\"BEQ-120\"},\"supplier_name\":{\"fragments\":[\"frag_be_quote_p1_l1\"],\"quote\":\"Bayline Electric Supply\",\"value\":\"Bayline Electric Supply\"},\"unit\":{\"fragments\":[\"frag_be_quote_p1_l9\"],\"quote\":\"Maximum quantity: 20 spools, delivered to the project\",\"value\":\"spool\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\",\"terms\":[{\"amount_cents\":14300,\"code\":\"unit_price\",\"effective_from\":\"2026-10-10\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_be_quote_p1_l10\",\"frag_be_quote_p1_l11\"],\"label\":\"Unit price, delivered\",\"quantity_milli\":0,\"quote\":\"Unit price: $143.00 per spool, delivered Price validity: fixed for deliveries from 2026-10-10 through 2026-10-31\",\"scope\":{\"unit\":\"spool\"}},{\"amount_cents\":0,\"code\":\"max_quantity\",\"effective_from\":\"2026-10-10\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_be_quote_p1_l9\"],\"label\":\"Maximum quantity\",\"quantity_milli\":20000,\"quote\":\"Maximum quantity: 20 spools, delivered to the project\",\"scope\":{\"unit\":\"spool\"}},{\"amount_cents\":0,\"code\":\"valid_through\",\"effective_from\":\"2026-10-10\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_be_quote_p1_l11\"],\"label\":\"Price validity\",\"quantity_milli\":0,\"quote\":\"Price validity: fixed for deliveries from 2026-10-10 through 2026-10-31\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"payment_terms\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_be_quote_p1_l13\"],\"label\":\"Net 30\",\"quantity_milli\":0,\"quote\":\"Payment terms: Net 30 days from invoice date\",\"scope\":{\"net_days\":30}},{\"amount_cents\":0,\"code\":\"price_change_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_be_quote_p2_l3\",\"frag_be_quote_p2_l4\"],\"label\":\"Price changes need mutual written agreement\",\"quantity_milli\":0,\"quote\":\"1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"extra_charge_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_be_quote_p2_l6\",\"frag_be_quote_p2_l7\"],\"label\":\"Extra charges only when agreed in writing first\",\"quantity_milli\":0,\"quote\":\"2. Additional charges. Charges not listed in this quote apply only when both parties agree to them in writing before the work.\",\"scope\":{}}]}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_mf_po_1117_ec00fe5d",
+      "document_id": "doc_mf_po_1117",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_mf_po_1117\",\"document_kind\":\"po\",\"fields\":{\"incorporates_quote\":{\"fragments\":[\"frag_mf_po_1117_p1_l12\"],\"quote\":\"Terms: Bayline Electric Supply Quote BEQ-120 and its Terms and Conditions of Sale.\",\"value\":\"BEQ-120\"},\"not_to_exceed_cents\":{\"fragments\":[\"frag_mf_po_1117_p1_l11\"],\"quote\":\"PO total, not to exceed: $2,860.00\",\"value\":286000},\"po_date\":{\"fragments\":[\"frag_mf_po_1117_p1_l4\"],\"quote\":\"PO date: 2026-10-10\",\"value\":\"2026-10-10\"},\"po_number\":{\"fragments\":[\"frag_mf_po_1117_p1_l3\"],\"quote\":\"PURCHASE ORDER MF-PO-1117\",\"value\":\"MF-PO-1117\"},\"project_name\":{\"fragments\":[\"frag_mf_po_1117_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA\",\"value\":\"Oakview Lane Fourplex\"},\"supplier_acknowledged_on\":{\"fragments\":[\"frag_mf_po_1117_p1_l16\",\"frag_mf_po_1117_p1_l17\"],\"quote\":\"Bayline Electric Supply acknowledges and accepts purchase order MF-PO-1117 on the terms of Quote BEQ-120. Acknowledged by: Priya Nand, Counter Sales, Bayline Electric Supply    Date: 2026-10-10\",\"value\":\"2026-10-10\"},\"supplier_name\":{\"fragments\":[\"frag_mf_po_1117_p1_l5\"],\"quote\":\"Supplier: Bayline Electric Supply, 3100 Shoreline Blvd, Alameda, CA 94501\",\"value\":\"Bayline Electric Supply\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":286000,\"description\":\"THHN copper wire 12 AWG, 500 ft spool\",\"fragments\":[\"frag_mf_po_1117_p1_l9\"],\"kind\":\"material\",\"quantity_milli\":20000,\"quote\":\"1     THHN copper wire 12 AWG, 500 ft spool        20.000   spool $143.00       $2,860.00\",\"unit\":\"spool\",\"unit_price_cents\":14300}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "upsert_purchase",
+    "args": {
+      "id": "pur_bayline_oak",
+      "supplier_id": "sup_bayline",
+      "project_id": "prj_oak",
+      "description": "THHN copper building wire, 12 AWG, 500 ft spool",
+      "unit": "spool",
+      "po_number": "MF-PO-1117",
+      "quote_document_id": "doc_be_quote",
+      "po_document_id": "doc_mf_po_1117",
+      "status": "open"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_bayline_oak_unit_price",
+      "purchase_id": "pur_bayline_oak",
+      "code": "unit_price",
+      "label": "Unit price, delivered",
+      "amount_cents": 14300,
+      "quantity_milli": 0,
+      "text": "Unit price: $143.00 per spool, delivered Price validity: fixed for deliveries from 2026-10-10 through 2026-10-31",
+      "scope_json": "{\"unit\":\"spool\"}",
+      "effective_from": "2026-10-10",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_be_quote_p1_l10\",\"frag_be_quote_p1_l11\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_bayline_oak_max_quantity",
+      "purchase_id": "pur_bayline_oak",
+      "code": "max_quantity",
+      "label": "Maximum quantity",
+      "amount_cents": 0,
+      "quantity_milli": 20000,
+      "text": "Maximum quantity: 20 spools, delivered to the project",
+      "scope_json": "{\"unit\":\"spool\"}",
+      "effective_from": "2026-10-10",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_be_quote_p1_l9\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_bayline_oak_valid_through",
+      "purchase_id": "pur_bayline_oak",
+      "code": "valid_through",
+      "label": "Price validity",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Price validity: fixed for deliveries from 2026-10-10 through 2026-10-31",
+      "scope_json": "{}",
+      "effective_from": "2026-10-10",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_be_quote_p1_l11\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_bayline_oak_payment_terms",
+      "purchase_id": "pur_bayline_oak",
+      "code": "payment_terms",
+      "label": "Net 30",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Payment terms: Net 30 days from invoice date",
+      "scope_json": "{\"net_days\":30}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_be_quote_p1_l13\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_bayline_oak_price_change_rule",
+      "purchase_id": "pur_bayline_oak",
+      "code": "price_change_rule",
+      "label": "Price changes need mutual written agreement",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_be_quote_p2_l3\",\"frag_be_quote_p2_l4\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_bayline_oak_extra_charge_rule",
+      "purchase_id": "pur_bayline_oak",
+      "code": "extra_charge_rule",
+      "label": "Extra charges only when agreed in writing first",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "2. Additional charges. Charges not listed in this quote apply only when both parties agree to them in writing before the work.",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_be_quote_p2_l6\",\"frag_be_quote_p2_l7\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_be_inv_1209_0246b682",
+      "document_id": "doc_be_inv_1209",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_be_inv_1209\",\"document_kind\":\"invoice\",\"fields\":{\"balance_requested_cents\":{\"fragments\":[\"frag_be_inv_1209_p1_l14\"],\"quote\":\"Balance due: $2,860.00\",\"value\":286000},\"currency\":{\"fragments\":[\"frag_be_inv_1209_p1_l13\"],\"quote\":\"Gross amount: $2,860.00\",\"value\":\"USD\"},\"due_date\":{\"fragments\":[\"frag_be_inv_1209_p1_l5\"],\"quote\":\"Due date: 2026-11-22 (Net 30)\",\"value\":\"2026-11-22\"},\"gross_cents\":{\"fragments\":[\"frag_be_inv_1209_p1_l13\"],\"quote\":\"Gross amount: $2,860.00\",\"value\":286000},\"invoice_date\":{\"fragments\":[\"frag_be_inv_1209_p1_l4\"],\"quote\":\"Invoice date: 2026-10-23\",\"value\":\"2026-10-23\"},\"invoice_number\":{\"fragments\":[\"frag_be_inv_1209_p1_l3\"],\"quote\":\"INVOICE BE-1209\",\"value\":\"BE-1209\"},\"po_number\":{\"fragments\":[\"frag_be_inv_1209_p1_l8\"],\"quote\":\"Your PO: MF-PO-1117    Quote: BEQ-120\",\"value\":\"MF-PO-1117\"},\"remit_account_last4\":{\"fragments\":[\"frag_be_inv_1209_p1_l17\"],\"quote\":\"Remit to: Bayline Electric Supply, Estuary Commercial Bank, account ending 8350\",\"value\":\"8350\"},\"supplier_name\":{\"fragments\":[\"frag_be_inv_1209_p1_l1\"],\"quote\":\"Bayline Electric Supply\",\"value\":\"Bayline Electric Supply\"},\"tax_cents\":{\"missing_reason\":\"No tax line on this invoice; no tax rate is assumed.\",\"value\":null}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":286000,\"description\":\"THHN copper wire 12 AWG, 500 ft spool\",\"fragments\":[\"frag_be_inv_1209_p1_l11\"],\"kind\":\"material\",\"links\":{\"term_code\":\"unit_price\"},\"quantity_milli\":20000,\"quote\":\"1     THHN copper wire 12 AWG, 500 ft spool        20.000   spool $143.00       $2,860.00\",\"unit\":\"spool\",\"unit_price_cents\":14300}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice",
+    "args": {
+      "id": "inv_be1209",
+      "supplier_id": "sup_bayline",
+      "purchase_id": "pur_bayline_oak",
+      "invoice_number": "BE-1209",
+      "invoice_date": "2026-10-23",
+      "due_date": "2026-11-22",
+      "currency": "USD"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_revision",
+    "args": {
+      "id": "rev_be1209_r1",
+      "invoice_id": "inv_be1209",
+      "revision": 1,
+      "document_id": "doc_be_inv_1209",
+      "gross_cents": 286000,
+      "deposit_shown_cents": 0,
+      "balance_requested_cents": 286000,
+      "supersedes_revision_id": ""
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_line",
+    "args": {
+      "id": "ln_be1209_r1_1",
+      "revision_id": "rev_be1209_r1",
+      "kind": "material",
+      "description": "THHN copper wire 12 AWG, 500 ft spool",
+      "quantity_milli": 20000,
+      "unit": "spool",
+      "unit_price_cents": 14300,
+      "amount_cents": 286000,
+      "linked_term_id": "term_bayline_oak_unit_price",
+      "linked_change_request_id": "",
+      "source_fragment_ids_json": "[\"frag_be_inv_1209_p1_l11\"]"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_assessment",
+    "args": {
+      "id": "asm_be1209_r1_v1",
+      "revision_id": "rev_be1209_r1",
+      "version": 1,
+      "fingerprint": "fp_0fee34b2a79d621bc079c2e84720c0a9",
+      "policy_version": "commercial-2026-10-24.1",
+      "claimed_cents": 286000,
+      "authorised_cents": 286000,
+      "pending_cents": 0,
+      "variance_cents": 0,
+      "deposit_available_cents": 0,
+      "proposed_payment_cents": 286000,
+      "commercial_status": "matches",
+      "summary": "Claimed $2,860.00: $2,860.00 authorised, $0.00 price variance, $0.00 pending. Everything claimed is authorised; $2,860.00 proposed after the $0.00 deposit.",
+      "details_json": "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $2,860.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":286000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 20 spool x $143.00 (accepted unit price) = $2,860.00; billed 20 spool x $143.00 = $2,860.00\",\"claimed_cents\":286000,\"classification\":\"\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"THHN copper wire 12 AWG, 500 ft spool\",\"fragment_ids\":[\"frag_be_inv_1209_p1_l11\",\"frag_be_quote_p1_l10\",\"frag_be_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_be1209_r1_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Material billed at the accepted price.\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"No extra charges billed.\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":20000,\"this_invoice_milli\":20000,\"unit\":\"spool\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"20 spool billed to date of 20 spool allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":0,\"shown_cents\":0},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No deposit to apply.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"spool\":20000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"fail\",\"summary\":\"Nobody has attested receipt of 20 spool. Clerk can't verify deliveries; the superintendent must confirm.\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_bayline:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 8350 (sup_bayline:v1).\"}],\"clarification_points\":[],\"conditional_payment_cents\":286000,\"deposit_applied_cents\":0,\"holds\":[{\"amount_cents\":0,\"code\":\"RECEIPT_NOT_VERIFIED\",\"evidence\":{\"attested_milli\":{},\"billed_milli\":{\"spool\":20000},\"label\":\"MANUALLY_CONFIRMED\"},\"reason\":\"Nobody has attested receipt of 20 spool. Clerk can't verify deliveries; the superintendent must confirm.\"}],\"inputs\":{\"allocations\":{},\"attestations\":{},\"authorities\":{\"all\":\"7072307adb37490d\"},\"change_requests\":{},\"deposits\":{},\"document\":{\"doc_be_inv_1209\":\"4fc12cf7495c8e8c478ecfe7bd2d8c2c5fe29aac34fbdf5f8861850d75b1b07f\"},\"invoice\":{\"inv_be1209\":\"678b75e059b7aaa0\"},\"lines\":{\"ln_be1209_r1_1\":\"60b6cc19b3a28af5\"},\"others\":{},\"payee_profiles\":{\"sup_bayline:v1\":\"c9e53376be87a435\"},\"policy_version\":\"commercial-2026-10-24.1\",\"purchase\":{\"pur_bayline_oak\":\"057eec998e69ec6c\"},\"revision\":{\"rev_be1209_r1\":\"2527f51a8c7bea90\"},\"terms\":{\"term_bayline_oak_extra_charge_rule\":\"2c1a3a6bc5bd8353\",\"term_bayline_oak_max_quantity\":\"1c32a3f8cf3631f0\",\"term_bayline_oak_payment_terms\":\"896e357ed5e76d41\",\"term_bayline_oak_price_change_rule\":\"d2823b74f52292e4\",\"term_bayline_oak_unit_price\":\"3c33bd809840d4a3\",\"term_bayline_oak_valid_through\":\"ba956f0a62b54be9\"}},\"lines\":[{\"accepted_cents\":286000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 20 spool x $143.00 (accepted unit price) = $2,860.00; billed 20 spool x $143.00 = $2,860.00\",\"claimed_cents\":286000,\"classification\":\"\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"THHN copper wire 12 AWG, 500 ft spool\",\"fragment_ids\":[\"frag_be_inv_1209_p1_l11\",\"frag_be_quote_p1_l10\",\"frag_be_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_be1209_r1_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":0}",
+      "next_action": "Superintendent: confirm what was received (manual attestation)."
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "open_hold",
+    "args": {
+      "id": "hold_rev_be1209_r1_receipt_not_verified",
+      "revision_id": "rev_be1209_r1",
+      "code": "RECEIPT_NOT_VERIFIED",
+      "amount_cents": 0,
+      "reason": "Nobody has attested receipt of 20 spool. Clerk can't verify deliveries; the superintendent must confirm.",
+      "evidence_json": "{\"attested_milli\":{},\"billed_milli\":{\"spool\":20000},\"label\":\"MANUALLY_CONFIRMED\"}"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_a572e8ef",
+      "kind": "seed",
+      "filename": "DeltaPump_Quote_DPQ-41.pdf",
+      "sha256": "a572e8ef5571e8ab0e98a127263a06e1136717158ed5cee9c66b44b938d15703",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_dp_quote",
+      "kind": "quote",
+      "source_file_id": "src_a572e8ef",
+      "sha256": "a572e8ef5571e8ab0e98a127263a06e1136717158ed5cee9c66b44b938d15703",
+      "filename": "DeltaPump_Quote_DPQ-41.pdf",
+      "pages": 2
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l1",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Delta Pump Services"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l2",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "Concrete pumping - 18 Levee Way, Newark, CA 94560 - (510) 555-0189"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l3",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "QUOTATION DPQ-41"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l4",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "Quote date: 2026-10-06"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l5",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Customer: Marlow & Finch Builders, attn. Jordan Pike (Purchasing)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l6",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l8",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Product: 38 m concrete boom pump with operator, up to 6 hours per pour"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l9",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "Maximum quantity: 3 pours at the project"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l10",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Unit price: $1,150.00 per pour, operator included"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l11",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "Price validity: fixed for pours from 2026-10-08 through 2026-10-31"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l12",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "Extended maximum: 3 pours x $1,150.00 = $3,450.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l13",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Payment terms: Net 15 days from invoice date"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l14",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "Fuel: surcharge per clause 4 of the Terms and Conditions of Sale"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l16",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "This quote incorporates the Delta Pump Services Terms and Conditions of Sale on page 2."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l18",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-08"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p1_l19",
+      "document_id": "doc_dp_quote",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 19,
+      "line_end": 19,
+      "text": "Issued for Delta Pump Services: Marco Ruiz, Dispatch"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l1",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "TERMS AND CONDITIONS OF SALE (part of Quote DPQ-41)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l3",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "1. Price changes. Any price change requires mutual written agreement of buyer and seller"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l4",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "before the affected deliveries."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l6",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "2. Additional charges. Charges not listed in this quote apply only when both parties agree"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l7",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 7,
+      "line_end": 7,
+      "text": "to them in writing before the work."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l9",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "3. Payment instructions. Seller will not change its payment instructions by email alone."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l10",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Buyer will confirm any change by calling seller at the phone number on this quote."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l12",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "4. Fuel surcharge. When the weekly California diesel index is above $5.00 per gallon, seller"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_quote_p2_l13",
+      "document_id": "doc_dp_quote",
+      "page": 2,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "adds $32.00 per pour. The invoice must state the index value for the week of each pour."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_ad17239c",
+      "kind": "seed",
+      "filename": "MarlowFinch_PO_MF-PO-1128.pdf",
+      "sha256": "ad17239c695ce78cb4327de181bc88b573e909970fc4d1ef646e2db99b9e4aaf",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_mf_po_1128",
+      "kind": "po",
+      "source_file_id": "src_ad17239c",
+      "sha256": "ad17239c695ce78cb4327de181bc88b573e909970fc4d1ef646e2db99b9e4aaf",
+      "filename": "MarlowFinch_PO_MF-PO-1128.pdf",
+      "pages": 1
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l1",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Marlow & Finch Builders"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l2",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "General contractor - Fremont, CA - purchasing@marlowfinch.example"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l3",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "PURCHASE ORDER MF-PO-1128"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l4",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "PO date: 2026-10-08"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l5",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Supplier: Delta Pump Services, 18 Levee Way, Newark, CA 94560"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l6",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l8",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Line  Description                                   Qty      Unit  Unit price    Amount"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l9",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 9,
+      "line_end": 9,
+      "text": "1     Concrete boom pump 38 m, per pour            3.000    pour  $1,150.00     $3,450.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l11",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "PO total, not to exceed: $3,450.00 plus fuel surcharge under quote clause 4"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l12",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "Terms: Delta Pump Services Quote DPQ-41 and its Terms and Conditions of Sale."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l13",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 13,
+      "line_end": 13,
+      "text": "Issued by: Jordan Pike, Purchasing, Marlow & Finch Builders"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l15",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 15,
+      "line_end": 15,
+      "text": "SUPPLIER ACKNOWLEDGMENT"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l16",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 16,
+      "line_end": 16,
+      "text": "Delta Pump Services acknowledges and accepts purchase order MF-PO-1128 on the terms of Quote DPQ-41."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_mf_po_1128_p1_l17",
+      "document_id": "doc_mf_po_1128",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "Acknowledged by: Marco Ruiz, Dispatch, Delta Pump Services    Date: 2026-10-08"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_source_file",
+    "args": {
+      "id": "src_f4f8fa14",
+      "kind": "seed",
+      "filename": "DeltaPump_Invoice_DP-418.pdf",
+      "sha256": "f4f8fa142a707c253b8b355f74d61c0ece866c678c60a1a7bdb537eb3a66e829",
+      "received_at_iso": "",
+      "from_address": "",
+      "subject": "",
+      "storage_path": ""
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "record_document",
+    "args": {
+      "id": "doc_dp_inv_418",
+      "kind": "invoice",
+      "source_file_id": "src_f4f8fa14",
+      "sha256": "f4f8fa142a707c253b8b355f74d61c0ece866c678c60a1a7bdb537eb3a66e829",
+      "filename": "DeltaPump_Invoice_DP-418.pdf",
+      "pages": 1
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l1",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 1,
+      "line_end": 1,
+      "text": "Delta Pump Services"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l2",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 2,
+      "line_end": 2,
+      "text": "Concrete pumping - 18 Levee Way, Newark, CA 94560 - ar@delta-pump.example"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l3",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 3,
+      "line_end": 3,
+      "text": "INVOICE DP-418"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l4",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 4,
+      "line_end": 4,
+      "text": "Invoice date: 2026-10-23"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l5",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 5,
+      "line_end": 5,
+      "text": "Due date: 2026-11-07 (Net 15)"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l6",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 6,
+      "line_end": 6,
+      "text": "Bill to: Marlow & Finch Builders, Accounts Payable"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l7",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 7,
+      "line_end": 7,
+      "text": "Project: Oakview Lane Fourplex"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l8",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 8,
+      "line_end": 8,
+      "text": "Your PO: MF-PO-1128    Quote: DPQ-41"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l10",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 10,
+      "line_end": 10,
+      "text": "Line  Description                                   Qty      Unit  Unit price    Amount"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l11",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 11,
+      "line_end": 11,
+      "text": "1     Concrete boom pump 38 m, per pour            3.000    pour  $1,150.00     $3,450.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l12",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 12,
+      "line_end": 12,
+      "text": "2     Fuel surcharge, per pour                     3.000    ea    $32.00        $96.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l14",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 14,
+      "line_end": 14,
+      "text": "Gross amount: $3,546.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l15",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 15,
+      "line_end": 15,
+      "text": "Balance due: $3,546.00"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l17",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 17,
+      "line_end": 17,
+      "text": "Pours: 2026-10-14 footings, 2026-10-17 slab east, 2026-10-21 slab west."
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l18",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 18,
+      "line_end": 18,
+      "text": "Remit to: Delta Pump Services, Levee Federal Credit Union, account ending 5108"
+    }
+  },
+  {
+    "role": "sync",
+    "reducer": "add_fragment",
+    "args": {
+      "id": "frag_dp_inv_418_p1_l19",
+      "document_id": "doc_dp_inv_418",
+      "page": 1,
+      "email_message_id": "",
+      "line_start": 19,
+      "line_end": 19,
+      "text": "Questions: ar@delta-pump.example, (510) 555-0190"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_dp_quote_cccdbd77",
+      "document_id": "doc_dp_quote",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_dp_quote\",\"document_kind\":\"quote\",\"fields\":{\"buyer_accepted_on\":{\"fragments\":[\"frag_dp_quote_p1_l18\"],\"quote\":\"Accepted for Marlow & Finch Builders: Jordan Pike, Purchasing    Date: 2026-10-08\",\"value\":\"2026-10-08\"},\"incorporates_terms\":{\"fragments\":[\"frag_dp_quote_p1_l16\"],\"quote\":\"This quote incorporates the Delta Pump Services Terms and Conditions of Sale on page 2.\",\"value\":true},\"product\":{\"fragments\":[\"frag_dp_quote_p1_l8\"],\"quote\":\"Product: 38 m concrete boom pump with operator, up to 6 hours per pour\",\"value\":\"38 m concrete boom pump with operator, up to 6 hours per pour\"},\"project_name\":{\"fragments\":[\"frag_dp_quote_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA\",\"value\":\"Oakview Lane Fourplex\"},\"quote_date\":{\"fragments\":[\"frag_dp_quote_p1_l4\"],\"quote\":\"Quote date: 2026-10-06\",\"value\":\"2026-10-06\"},\"quote_number\":{\"fragments\":[\"frag_dp_quote_p1_l3\"],\"quote\":\"QUOTATION DPQ-41\",\"value\":\"DPQ-41\"},\"supplier_name\":{\"fragments\":[\"frag_dp_quote_p1_l1\"],\"quote\":\"Delta Pump Services\",\"value\":\"Delta Pump Services\"},\"unit\":{\"fragments\":[\"frag_dp_quote_p1_l9\"],\"quote\":\"Maximum quantity: 3 pours at the project\",\"value\":\"pour\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\",\"terms\":[{\"amount_cents\":115000,\"code\":\"unit_price\",\"effective_from\":\"2026-10-08\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_dp_quote_p1_l10\",\"frag_dp_quote_p1_l11\"],\"label\":\"Unit price, delivered\",\"quantity_milli\":0,\"quote\":\"Unit price: $1,150.00 per pour, operator included Price validity: fixed for pours from 2026-10-08 through 2026-10-31\",\"scope\":{\"unit\":\"pour\"}},{\"amount_cents\":0,\"code\":\"max_quantity\",\"effective_from\":\"2026-10-08\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_dp_quote_p1_l9\"],\"label\":\"Maximum quantity\",\"quantity_milli\":3000,\"quote\":\"Maximum quantity: 3 pours at the project\",\"scope\":{\"unit\":\"pour\"}},{\"amount_cents\":0,\"code\":\"valid_through\",\"effective_from\":\"2026-10-08\",\"effective_to\":\"2026-10-31\",\"fragments\":[\"frag_dp_quote_p1_l11\"],\"label\":\"Price validity\",\"quantity_milli\":0,\"quote\":\"Price validity: fixed for pours from 2026-10-08 through 2026-10-31\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"payment_terms\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_dp_quote_p1_l13\"],\"label\":\"Net 15\",\"quantity_milli\":0,\"quote\":\"Payment terms: Net 15 days from invoice date\",\"scope\":{\"net_days\":15}},{\"amount_cents\":0,\"code\":\"price_change_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_dp_quote_p2_l3\",\"frag_dp_quote_p2_l4\"],\"label\":\"Price changes need mutual written agreement\",\"quantity_milli\":0,\"quote\":\"1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.\",\"scope\":{}},{\"amount_cents\":0,\"code\":\"extra_charge_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_dp_quote_p2_l6\",\"frag_dp_quote_p2_l7\"],\"label\":\"Extra charges only when agreed in writing first\",\"quantity_milli\":0,\"quote\":\"2. Additional charges. Charges not listed in this quote apply only when both parties agree to them in writing before the work.\",\"scope\":{}},{\"amount_cents\":3200,\"code\":\"fuel_surcharge_rule\",\"effective_from\":\"\",\"effective_to\":\"\",\"fragments\":[\"frag_dp_quote_p2_l12\",\"frag_dp_quote_p2_l13\"],\"label\":\"Fuel surcharge per pour when the diesel index is above $5.00/gal\",\"quantity_milli\":0,\"quote\":\"4. Fuel surcharge. When the weekly California diesel index is above $5.00 per gallon, seller adds $32.00 per pour. The invoice must state the index value for the week of each pour.\",\"scope\":{\"index_threshold_cents\":500,\"unit\":\"pour\"}}]}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_mf_po_1128_ee6e22a8",
+      "document_id": "doc_mf_po_1128",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_mf_po_1128\",\"document_kind\":\"po\",\"fields\":{\"incorporates_quote\":{\"fragments\":[\"frag_mf_po_1128_p1_l12\"],\"quote\":\"Terms: Delta Pump Services Quote DPQ-41 and its Terms and Conditions of Sale.\",\"value\":\"DPQ-41\"},\"not_to_exceed_cents\":{\"fragments\":[\"frag_mf_po_1128_p1_l11\"],\"quote\":\"PO total, not to exceed: $3,450.00 plus fuel surcharge under quote clause 4\",\"value\":345000},\"po_date\":{\"fragments\":[\"frag_mf_po_1128_p1_l4\"],\"quote\":\"PO date: 2026-10-08\",\"value\":\"2026-10-08\"},\"po_number\":{\"fragments\":[\"frag_mf_po_1128_p1_l3\"],\"quote\":\"PURCHASE ORDER MF-PO-1128\",\"value\":\"MF-PO-1128\"},\"project_name\":{\"fragments\":[\"frag_mf_po_1128_p1_l6\"],\"quote\":\"Project: Oakview Lane Fourplex, 1418 Oakview Ln, Fremont, CA\",\"value\":\"Oakview Lane Fourplex\"},\"supplier_acknowledged_on\":{\"fragments\":[\"frag_mf_po_1128_p1_l16\",\"frag_mf_po_1128_p1_l17\"],\"quote\":\"Delta Pump Services acknowledges and accepts purchase order MF-PO-1128 on the terms of Quote DPQ-41. Acknowledged by: Marco Ruiz, Dispatch, Delta Pump Services    Date: 2026-10-08\",\"value\":\"2026-10-08\"},\"supplier_name\":{\"fragments\":[\"frag_mf_po_1128_p1_l5\"],\"quote\":\"Supplier: Delta Pump Services, 18 Levee Way, Newark, CA 94560\",\"value\":\"Delta Pump Services\"}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":345000,\"description\":\"Concrete boom pump 38 m, per pour\",\"fragments\":[\"frag_mf_po_1128_p1_l9\"],\"kind\":\"material\",\"quantity_milli\":3000,\"quote\":\"1     Concrete boom pump 38 m, per pour            3.000    pour  $1,150.00     $3,450.00\",\"unit\":\"pour\",\"unit_price_cents\":115000}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "upsert_purchase",
+    "args": {
+      "id": "pur_delta_oak",
+      "supplier_id": "sup_delta",
+      "project_id": "prj_oak",
+      "description": "38 m concrete boom pump with operator, up to 6 hours per pour",
+      "unit": "pour",
+      "po_number": "MF-PO-1128",
+      "quote_document_id": "doc_dp_quote",
+      "po_document_id": "doc_mf_po_1128",
+      "status": "open"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_delta_oak_unit_price",
+      "purchase_id": "pur_delta_oak",
+      "code": "unit_price",
+      "label": "Unit price, delivered",
+      "amount_cents": 115000,
+      "quantity_milli": 0,
+      "text": "Unit price: $1,150.00 per pour, operator included Price validity: fixed for pours from 2026-10-08 through 2026-10-31",
+      "scope_json": "{\"unit\":\"pour\"}",
+      "effective_from": "2026-10-08",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_dp_quote_p1_l10\",\"frag_dp_quote_p1_l11\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_delta_oak_max_quantity",
+      "purchase_id": "pur_delta_oak",
+      "code": "max_quantity",
+      "label": "Maximum quantity",
+      "amount_cents": 0,
+      "quantity_milli": 3000,
+      "text": "Maximum quantity: 3 pours at the project",
+      "scope_json": "{\"unit\":\"pour\"}",
+      "effective_from": "2026-10-08",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_dp_quote_p1_l9\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_delta_oak_valid_through",
+      "purchase_id": "pur_delta_oak",
+      "code": "valid_through",
+      "label": "Price validity",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Price validity: fixed for pours from 2026-10-08 through 2026-10-31",
+      "scope_json": "{}",
+      "effective_from": "2026-10-08",
+      "effective_to": "2026-10-31",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_dp_quote_p1_l11\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_delta_oak_payment_terms",
+      "purchase_id": "pur_delta_oak",
+      "code": "payment_terms",
+      "label": "Net 15",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "Payment terms: Net 15 days from invoice date",
+      "scope_json": "{\"net_days\":15}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_dp_quote_p1_l13\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_delta_oak_price_change_rule",
+      "purchase_id": "pur_delta_oak",
+      "code": "price_change_rule",
+      "label": "Price changes need mutual written agreement",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "1. Price changes. Any price change requires mutual written agreement of buyer and seller before the affected deliveries.",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_dp_quote_p2_l3\",\"frag_dp_quote_p2_l4\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_delta_oak_extra_charge_rule",
+      "purchase_id": "pur_delta_oak",
+      "code": "extra_charge_rule",
+      "label": "Extra charges only when agreed in writing first",
+      "amount_cents": 0,
+      "quantity_milli": 0,
+      "text": "2. Additional charges. Charges not listed in this quote apply only when both parties agree to them in writing before the work.",
+      "scope_json": "{}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_dp_quote_p2_l6\",\"frag_dp_quote_p2_l7\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_term",
+    "args": {
+      "id": "term_delta_oak_fuel_surcharge_rule",
+      "purchase_id": "pur_delta_oak",
+      "code": "fuel_surcharge_rule",
+      "label": "Fuel surcharge per pour when the diesel index is above $5.00/gal",
+      "amount_cents": 3200,
+      "quantity_milli": 0,
+      "text": "4. Fuel surcharge. When the weekly California diesel index is above $5.00 per gallon, seller adds $32.00 per pour. The invoice must state the index value for the week of each pour.",
+      "scope_json": "{\"index_threshold_cents\":500,\"unit\":\"pour\"}",
+      "effective_from": "",
+      "effective_to": "",
+      "status": "accepted",
+      "source_fragment_ids_json": "[\"frag_dp_quote_p2_l12\",\"frag_dp_quote_p2_l13\"]",
+      "version": 1
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_extraction_run",
+    "args": {
+      "id": "run_dp_inv_418_68968eeb",
+      "document_id": "doc_dp_inv_418",
+      "mode": "fixture",
+      "model": "fixture",
+      "prompt_version": "fixture-v1",
+      "status": "ok",
+      "error": "",
+      "fields_json": "{\"document_id\":\"doc_dp_inv_418\",\"document_kind\":\"invoice\",\"fields\":{\"balance_requested_cents\":{\"fragments\":[\"frag_dp_inv_418_p1_l15\"],\"quote\":\"Balance due: $3,546.00\",\"value\":354600},\"currency\":{\"fragments\":[\"frag_dp_inv_418_p1_l14\"],\"quote\":\"Gross amount: $3,546.00\",\"value\":\"USD\"},\"due_date\":{\"fragments\":[\"frag_dp_inv_418_p1_l5\"],\"quote\":\"Due date: 2026-11-07 (Net 15)\",\"value\":\"2026-11-07\"},\"gross_cents\":{\"fragments\":[\"frag_dp_inv_418_p1_l14\"],\"quote\":\"Gross amount: $3,546.00\",\"value\":354600},\"invoice_date\":{\"fragments\":[\"frag_dp_inv_418_p1_l4\"],\"quote\":\"Invoice date: 2026-10-23\",\"value\":\"2026-10-23\"},\"invoice_number\":{\"fragments\":[\"frag_dp_inv_418_p1_l3\"],\"quote\":\"INVOICE DP-418\",\"value\":\"DP-418\"},\"po_number\":{\"fragments\":[\"frag_dp_inv_418_p1_l8\"],\"quote\":\"Your PO: MF-PO-1128    Quote: DPQ-41\",\"value\":\"MF-PO-1128\"},\"remit_account_last4\":{\"fragments\":[\"frag_dp_inv_418_p1_l18\"],\"quote\":\"Remit to: Delta Pump Services, Levee Federal Credit Union, account ending 5108\",\"value\":\"5108\"},\"supplier_name\":{\"fragments\":[\"frag_dp_inv_418_p1_l1\"],\"quote\":\"Delta Pump Services\",\"value\":\"Delta Pump Services\"},\"tax_cents\":{\"missing_reason\":\"No tax line on this invoice; no tax rate is assumed.\",\"value\":null}},\"instructions_found\":[],\"label\":\"FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call\",\"lines\":[{\"amount_cents\":345000,\"description\":\"Concrete boom pump 38 m, per pour\",\"fragments\":[\"frag_dp_inv_418_p1_l11\"],\"kind\":\"material\",\"links\":{\"term_code\":\"unit_price\"},\"quantity_milli\":3000,\"quote\":\"1     Concrete boom pump 38 m, per pour            3.000    pour  $1,150.00     $3,450.00\",\"unit\":\"pour\",\"unit_price_cents\":115000},{\"amount_cents\":9600,\"description\":\"Fuel surcharge, per pour\",\"fragments\":[\"frag_dp_inv_418_p1_l12\"],\"kind\":\"fuel\",\"quantity_milli\":3000,\"quote\":\"2     Fuel surcharge, per pour                     3.000    ea    $32.00        $96.00\",\"unit\":\"ea\",\"unit_price_cents\":3200}],\"mode\":\"fixture\",\"prompt_version\":\"fixture-v1\"}"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice",
+    "args": {
+      "id": "inv_dp418",
+      "supplier_id": "sup_delta",
+      "purchase_id": "pur_delta_oak",
+      "invoice_number": "DP-418",
+      "invoice_date": "2026-10-23",
+      "due_date": "2026-11-07",
+      "currency": "USD"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_revision",
+    "args": {
+      "id": "rev_dp418_r1",
+      "invoice_id": "inv_dp418",
+      "revision": 1,
+      "document_id": "doc_dp_inv_418",
+      "gross_cents": 354600,
+      "deposit_shown_cents": 0,
+      "balance_requested_cents": 354600,
+      "supersedes_revision_id": ""
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_line",
+    "args": {
+      "id": "ln_dp418_r1_1",
+      "revision_id": "rev_dp418_r1",
+      "kind": "material",
+      "description": "Concrete boom pump 38 m, per pour",
+      "quantity_milli": 3000,
+      "unit": "pour",
+      "unit_price_cents": 115000,
+      "amount_cents": 345000,
+      "linked_term_id": "term_delta_oak_unit_price",
+      "linked_change_request_id": "",
+      "source_fragment_ids_json": "[\"frag_dp_inv_418_p1_l11\"]"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_invoice_line",
+    "args": {
+      "id": "ln_dp418_r1_2",
+      "revision_id": "rev_dp418_r1",
+      "kind": "fuel",
+      "description": "Fuel surcharge, per pour",
+      "quantity_milli": 3000,
+      "unit": "ea",
+      "unit_price_cents": 3200,
+      "amount_cents": 9600,
+      "linked_term_id": "",
+      "linked_change_request_id": "",
+      "source_fragment_ids_json": "[\"frag_dp_inv_418_p1_l12\"]"
+    }
+  },
+  {
+    "role": "receiver",
+    "reducer": "attest_receipt",
+    "args": {
+      "id": "att_dp_3",
+      "invoice_id": "inv_dp418",
+      "scope": "Three pours: footings, slab east, slab west",
+      "quantity_milli": 3000,
+      "unit": "pour",
+      "reason": "Pump tickets signed for all three pours"
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "record_assessment",
+    "args": {
+      "id": "asm_dp418_r1_v1",
+      "revision_id": "rev_dp418_r1",
+      "version": 1,
+      "fingerprint": "fp_fffba808715468e0086c8f22c06feb91",
+      "policy_version": "commercial-2026-10-24.1",
+      "claimed_cents": 354600,
+      "authorised_cents": 345000,
+      "pending_cents": 9600,
+      "variance_cents": 0,
+      "deposit_available_cents": 0,
+      "proposed_payment_cents": 0,
+      "commercial_status": "differences_under_review",
+      "summary": "Claimed $3,546.00: $3,450.00 authorised, $0.00 price variance, $96.00 pending. $96.00 under review (not savings until the supplier agrees).",
+      "details_json": "{\"checks\":[{\"code\":\"extraction\",\"evidence\":{},\"source\":\"document\",\"status\":\"pass\",\"summary\":\"Lines add up to the gross $3,546.00; balance math checks.\"},{\"code\":\"contract\",\"evidence\":{},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Accepted quote and acknowledged PO establish the terms.\"},{\"code\":\"price_terms\",\"evidence\":{\"lines\":[{\"accepted_cents\":345000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 3 pour x $1,150.00 (accepted unit price) = $3,450.00; billed 3 pour x $1,150.00 = $3,450.00\",\"claimed_cents\":345000,\"classification\":\"\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Concrete boom pump 38 m, per pour\",\"fragment_ids\":[\"frag_dp_inv_418_p1_l11\",\"frag_dp_quote_p1_l10\",\"frag_dp_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_dp418_r1_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"Material billed at the accepted price.\"},{\"code\":\"extra_charges\",\"evidence\":{\"lines\":[{\"accepted_cents\":0,\"awaiting_decision_by\":\"\",\"calculation\":\"\",\"claimed_cents\":9600,\"classification\":\"AUTHORISED_RATE_USAGE_MISSING\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Fuel surcharge, per pour\",\"fragment_ids\":[\"frag_dp_inv_418_p1_l12\"],\"hold_code\":\"USAGE_EVIDENCE_MISSING\",\"kind\":\"fuel\",\"line_id\":\"ln_dp418_r1_2\",\"pending_cents\":9600,\"status\":\"pending\",\"uncertainty\":\"The fuel surcharge rule is accepted, but the diesel index for the delivery week hasn't been checked.\",\"variance_cents\":0}]},\"source\":\"contract\",\"status\":\"fail\",\"summary\":\"Pending Fuel surcharge, per pour ($96.00): The fuel surcharge rule is accepted, but the diesel index for the delivery week hasn't been checked.\"},{\"code\":\"po_ceiling\",\"evidence\":{\"billed_before_milli\":0,\"ceiling_milli\":3000,\"this_invoice_milli\":3000,\"unit\":\"pour\"},\"source\":\"contract\",\"status\":\"pass\",\"summary\":\"3 pour billed to date of 3 pour allowed.\"},{\"code\":\"duplicate\",\"evidence\":{},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No earlier invoice with this file, number, or amount and date.\"},{\"code\":\"deposit\",\"evidence\":{\"available_cents\":0,\"shown_cents\":0},\"source\":\"history\",\"status\":\"pass\",\"summary\":\"No deposit to apply.\"},{\"code\":\"receipt\",\"evidence\":{\"attested_milli\":{\"pour\":3000},\"billed_milli\":{\"pour\":3000},\"label\":\"MANUALLY_CONFIRMED\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Receipt of 3 pour attested by the superintendent (MANUALLY_CONFIRMED, not machine-verified).\"},{\"code\":\"payee\",\"evidence\":{\"payee_profile_id\":\"sup_delta:v1\"},\"source\":\"audit\",\"status\":\"pass\",\"summary\":\"Pays the verified account ending 5108 (sup_delta:v1).\"}],\"clarification_points\":[\"Fuel surcharge, per pour ($96.00): The fuel surcharge rule is accepted, but the diesel index for the delivery week hasn't been checked.\",\"Please send a corrected invoice or an agreed credit memo. We'll keep your original invoice on file.\"],\"conditional_payment_cents\":345000,\"deposit_applied_cents\":0,\"holds\":[{\"amount_cents\":9600,\"code\":\"USAGE_EVIDENCE_MISSING\",\"evidence\":{\"fragment_ids\":[\"frag_dp_inv_418_p1_l12\"],\"line_ids\":[\"ln_dp418_r1_2\"]},\"reason\":\"Fuel surcharge, per pour: The fuel surcharge rule is accepted, but the diesel index for the delivery week hasn't been checked.\"}],\"inputs\":{\"allocations\":{},\"attestations\":{\"att_dp_3\":\"cb0004960e18ba24\"},\"authorities\":{\"all\":\"7072307adb37490d\"},\"change_requests\":{},\"deposits\":{},\"document\":{\"doc_dp_inv_418\":\"f4f8fa142a707c253b8b355f74d61c0ece866c678c60a1a7bdb537eb3a66e829\"},\"invoice\":{\"inv_dp418\":\"4beac9fa974f8f1e\"},\"lines\":{\"ln_dp418_r1_1\":\"b385e9584db7508a\",\"ln_dp418_r1_2\":\"2e2a186665f6377b\"},\"others\":{},\"payee_profiles\":{\"sup_delta:v1\":\"ecb527a3f161bc65\"},\"policy_version\":\"commercial-2026-10-24.1\",\"purchase\":{\"pur_delta_oak\":\"d6ef14109ac3d467\"},\"revision\":{\"rev_dp418_r1\":\"ed0d8c7ea3946cb4\"},\"terms\":{\"term_delta_oak_extra_charge_rule\":\"567c1df6b72d87f4\",\"term_delta_oak_fuel_surcharge_rule\":\"b34c7795f99f271d\",\"term_delta_oak_max_quantity\":\"4f90ec5ccb4c1480\",\"term_delta_oak_payment_terms\":\"6c60104496dda1fd\",\"term_delta_oak_price_change_rule\":\"85aa9761c5a764ac\",\"term_delta_oak_unit_price\":\"0916fcbd2c1287d1\",\"term_delta_oak_valid_through\":\"4c9cdcf6a1593a08\"}},\"lines\":[{\"accepted_cents\":345000,\"awaiting_decision_by\":\"\",\"calculation\":\"Allowed 3 pour x $1,150.00 (accepted unit price) = $3,450.00; billed 3 pour x $1,150.00 = $3,450.00\",\"claimed_cents\":345000,\"classification\":\"\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Concrete boom pump 38 m, per pour\",\"fragment_ids\":[\"frag_dp_inv_418_p1_l11\",\"frag_dp_quote_p1_l10\",\"frag_dp_quote_p1_l11\"],\"hold_code\":\"\",\"kind\":\"material\",\"line_id\":\"ln_dp418_r1_1\",\"pending_cents\":0,\"status\":\"accepted\",\"uncertainty\":\"\",\"variance_cents\":0},{\"accepted_cents\":0,\"awaiting_decision_by\":\"\",\"calculation\":\"\",\"claimed_cents\":9600,\"classification\":\"AUTHORISED_RATE_USAGE_MISSING\",\"decision\":\"\",\"decision_id\":\"\",\"description\":\"Fuel surcharge, per pour\",\"fragment_ids\":[\"frag_dp_inv_418_p1_l12\"],\"hold_code\":\"USAGE_EVIDENCE_MISSING\",\"kind\":\"fuel\",\"line_id\":\"ln_dp418_r1_2\",\"pending_cents\":9600,\"status\":\"pending\",\"uncertainty\":\"The fuel surcharge rule is accepted, but the diesel index for the delivery week hasn't been checked.\",\"variance_cents\":0}],\"note\":\"Amounts under review are not savings until the supplier agrees.\",\"under_review_cents\":9600}",
+      "next_action": "Ask the supplier for a corrected invoice or an agreed credit for the $96.00 under review."
+    }
+  },
+  {
+    "role": "agent",
+    "reducer": "open_hold",
+    "args": {
+      "id": "hold_rev_dp418_r1_usage_evidence_missing",
+      "revision_id": "rev_dp418_r1",
+      "code": "USAGE_EVIDENCE_MISSING",
+      "amount_cents": 9600,
+      "reason": "Fuel surcharge, per pour: The fuel surcharge rule is accepted, but the diesel index for the delivery week hasn't been checked.",
+      "evidence_json": "{\"fragment_ids\":[\"frag_dp_inv_418_p1_l12\"],\"line_ids\":[\"ln_dp418_r1_2\"]}"
     }
   }
 ]
