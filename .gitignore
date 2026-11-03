@@ -13,6 +13,7 @@ node_modules/
 out/
 dist/
 build/
+.local-backend/
 *.tsbuildinfo
 next-env.d.ts
 .vercel/
@@ -41,7 +42,6 @@ db/spacetimedb/dist/
 *.db
 data/generated/
 data/runs/
-
 # OS / editors
 .DS_Store
 Thumbs.db

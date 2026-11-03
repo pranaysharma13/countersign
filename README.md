@@ -6,6 +6,8 @@ Seats it fills: **materials purchasing coordinator** and **accounts-payable exce
 
 Built at Cal Hacks 13.0. All companies, people, documents and bank details are fictional.
 
+**Live demo:** [clerkai-calhacks.vercel.app](https://clerkai-calhacks.vercel.app). Open the books as Dana (owner), or switch person from the top bar.
+
 ## The problem
 
 Small general contractors buy materials on quotes, purchase orders and a trail of emails. Weeks later the invoice arrives with a higher unit price, waiting time and extras, some agreed and some only proposed. Busy teams pay it. Fraud is rare; paying more than you agreed happens every month.
@@ -44,9 +46,9 @@ The scorecard's first runs found two real defects, fixed before these numbers: t
 | Factory Droid agent | Scripted agent with the same tools and rules | `AGENT_MODE=droid` + `droid` CLI + `FACTORY_API_KEY` (not yet run for real) |
 | Capital One Nessie (deposit, settlement) | **Simulated**: mock bank, every transfer labelled simulated | `USE_MOCKS=false` + `NESSIE_API_KEY` |
 | CRS (supplier public records) | **Mock**: provided test identities, labelled "mock test data" | CRS credentials + the Postman collection (not available yet) |
-| Supplier emails | Simulated: drafts are "sent" without leaving the app | — |
+| Supplier emails | Simulated: drafts are "sent" without leaving the app | n/a |
 | Judge page (`/sneak`) | Needs the live worker: each submission is a real invoice on a fictional sandbox supplier, read and checked like any other; extraction generated from your inputs (labelled). Offline the page says it didn't run, and nothing changes | `AI_MODE=live`: Claude reads the PDF |
-| Apify diesel index (fuel surcharge) | Not built. A fuel surcharge waits for evidence (`USAGE_EVIDENCE_MISSING`) | — |
+| Apify diesel index (fuel surcharge) | Not built. A fuel surcharge waits for evidence (`USAGE_EVIDENCE_MISSING`) | n/a |
 
 ## Run it offline (no keys)
 
@@ -107,6 +109,7 @@ uv run --project core python scripts/run_worker.py          # must keep running 
 npm i -g vercel && cd web && vercel login && vercel link     # Root Directory = web
 # Vercel settings: Install Command = "npm ci && npm --prefix ../db ci" (the build bundles ../db)
 # Env: DATA_SOURCE=live, SPACETIMEDB_URI, SPACETIMEDB_DATABASE, the four staff tokens, DEMO_PIN,
+#      CARTESIA_API_KEY (verification call to the number on file),
 #      NEXT_PUBLIC_CORE_URL (a public URL for the Python API, e.g. a tunnel to :8000; without it, PDF preview,
 #      audit download and "Why?" say the API is unreachable)
 vercel --prod
@@ -155,7 +158,7 @@ One Droid session per invoice revision, inside that invoice's `process_document`
 |---|---|---|
 | `db/` | SpacetimeDB module: tables, roles, statuses, holds, approvals, audit log, job bus | TypeScript |
 | `core/` | Worker, Claude extraction, Droid agent, checks, gateway, integrations, scorecard | Python |
-| `web/` | Bills, invoice case, approval review, receive, changes, judge page | TypeScript (Next.js) |
+| `web/` | Work, bills, invoice case, approval review, proof, banks, calls, inbox, receive, changes, judge page | TypeScript (Next.js) |
 | `data/` | Fictional documents, fixtures, seeds, answer keys, scorecard | JSON |
 | `docs/` | Interface contract, architecture, detailed spec, prize tracks, briefs | Markdown |
 | `pitch/` | Devpost draft, demo script | Markdown |

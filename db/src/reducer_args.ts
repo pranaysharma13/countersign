@@ -1,4 +1,4 @@
-// GENERATED from src/index.ts by scripts/gen_reducer_args.py — do not edit.
+// GENERATED from src/index.ts by scripts/gen_reducer_args.py. Do not edit.
 // Reducer name → parameter names in CONTRACT order (request_id first). Names ending _cents/_milli are i64.
 export const REDUCER_ARGS: Record<string, string[]> = {
   claim_admin: ["request_id"],

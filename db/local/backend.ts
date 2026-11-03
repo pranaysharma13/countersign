@@ -1,4 +1,4 @@
-// LOCAL DEMO BACKEND — runs the real module in-process (spacetimedb test harness), seeded by
+// LOCAL DEMO BACKEND: runs the real module in-process (spacetimedb test harness), seeded by
 // replaying data/seeds/baymix_opening.json (same BM-23104 world as Python). Used by the web app
 // when no SpacetimeDB server is reachable, and as an offline fallback for judging. A small
 // stand-in worker plays the agent, the gateway and the supplier (all clearly labeled simulated).

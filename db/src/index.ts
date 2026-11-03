@@ -155,7 +155,7 @@ export const finish_job = spacetimedb.reducer(
   { request_id: s(), job_id: s(), ok: t.bool(), result_json: s(), error: s() },
   (ctx, a) => { L.finish_job(ctx, ctx.sender, a.request_id, a.job_id, a.ok, a.result_json, a.error); });
 
-// ---- 4.6-4.9 (P1) and §9 v2 — parameter order = CONTRACT ----
+// ---- 4.6-4.9 (P1) and §9 v2: parameter order = CONTRACT ----
 export const request_bank_change = spacetimedb.reducer(
   { request_id: s(), id: s(), sub_id: s(), new_account_ref: s(), new_last4: s(), new_owner_name: s(), requested_via: s() },
   (ctx, a) => { L.request_bank_change(ctx, ctx.sender, a.request_id, a.id, a.sub_id, a.new_account_ref, a.new_last4, a.new_owner_name, a.requested_via); });
