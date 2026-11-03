@@ -14,7 +14,11 @@ from .companion_world import (CEDAR_GROSS_CENTS, CEDAR_INVOICE, CEDAR_INV_NUMBER
                               RH_FUEL_CENTS, RH_FUEL_QTY_MILLI, RH_GROSS_CENTS, RH_INVOICE, RH_MATERIAL_CENTS, RH_PO,
                               RH_QTY_MILLI, RH_QUOTE, RH_UNIT_CENTS, VALLEY_INV_NUMBER, VS_CEILING_CENTS,
                               VS_CEILING_QTY_MILLI, VS_GROSS_CENTS, VS_INVOICE, VS_PO, VS_QTY_MILLI, VS_QUOTE,
-                              VS_UNIT_CENTS)
+                              VS_UNIT_CENTS, BAYLINE_INV_NUMBER, BE_GROSS_CENTS, BE_INVOICE, BE_PO, BE_QTY_MILLI,
+                              BE_QUOTE, BE_UNIT_CENTS, DELTA_INV_NUMBER, DP_FUEL_CENTS, DP_FUEL_QTY_MILLI,
+                              DP_FUEL_UNIT_CENTS, DP_GROSS_CENTS, DP_INVOICE, DP_PO, DP_PUMP_CENTS, DP_QTY_MILLI,
+                              DP_QUOTE, DP_UNIT_CENTS, RD_BILLED_UNIT_CENTS, RD_GROSS_CENTS, RD_INVOICE, RD_PO,
+                              RD_QTY_MILLI, RD_QUOTE, RD_QUOTED_CENTS, RD_QUOTED_UNIT_CENTS, RIDGEWAY_INV_NUMBER)
 from .supplier_docs import fragments
 from .supplier_world import PROJECT, SourceDoc
 
@@ -484,6 +488,131 @@ def peak_invoice() -> dict[str, Any]:
     }])
 
 
+def _quote(doc: SourceDoc, supplier: str, number: str, date: str, product: str, product_needle: str, unit: str,
+           unit_needle: str, accepted_on: str, terms_needle: str, terms: list[dict[str, Any]]) -> dict[str, Any]:
+    return _wrap(doc.id, "quote", fields={
+        "supplier_name": _exact_field(doc, supplier, supplier),
+        "quote_number": _field(doc, number, f"QUOTATION {number}"),
+        "quote_date": _field(doc, date, f"Quote date: {date}"),
+        "project_name": _field(doc, PROJECT.name, "Project: Oakview Lane Fourplex"),
+        "product": _field(doc, product, product_needle),
+        "unit": _field(doc, unit, unit_needle),
+        "buyer_accepted_on": _field(doc, accepted_on, "Accepted for Marlow & Finch"),
+        "incorporates_terms": _field(doc, True, terms_needle),
+    }, terms=terms)
+
+
+def _po(doc: SourceDoc, number: str, date: str, supplier: str, ack_by: str, quote_no: str, nte_cents: int,
+        nte_needle: str, line: dict[str, Any], line_needle: str) -> dict[str, Any]:
+    ack_q, ack_ids = _join(doc, (f"{supplier} acknowledges",), (f"Acknowledged by: {ack_by}",))
+    return _wrap(doc.id, "po", fields={
+        "po_number": _field(doc, number, f"PURCHASE ORDER {number}"),
+        "po_date": _field(doc, date, f"PO date: {date}"),
+        "supplier_name": _field(doc, supplier, f"Supplier: {supplier}"),
+        "project_name": _field(doc, PROJECT.name, "Project: Oakview Lane Fourplex"),
+        "not_to_exceed_cents": _field(doc, nte_cents, nte_needle),
+        "incorporates_quote": _field(doc, quote_no, f"Terms: {supplier} Quote {quote_no}"),
+        "supplier_acknowledged_on": {"value": date, "quote": ack_q, "fragments": ack_ids},
+    }, lines=[{**line, "quote": _one(doc, line_needle).text, "fragments": [_one(doc, line_needle).id]}])
+
+
+def _invoice(doc: SourceDoc, supplier: str, number: str, date: str, due: str, due_needle: str, po_number: str,
+             gross_cents: int, gross_text: str, last4: str, lines: list[tuple[dict[str, Any], str]]) -> dict[str, Any]:
+    return _wrap(doc.id, "invoice", fields={
+        "supplier_name": _exact_field(doc, supplier, supplier),
+        "invoice_number": _field(doc, number, f"INVOICE {number}"),
+        "invoice_date": _field(doc, date, f"Invoice date: {date}"),
+        "due_date": _field(doc, due, due_needle),
+        "po_number": _field(doc, po_number, f"Your PO: {po_number}"),
+        "currency": _field(doc, "USD", f"Gross amount: {gross_text}"),
+        "gross_cents": _field(doc, gross_cents, f"Gross amount: {gross_text}"),
+        "balance_requested_cents": _field(doc, gross_cents, f"Balance due: {gross_text}"),
+        "remit_account_last4": _field(doc, last4, f"account ending {last4}"),
+        "tax_cents": {"value": None, "missing_reason": "No tax line on this invoice; no tax rate is assumed."},
+    }, lines=[{**line, "quote": _one(doc, needle).text, "fragments": [_one(doc, needle).id]} for line, needle in lines])
+
+
+_RD_LINE = "Type X gypsum board 4x12 5/8 in."
+_BE_LINE = "THHN copper wire 12 AWG, 500 ft spool"
+_DP_LINE = "Concrete boom pump 38 m, per pour"
+
+
+def ridgeway_quote() -> dict[str, Any]:
+    return _quote(RD_QUOTE, "Ridgeway Drywall Supply", "RDQ-61", "2026-10-07",
+                  "Type X gypsum board, 4 ft x 12 ft x 5/8 in., fire rated", "Product: Type X gypsum board",
+                  "sheet", "300 sheets, delivered", "2026-10-09", "This quote incorporates the Ridgeway",
+                  _agreed_terms(RD_QUOTE, "sheet", RD_QUOTED_UNIT_CENTS, RD_QTY_MILLI, "Unit price: $14.25",
+                                "Maximum quantity: 300 sheets", 15, "2026-10-09", "2026-10-31"))
+
+
+def ridgeway_po() -> dict[str, Any]:
+    return _po(RD_PO, "MF-PO-1106", "2026-10-09", "Ridgeway Drywall Supply", "Jun Park", "RDQ-61", RD_QUOTED_CENTS,
+               "PO total, not to exceed: $4,275.00",
+               {"kind": "material", "description": _RD_LINE, "quantity_milli": RD_QTY_MILLI, "unit": "sheet",
+                "unit_price_cents": RD_QUOTED_UNIT_CENTS, "amount_cents": RD_QUOTED_CENTS}, _RD_LINE)
+
+
+def ridgeway_invoice() -> dict[str, Any]:
+    return _invoice(RD_INVOICE, "Ridgeway Drywall Supply", RIDGEWAY_INV_NUMBER, "2026-10-22", "2026-11-06",
+                    "Due date: 2026-11-06 (Net 15)", "MF-PO-1106", RD_GROSS_CENTS, "$4,530.00", "2619",
+                    [({"kind": "material", "description": _RD_LINE, "quantity_milli": RD_QTY_MILLI, "unit": "sheet",
+                       "unit_price_cents": RD_BILLED_UNIT_CENTS, "amount_cents": RD_GROSS_CENTS,
+                       "links": {"term_code": "unit_price"}}, _RD_LINE)])
+
+
+def bayline_quote() -> dict[str, Any]:
+    return _quote(BE_QUOTE, "Bayline Electric Supply", "BEQ-120", "2026-10-08",
+                  "THHN copper building wire, 12 AWG, 500 ft spool", "Product: THHN copper building wire",
+                  "spool", "20 spools, delivered", "2026-10-10", "This quote incorporates the Bayline",
+                  _agreed_terms(BE_QUOTE, "spool", BE_UNIT_CENTS, BE_QTY_MILLI, "Unit price: $143.00",
+                                "Maximum quantity: 20 spools", 30, "2026-10-10", "2026-10-31"))
+
+
+def bayline_po() -> dict[str, Any]:
+    return _po(BE_PO, "MF-PO-1117", "2026-10-10", "Bayline Electric Supply", "Priya Nand", "BEQ-120", BE_GROSS_CENTS,
+               "PO total, not to exceed: $2,860.00",
+               {"kind": "material", "description": _BE_LINE, "quantity_milli": BE_QTY_MILLI, "unit": "spool",
+                "unit_price_cents": BE_UNIT_CENTS, "amount_cents": BE_GROSS_CENTS}, _BE_LINE)
+
+
+def bayline_invoice() -> dict[str, Any]:
+    return _invoice(BE_INVOICE, "Bayline Electric Supply", BAYLINE_INV_NUMBER, "2026-10-23", "2026-11-22",
+                    "Due date: 2026-11-22 (Net 30)", "MF-PO-1117", BE_GROSS_CENTS, "$2,860.00", "8350",
+                    [({"kind": "material", "description": _BE_LINE, "quantity_milli": BE_QTY_MILLI, "unit": "spool",
+                       "unit_price_cents": BE_UNIT_CENTS, "amount_cents": BE_GROSS_CENTS,
+                       "links": {"term_code": "unit_price"}}, _BE_LINE)])
+
+
+def delta_quote() -> dict[str, Any]:
+    fuel_q, fuel_ids = _join(DP_QUOTE, ("4. Fuel surcharge.",), ("adds $32.00 per pour.",))
+    terms = _agreed_terms(DP_QUOTE, "pour", DP_UNIT_CENTS, DP_QTY_MILLI, "Unit price: $1,150.00",
+                          "Maximum quantity: 3 pours", 15, "2026-10-08", "2026-10-31")
+    terms.append(_term("fuel_surcharge_rule", "Fuel surcharge per pour when the diesel index is above $5.00/gal",
+                       DP_FUEL_UNIT_CENTS, 0, fuel_q, fuel_ids, {"unit": "pour", "index_threshold_cents": 500}))
+    return _quote(DP_QUOTE, "Delta Pump Services", "DPQ-41", "2026-10-06",
+                  "38 m concrete boom pump with operator, up to 6 hours per pour", "Product: 38 m concrete boom pump",
+                  "pour", "Maximum quantity: 3 pours", "2026-10-08", "This quote incorporates the Delta Pump",
+                  terms)
+
+
+def delta_po() -> dict[str, Any]:
+    return _po(DP_PO, "MF-PO-1128", "2026-10-08", "Delta Pump Services", "Marco Ruiz", "DPQ-41", DP_PUMP_CENTS,
+               "PO total, not to exceed: $3,450.00",
+               {"kind": "material", "description": _DP_LINE, "quantity_milli": DP_QTY_MILLI, "unit": "pour",
+                "unit_price_cents": DP_UNIT_CENTS, "amount_cents": DP_PUMP_CENTS}, _DP_LINE)
+
+
+def delta_invoice() -> dict[str, Any]:
+    return _invoice(DP_INVOICE, "Delta Pump Services", DELTA_INV_NUMBER, "2026-10-23", "2026-11-07",
+                    "Due date: 2026-11-07 (Net 15)", "MF-PO-1128", DP_GROSS_CENTS, "$3,546.00", "5108",
+                    [({"kind": "material", "description": _DP_LINE, "quantity_milli": DP_QTY_MILLI, "unit": "pour",
+                       "unit_price_cents": DP_UNIT_CENTS, "amount_cents": DP_PUMP_CENTS,
+                       "links": {"term_code": "unit_price"}}, _DP_LINE),
+                     ({"kind": "fuel", "description": "Fuel surcharge, per pour", "quantity_milli": DP_FUEL_QTY_MILLI,
+                       "unit": "ea", "unit_price_cents": DP_FUEL_UNIT_CENTS, "amount_cents": DP_FUEL_CENTS},
+                      "Fuel surcharge, per pour")])
+
+
 def all_companion_fixtures() -> dict[str, dict[str, Any]]:
     return {
         CEDAR_QUOTE.id: cedar_quote(),
@@ -505,4 +634,13 @@ def all_companion_fixtures() -> dict[str, dict[str, Any]]:
         PF_QUOTE.id: peak_quote(),
         PF_PO.id: peak_po(),
         PF_INVOICE.id: peak_invoice(),
+        RD_QUOTE.id: ridgeway_quote(),
+        RD_PO.id: ridgeway_po(),
+        RD_INVOICE.id: ridgeway_invoice(),
+        BE_QUOTE.id: bayline_quote(),
+        BE_PO.id: bayline_po(),
+        BE_INVOICE.id: bayline_invoice(),
+        DP_QUOTE.id: delta_quote(),
+        DP_PO.id: delta_po(),
+        DP_INVOICE.id: delta_invoice(),
     }

@@ -7,22 +7,18 @@ description: Plain-language UI for Countersign. Use when changing web copy, nav,
 
 A builder, not an AP clerk, should understand every screen in one glance.
 
-Before visual work, also read:
+Before visual work, also read `.cursor/skills/web-design-guidelines/SKILL.md` for accessibility and density. Keep the paper palette. Do not apply a gold or purple default.
 
-1. `~/.claude/skills/frontend-design/SKILL.md`
-2. `~/.claude/skills/web-design-guidelines/SKILL.md`
-3. `~/.claude/skills/ui-ux-pro-max/SKILL.md` (search.py for patterns; ignore its gold/purple “design system”)
-
-Keep the existing Archivo paper palette. Do not restyle the product into a generic fintech dashboard.
+Keep sage paper and Plus Jakarta Sans. Do not restyle the product into a generic fintech dashboard.
 
 ## One glance, four facts
 
 Every invoice surface answers, in this order:
 
-1. **Who** — supplier name
-2. **How much** — dollars they want
-3. **What's wrong** — one sentence, or “Looks right”
-4. **What to do** — one next step, named person
+1. **Who:** supplier name
+2. **How much:** dollars they want
+3. **What's wrong:** one sentence, or “Looks right”
+4. **What to do:** one next step, named person
 
 If a label needs a glossary, rewrite the label.
 
@@ -70,7 +66,7 @@ Put engineer detail behind `<details>Activity</details>`.
 
 ## Layout
 
-- `/` is the cover sheet and four-person sign-in. Bills live at `/bills`. Inbox is `/inbox`.
+- `/` is the cover sheet and Open the books as owner. Bills live at `/bills`. Inbox is `/inbox`. Walkthrough desks are on `/start`.
 - Sage canvas, Plus Jakarta Sans, top bar, 2-column tiles, one black featured card, one lime lesson card. Black pill buttons. No world maps or dummy gauges.
 - List of bills = cards (who, amount, due chip, story, next).
 - Nav = Bills + Inbox + sneak. Deep links live on the bill.

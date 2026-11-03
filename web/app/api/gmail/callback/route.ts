@@ -17,9 +17,9 @@ export async function GET(req: NextRequest) {
   const code = url.searchParams.get('code');
   if (!code || !sameState(req.cookies.get(STATE_COOKIE)?.value, url.searchParams.get('state'))) return back('bad_state');
   try {
-    const tokens = await exchangeCode(code);
+    const tokens = await exchangeCode(code, req);
     const res = back('ok');
-    res.cookies.set(TOKEN_COOKIE, JSON.stringify(tokens), cookieOptions(60 * 60 * 24 * 14));
+    res.cookies.set(TOKEN_COOKIE, JSON.stringify(tokens), cookieOptions(60 * 60 * 24 * 14, req));
     return res;
   } catch (e) {
     return back(e instanceof GmailError ? e.code : 'token_failed');

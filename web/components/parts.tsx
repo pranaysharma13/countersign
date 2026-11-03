@@ -1,7 +1,12 @@
 'use client';
 import { useState } from 'react';
 import { call, newId, type CallResult, type Row, type Tables } from '@/lib/client';
-import { day, HOLD_LABEL, qty, ROLE_LABEL, safeQuote, when } from '@/lib/format';
+import { day, HOLD_LABEL, plainDenied, plainTerms, qty, ROLE_LABEL, safeQuote, when } from '@/lib/format';
+import { switchTo } from '@/lib/personas';
+import { usePersona } from '@/lib/usePersona';
+import { Hear } from '@/components/Hear';
+import { SayFill } from '@/components/SayFill';
+import { spokenBriefing } from '@/lib/voice';
 
 type Tone = 'ok' | 'hold' | 'stop' | 'idle' | 'act';
 const STATUS: Record<string, Record<string, [string, Tone]>> = {
@@ -38,7 +43,7 @@ export function StatusStrip({ inv }: { inv: Row }) {
 export function HoldChips({ holds }: { holds: Row[] }) {
   if (!holds.length) return <span className="muted small">Nothing blocking</span>;
   return <>{holds.map(h => (
-    <span key={h.id} className={`chip ${['PAYEE_CHANGE_PENDING', 'PROMPT_INJECTION'].includes(h.code) ? 'stop' : ''}`} title={h.reason}>
+    <span key={h.id} className={`chip ${['PAYEE_CHANGE_PENDING', 'PROMPT_INJECTION'].includes(h.code) ? 'stop' : ''}`} title={plainTerms(String(h.reason ?? ''))}>
       {HOLD_LABEL[h.code] ?? h.code}
     </span>
   ))}</>;
@@ -104,11 +109,12 @@ export function Loading({ error }: { error?: string | null }) {
 export function Outcome({ r }: { r: { outcome: string; message: string } | null }) {
   if (!r) return null;
   if (r.outcome === 'ok' || r.outcome === 'duplicate') return <div className="notice ok" role="status">Done{r.message ? `: ${r.message}` : '.'}</div>;
-  return <div className="notice stop" role="alert">Refused: {r.message}</div>;
+  return <div className="notice stop" role="alert">{plainDenied(r.message)}</div>;
 }
 
 /** Superintendent attestation. Same rules as the invoice case; also used on the phone receipt page. */
 export function ReceiptForm({ inv, rev, t }: { inv: Row; rev?: Row; t: Tables }) {
+  const persona = usePersona();
   const material = t.invoice_line.filter(l => l.revision_id === rev?.id && l.kind === 'material');
   const billed = material.reduce((s, l) => s + l.quantity_milli, 0);
   const unit = material[0]?.unit ?? 'cy';
@@ -116,6 +122,7 @@ export function ReceiptForm({ inv, rev, t }: { inv: Row; rev?: Row; t: Tables })
   const [q, setQ] = useState(billed ? String(billed / 1000) : '');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<CallResult | null>(null);
+  const mine = persona === 'receiver';
   return (
     <section className="sheet pad" aria-labelledby="receipt">
       <h2 id="receipt">Delivery</h2>
@@ -125,7 +132,10 @@ export function ReceiptForm({ inv, rev, t }: { inv: Row; rev?: Row; t: Tables })
           <strong>{String(a.label).replace('_', ' ').toLowerCase()}</strong>: {qty(a.quantity_milli, a.unit)} ({a.scope}). “{a.reason}” {ROLE_LABEL[a.attested_by_role]}, {when(a.created_at)}
         </div>
       ))}
-      {inv.receipt_status !== 'manually_confirmed' && (
+      {inv.receipt_status !== 'manually_confirmed' && !mine && (
+        <p className="small">{switchTo('receiver')} Only Luis can confirm what arrived.</p>
+      )}
+      {inv.receipt_status !== 'manually_confirmed' && mine && (
         <form className="row" onSubmit={async e => {
           e.preventDefault();
           setResult(await call('attest_receipt', {
@@ -141,6 +151,25 @@ export function ReceiptForm({ inv, rev, t }: { inv: Row; rev?: Row; t: Tables })
           </label>
           <button className="btn secondary" type="submit" disabled={!q || !reason.trim()} style={{ alignSelf: 'flex-end' }}>Confirm what arrived</button>
         </form>
+      )}
+      {inv.receipt_status !== 'manually_confirmed' && mine && billed > 0 && (
+        <Hear
+          label="Hear what they billed"
+          text={spokenBriefing([
+            `Invoice ${String(inv.invoice_number).replace(/-/g, ' ')}. They billed ${qty(billed, unit)}.`,
+            'Say the count you counted, and how you know. You still press confirm.',
+          ])}
+        />
+      )}
+      {inv.receipt_status !== 'manually_confirmed' && mine && (
+        <SayFill
+          invoiceId={String(inv.id)}
+          invoiceNumber={String(inv.invoice_number)}
+          onHeard={(qty, said) => {
+            if (qty) setQ(qty);
+            setReason(said);
+          }}
+        />
       )}
       <Outcome r={result} />
     </section>

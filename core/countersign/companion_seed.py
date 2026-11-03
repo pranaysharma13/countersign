@@ -1,5 +1,6 @@
-"""Replayable companion queue: Cedar & Bolt, Northline Rebar, and four more Oakview
-cases (injection, PO ceiling, unapproved extra, CRS risk). Built on top of seed_setup
+"""Replayable companion queue: Cedar & Bolt, Northline Rebar, and seven more Oakview
+cases (injection, PO ceiling, unapproved extra, CRS risk, price above the quote,
+delivery not confirmed, fuel surcharge without its index). Built on top of seed_setup
 so actors and Oakview already exist. Does not record BayMix invoices or change BM-23104.
 """
 
@@ -19,7 +20,10 @@ from .companion_world import (CEDAR_DOCS, CEDAR_INVOICE, CEDAR_INVOICE_ID, CEDAR
                               PEAK_INVOICE_ID, PEAK_PURCHASE_ID, PF_INVOICE, PF_PO, PF_QTY_MILLI, PF_QUOTE,
                               REDLINE_DOCS, REDLINE_INVOICE_ID, REDLINE_PURCHASE_ID, RH_INVOICE, RH_PO, RH_QTY_MILLI,
                               RH_QUOTE, VALLEY_DOCS, VALLEY_INVOICE_ID, VALLEY_PURCHASE_ID, VS_INVOICE, VS_PO,
-                              VS_QTY_MILLI, VS_QUOTE)
+                              VS_QTY_MILLI, VS_QUOTE, BAYLINE_DOCS, BAYLINE_INVOICE_ID, BAYLINE_PURCHASE_ID,
+                              BE_INVOICE, BE_PO, BE_QUOTE, DELTA_DOCS, DELTA_INVOICE_ID, DELTA_PURCHASE_ID, DP_INVOICE,
+                              DP_PO, DP_QTY_MILLI, DP_QUOTE, RD_INVOICE, RD_PO, RD_QTY_MILLI, RD_QUOTE, RIDGEWAY_DOCS,
+                              RIDGEWAY_INVOICE_ID, RIDGEWAY_PURCHASE_ID)
 from .config import DATA_DIR
 from .extractions import record_email_extraction, record_invoice_extraction, record_purchase
 from .fake_store import FakeStore
@@ -163,26 +167,48 @@ def record_peak(store) -> None:
         raise RuntimeError(f"peak supplier risk hold: {res.outcome} {res.message}")
 
 
+def record_ridgeway(store) -> None:
+    invoice_id, _ = _record_matched_invoice(
+        store, RIDGEWAY_DOCS, RD_QUOTE, RD_PO, RD_INVOICE, RIDGEWAY_PURCHASE_ID, RIDGEWAY_INVOICE_ID,
+        "att_rd_300", "Drywall stocked floor by floor", RD_QTY_MILLI, "sheet",
+        "Counted 300 sheets of Type X against the delivery ticket")
+    _assess_no_payment(store, invoice_id)  # PRICE_VARIANCE at $15.10 vs $14.25; do not propose payment
+
+
+def record_bayline(store) -> None:
+    for doc in BAYLINE_DOCS:
+        seed_document(store, doc)
+    record_purchase(store, _fx(BE_QUOTE.id), _fx(BE_PO.id), BAYLINE_PURCHASE_ID)
+    invoice_id, _ = record_invoice_extraction(store, _fx(BE_INVOICE.id), BAYLINE_PURCHASE_ID)
+    if invoice_id != BAYLINE_INVOICE_ID:
+        raise RuntimeError(f"expected {BAYLINE_INVOICE_ID}, got {invoice_id}")
+    _assess_no_payment(store, invoice_id)  # RECEIPT_NOT_VERIFIED until the site lead confirms the spools
+
+
+def record_delta(store) -> None:
+    invoice_id, _ = _record_matched_invoice(
+        store, DELTA_DOCS, DP_QUOTE, DP_PO, DP_INVOICE, DELTA_PURCHASE_ID, DELTA_INVOICE_ID,
+        "att_dp_3", "Three pours: footings, slab east, slab west", DP_QTY_MILLI, "pour",
+        "Pump tickets signed for all three pours")
+    _assess_no_payment(store, invoice_id)  # USAGE_EVIDENCE_MISSING on fuel; do not propose payment
+
+
+_RECORDERS = (record_cedar, record_northline, record_harbor, record_valley, record_redline, record_peak,
+              record_ridgeway, record_bayline, record_delta)
+
+
 def export_companion_seed() -> list[dict[str, Any]]:
     inner = FakeStore()
     seed_setup(inner)
     rec = RecordingStore(inner)
     seed_companion_parties(rec)
-    record_cedar(rec)
-    record_northline(rec)
-    record_harbor(rec)
-    record_valley(rec)
-    record_redline(rec)
-    record_peak(rec)
+    for record_one in _RECORDERS:
+        record_one(rec)
     return rec.take()
 
 
 def replay_companions(store) -> None:
     """Add the companion invoices onto a store that already has actors and Oakview."""
     seed_companion_parties(store)
-    record_cedar(store)
-    record_northline(store)
-    record_harbor(store)
-    record_valley(store)
-    record_redline(store)
-    record_peak(store)
+    for record_one in _RECORDERS:
+        record_one(store)

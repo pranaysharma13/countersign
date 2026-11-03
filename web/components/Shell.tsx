@@ -4,9 +4,20 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { refreshAll } from '@/lib/client';
 import { PERSONAS, personaOf, initials } from '@/lib/personas';
+import { Mark } from '@/components/Mark';
 import { PERSONA_EVENT } from '@/lib/usePersona';
+import { Tour } from '@/components/Tour';
+import { requestTour } from '@/lib/tour';
 
-interface Session { persona: string; unlocked: boolean; mode: 'live' | 'local'; pinRequired: boolean }
+interface Session {
+  persona: string;
+  unlocked: boolean;
+  mode: 'live' | 'local';
+  pinRequired: boolean;
+  auth: 'supabase' | 'desk';
+  email: string | null;
+  emailLogin: boolean;
+}
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -15,6 +26,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [err, setErr] = useState('');
 
   useEffect(() => { fetch('/api/session').then(r => r.json()).then(setS); }, []);
+
+  useEffect(() => {
+    if (!s?.pinRequired || !s.unlocked) return;
+    let t = window.setTimeout(lock, 12 * 60 * 1000);
+    const bump = () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(lock, 12 * 60 * 1000);
+    };
+    const ev = ['pointerdown', 'keydown'] as const;
+    ev.forEach(n => window.addEventListener(n, bump));
+    return () => {
+      window.clearTimeout(t);
+      ev.forEach(n => window.removeEventListener(n, bump));
+    };
+    async function lock() {
+      const r = await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lock: true }) });
+      const j = await r.json();
+      setS(prev => (prev ? { ...prev, unlocked: j.unlocked } : prev));
+    }
+  }, [s?.pinRequired, s?.unlocked]);
 
   async function post(body: object) {
     const r = await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -41,11 +72,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
     refreshAll();
   }
 
-  if (path === '/') return <>{children}</>;
+  if (path === '/' || path === '/login' || path === '/start') return <>{children}</>;
 
   const me = personaOf(s?.persona ?? 'owner');
   const nav = [
+    { href: '/office', label: 'Work', on: path.startsWith('/office') },
     { href: '/bills', label: 'Bills', on: path === '/bills' || path.startsWith('/invoices') || path.startsWith('/purchases') },
+    { href: '/proof', label: 'Proof', on: path.startsWith('/proof') },
+    { href: '/banks', label: 'Banks', on: path.startsWith('/banks') },
+    { href: '/calls', label: 'Calls', on: path.startsWith('/calls') },
     { href: '/inbox', label: 'Inbox', on: path.startsWith('/inbox') },
     { href: '/sneak', label: 'Sneak', on: path.startsWith('/sneak') },
   ];
@@ -53,16 +88,37 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app">
       <header className="top">
-        <Link href="/" className="mark">Clerk</Link>
+        <Mark href="/" />
         <nav className="nav" aria-label="Main">
-          {nav.map(n => <Link key={n.href} href={n.href} aria-current={n.on ? 'page' : undefined}>{n.label}</Link>)}
+          {nav.map(n => (
+            <Link key={n.href} href={n.href} aria-current={n.on ? 'page' : undefined}>{n.label}</Link>
+          ))}
         </nav>
         <div className="top-end">
-          <Link className="btn" href="/inbox">Open inbox</Link>
-          {me && <div className="avatar" title={me.name}>{initials(me.name)}</div>}
-          <select className="who-pick" value={s?.persona ?? 'owner'} onChange={e => post({ persona: e.target.value })} aria-label="I am">
-            {PERSONAS.map(p => <option key={p.id} value={p.id}>{p.role}</option>)}
-          </select>
+          <button className="btn secondary" type="button" onClick={requestTour}>Walkthrough</button>
+          {s?.auth === 'supabase' ? (
+            <form action="/api/auth/logout" method="post" onSubmit={async e => {
+              e.preventDefault();
+              await fetch('/api/auth/logout', { method: 'POST' });
+              window.location.href = '/login';
+            }}>
+              <button className="ghost-inline" type="submit">{s.email || 'Sign out'}</button>
+            </form>
+          ) : (
+            <label className="who">
+              {me && <span className="avatar sm" aria-hidden="true">{initials(me.name)}</span>}
+              {me && (
+                <span className="who-name" aria-hidden="true">
+                  <span className="who-first">{me.name.split(' ')[0]}</span>
+                  <span className="who-last"> {me.name.split(' ').slice(1).join(' ')}</span>
+                  <span className="who-role"> · {me.role}</span>
+                </span>
+              )}
+              <select className="who-pick" value={s?.persona ?? 'owner'} onChange={e => post({ persona: e.target.value })} aria-label="I am">
+                {PERSONAS.map(p => <option key={p.id} value={p.id}>{p.name}, {p.role}</option>)}
+              </select>
+            </label>
+          )}
         </div>
       </header>
       <main>
@@ -76,8 +132,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <button className="ghost" onClick={reset}>Start over</button>
         )}
         {err && <div className="notice stop" role="alert">{err}</div>}
+        {me && (
+          <p className="desk-who" aria-live="polite">
+            <span className="desk-who-id"><strong>{me.name}</strong> · {me.role}</span>
+            <span className="desk-who-job">{me.does} {me.cannot}</span>
+          </p>
+        )}
         {children}
+        <Tour />
       </main>
     </div>
   );
 }
+

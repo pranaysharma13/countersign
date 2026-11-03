@@ -8,11 +8,19 @@
     "build": "next build",
     "start": "next start -p 3001",
     "typecheck": "tsc --noEmit",
+    "test:voice": "node --experimental-strip-types --test lib/voice.test.ts lib/deskCall.test.ts",
+    "test:banks": "node --experimental-strip-types --test lib/banks.test.ts",
+    "test:site": "node --experimental-strip-types --test lib/siteUrl.test.ts",
+    "test:proof": "node --experimental-strip-types --test lib/proof.test.ts",
+    "test:trust": "node --experimental-strip-types --test lib/trust.test.ts lib/books.test.ts lib/questions.test.ts",
+    "test:auth": "node --experimental-strip-types --test lib/authRole.test.ts",
     "check:gmail": "node scripts/check-gmail-env.mjs",
-    "predev": "npm --prefix ../db run build:local",
-    "prebuild": "npm --prefix ../db run build:local"
+    "predev": "npm --prefix ../db run build:local && node scripts/stage-local.mjs",
+    "prebuild": "node scripts/stage-local.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
     "echarts": "^6.1.0",
     "jspdf": "^4.2.1",
     "next": "16.4.2",

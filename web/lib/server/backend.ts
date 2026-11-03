@@ -1,10 +1,10 @@
 // Server-only data access. Two backends behind one interface:
-//   live  — the published SpacetimeDB module over HTTP (SQL reads, reducer calls with per-role tokens)
-//   local — the same module running in-process with the BayMix demo seeded (db/dist/local.mjs)
+//   live:  the published SpacetimeDB module over HTTP (SQL reads, reducer calls with per-role tokens)
+//   local: the same module running in-process with the BayMix demo seeded (db/dist/local.mjs)
 // Choose with DATA_SOURCE=live|local (default local). Tokens never reach the browser.
 import 'server-only';
 import { pathToFileURL } from 'node:url';
-import { resolve } from 'node:path';
+import { join } from 'node:path';
 
 export type Persona = 'owner' | 'purchasing' | 'receiver' | 'bookkeeper' | 'public';
 export const STAFF: Exclude<Persona, 'public'>[] = ['owner', 'purchasing', 'receiver', 'bookkeeper'];
@@ -24,13 +24,16 @@ type LocalModule = {
   REDUCER_ARGS: Record<string, string[]>;
 };
 let localMod: Promise<LocalModule> | null = null;
-// Loaded at runtime from db/dist (built by `npm run build:local` in db/, run automatically by predev/prebuild).
-const LOCAL_PATH = resolve(process.cwd(), process.env.LOCAL_BACKEND_PATH ?? '../db/dist/local.mjs');
-const local = () => (localMod ??= import(/* webpackIgnore: true */ /* turbopackIgnore: true */ pathToFileURL(LOCAL_PATH).href) as Promise<LocalModule>);
+const LOCAL_FILE = join(process.cwd(), '.local-backend', 'local.mjs');
+const local = () => (localMod ??= import(/* webpackIgnore: true */ /* turbopackIgnore: true */ pathToFileURL(LOCAL_FILE).href) as Promise<LocalModule>);
 
 // ---------------------------------------------------------------- live
 
 const base = () => `${(process.env.SPACETIMEDB_URI ?? 'http://localhost:3000').replace(/\/$/, '')}/v1/database/${process.env.SPACETIMEDB_DATABASE ?? 'countersign'}`;
+// Role tokens stay on this server. A signed-in person's Supabase JWT is not
+// sent to Spacetime until each identity is in the actor table. Otherwise the
+// caller is `public` and every reducer denies. Opt-in later with
+// SPACETIMEDB_PASS_USER_JWT after register_actor for that iss|sub.
 const token = (p: Persona) => (p === 'public' ? process.env.SPACETIMEDB_PUBLIC_TOKEN : process.env[`SPACETIMEDB_${p.toUpperCase()}_TOKEN`]) ?? '';
 
 function normalize(v: unknown): unknown {

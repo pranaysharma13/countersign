@@ -1,0 +1,106 @@
+{
+  "document_id": "doc_dp_inv_418",
+  "document_kind": "invoice",
+  "mode": "fixture",
+  "label": "FIXTURE: pre-labelled extraction (AI_MODE=fixture), not a live model call",
+  "prompt_version": "fixture-v1",
+  "instructions_found": [],
+  "fields": {
+    "supplier_name": {
+      "value": "Delta Pump Services",
+      "quote": "Delta Pump Services",
+      "fragments": [
+        "frag_dp_inv_418_p1_l1"
+      ]
+    },
+    "invoice_number": {
+      "value": "DP-418",
+      "quote": "INVOICE DP-418",
+      "fragments": [
+        "frag_dp_inv_418_p1_l3"
+      ]
+    },
+    "invoice_date": {
+      "value": "2026-10-23",
+      "quote": "Invoice date: 2026-10-23",
+      "fragments": [
+        "frag_dp_inv_418_p1_l4"
+      ]
+    },
+    "due_date": {
+      "value": "2026-11-07",
+      "quote": "Due date: 2026-11-07 (Net 15)",
+      "fragments": [
+        "frag_dp_inv_418_p1_l5"
+      ]
+    },
+    "po_number": {
+      "value": "MF-PO-1128",
+      "quote": "Your PO: MF-PO-1128    Quote: DPQ-41",
+      "fragments": [
+        "frag_dp_inv_418_p1_l8"
+      ]
+    },
+    "currency": {
+      "value": "USD",
+      "quote": "Gross amount: $3,546.00",
+      "fragments": [
+        "frag_dp_inv_418_p1_l14"
+      ]
+    },
+    "gross_cents": {
+      "value": 354600,
+      "quote": "Gross amount: $3,546.00",
+      "fragments": [
+        "frag_dp_inv_418_p1_l14"
+      ]
+    },
+    "balance_requested_cents": {
+      "value": 354600,
+      "quote": "Balance due: $3,546.00",
+      "fragments": [
+        "frag_dp_inv_418_p1_l15"
+      ]
+    },
+    "remit_account_last4": {
+      "value": "5108",
+      "quote": "Remit to: Delta Pump Services, Levee Federal Credit Union, account ending 5108",
+      "fragments": [
+        "frag_dp_inv_418_p1_l18"
+      ]
+    },
+    "tax_cents": {
+      "value": null,
+      "missing_reason": "No tax line on this invoice; no tax rate is assumed."
+    }
+  },
+  "lines": [
+    {
+      "kind": "material",
+      "description": "Concrete boom pump 38 m, per pour",
+      "quantity_milli": 3000,
+      "unit": "pour",
+      "unit_price_cents": 115000,
+      "amount_cents": 345000,
+      "links": {
+        "term_code": "unit_price"
+      },
+      "quote": "1     Concrete boom pump 38 m, per pour            3.000    pour  $1,150.00     $3,450.00",
+      "fragments": [
+        "frag_dp_inv_418_p1_l11"
+      ]
+    },
+    {
+      "kind": "fuel",
+      "description": "Fuel surcharge, per pour",
+      "quantity_milli": 3000,
+      "unit": "ea",
+      "unit_price_cents": 3200,
+      "amount_cents": 9600,
+      "quote": "2     Fuel surcharge, per pour                     3.000    ea    $32.00        $96.00",
+      "fragments": [
+        "frag_dp_inv_418_p1_l12"
+      ]
+    }
+  ]
+}

@@ -2,15 +2,25 @@
 import Link from 'next/link';
 import { use, useState } from 'react';
 import { useTables, call, newId, type Row, type Tables, type CallResult } from '@/lib/client';
-import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, assessmentLines, billStory, nextStep, safeReason, ceilingCopy, plainCalc, plainTerms } from '@/lib/format';
-import { StatusStrip, Evidence, Loading, Outcome, sourceOf } from '@/components/parts';
+import { money, day, time, ids, HOLD_LABEL, HOLD_DETAIL, ROLE_LABEL, nextWho, assessmentLines, billStory, nextStep, safeReason, ceilingCopy, ceilingFacts, plainTerms, lineWhy, type AssessmentLine } from '@/lib/format';
+import { StatusStrip, Evidence, Loading, Outcome, sourceOf, ReceiptForm } from '@/components/parts';
 import { Papers } from '@/components/Stationery';
+import { DeskCall } from '@/components/DeskCall';
+import { PayeeCall } from '@/components/PayeeCall';
+import { VoiceRecord } from '@/components/VoiceRecord';
+import { Hear } from '@/components/Hear';
+import { TrustCase } from '@/components/Trust';
+import { billTrust } from '@/lib/trust';
+import { billSpeech, letterSpeech } from '@/lib/voice';
 import { auditHref } from '@/lib/files';
 import { fromGmail } from '@/lib/mail';
+import { isDeskHold } from '@/lib/deskCall';
+import { usePersona } from '@/lib/usePersona';
 
 const TABLES = ['invoice', 'invoice_revision', 'invoice_line', 'assessment', 'hold', 'supplier', 'supplier_contact', 'purchase',
   'project', 'document', 'source_file', 'source_fragment', 'email_message', 'outbox', 'agent_step', 'audit_log', 'receipt_attestation',
-  'change_request', 'proposal', 'settlement_decision', 'job'];
+  'change_request', 'proposal', 'settlement_decision', 'job', 'payee_profile', 'payment', 'ledger_line', 'request_result',
+  'extraction_run', 'term', 'payment_approval'];
 const ACTION_WORDS: Record<string, string> = {
   record_invoice: 'recorded the invoice', record_invoice_revision: 'recorded a revision', record_invoice_line: 'recorded a line',
   set_work_item_state: 'updated the case', open_hold: 'opened a hold', resolve_hold: 'cleared a hold', record_assessment: 'assessed the invoice',
@@ -26,6 +36,7 @@ const MONEY_HOLD = ['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'USAGE_EVIDENCE_MISSING
 export default function InvoiceCase({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: t, mode, error } = useTables(TABLES);
+  const persona = usePersona();
   if (!t) return <Loading error={error} />;
   const inv = t.invoice.find(i => i.id === id);
   if (!inv) return <div className="empty">No bill {id}. Check the <Link href="/bills">bills list</Link>.</div>;
@@ -37,15 +48,34 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
   const assessment = t.assessment.filter(a => a.revision_id === rev?.id).sort((a, b) => b.version - a.version)[0];
   const holds = t.hold.filter(h => h.revision_id === rev?.id && h.status === 'open');
   const next = nextStep(inv, holds);
+  const pendingPayees = (t.payee_profile ?? []).filter(x => x.supplier_id === inv.supplier_id && x.status === 'pending');
+  const oldLast4 = String((t.payee_profile ?? []).find(x => x.supplier_id === inv.supplier_id && x.status === 'verified')?.last4 ?? '');
+  const bankHold = holds.some(h => h.code === 'PAYEE_CHANGE_PENDING')
+    || pendingPayees.length > 0
+    || inv.payee_status === 'change_pending'
+    || inv.payee_status === 'unverified';
+  const receiptHold = holds.some(h => h.code === 'RECEIPT_NOT_VERIFIED') || inv.receipt_status === 'required';
+  const drafts = t.outbox.filter(o => o.invoice_id === id);
 
   return (
-    <div className="stack">
+    <div
+      className="stack"
+      itemScope
+      itemType="https://schema.org/Invoice"
+      data-invoice-id={String(inv.id)}
+      data-invoice-number={String(inv.invoice_number)}
+      data-supplier={String(sup?.name ?? '')}
+      data-cents={Number(rev?.balance_requested_cents) || 0}
+      data-hold={holds[0] ? String(holds[0].code) : ''}
+      data-next-role={next.role || ''}
+      data-payment-status={String(inv.payment_status)}
+    >
       <div className="head">
         <div>
-          <div className="small muted"><Link href="/bills">Bills</Link> · {inv.invoice_number}</div>
-          <h1>{sup?.name ?? 'Supplier'}</h1>
+          <div className="small muted"><Link href="/bills">Bills</Link> · <span itemProp="identifier">{inv.invoice_number}</span></div>
+          <h1 itemProp="provider">{sup?.name ?? 'Supplier'}</h1>
           <p className="lede">{billStory(inv, holds)}</p>
-          <div className="case-amt">{money(rev?.balance_requested_cents)}</div>
+          <div className="case-amt" itemProp="totalPaymentDue">{money(rev?.balance_requested_cents)}</div>
           <p className="small muted" style={{ marginTop: 6 }}>
             {pur ? <>Order <Link href={`/purchases/${pur.id}`}>{pur.po_number}</Link>. </> : 'No purchase order. '}
             Dated {day(inv.invoice_date)}, due {day(inv.due_date)}.{rev && rev.revision > 1 ? ` Revision ${rev.revision} is the one that counts.` : ''}
@@ -54,29 +84,73 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
         <div className="row">
           <a className="btn secondary" href={auditHref(inv.id)} download>Download audit</a>
           {inv.payment_status === 'settled' ? null
-            : holds.length > 0
-              ? <a className="btn" href="#holds">Review what's blocking</a>
-              : <Link className="btn" href={`/invoices/${id}/approve`}>Review payment</Link>}
+            : bankHold
+              ? <a className="btn" href="#next">Call about the new account</a>
+              : holds.some(h => isDeskHold(String(h.code)))
+                ? <a className="btn" href="#desk-call">Call the supplier</a>
+              : holds.length > 0
+                ? <a className="btn" href="#next">What to do next</a>
+                : <Link className="btn" href={`/invoices/${id}/approve`}>Pay this bill</Link>}
         </div>
       </div>
 
       <StatusStrip inv={inv} />
-      <p className="next">
-        {next.role
-          ? <><strong>{ROLE_LABEL[next.role] ?? next.role} — </strong>{next.action}</>
-          : next.action}
-      </p>
+
+      <NextCard
+        inv={inv}
+        holds={holds}
+        next={next}
+        persona={persona}
+        drafts={drafts}
+        t={t}
+        assessment={assessment}
+      />
+
+      {holds.filter(h => isDeskHold(String(h.code))).slice(0, 1).map(h => {
+        const rows = (t.supplier_contact ?? []).filter(c => c.supplier_id === inv.supplier_id && c.pre_established);
+        const ar = rows.find(c => /receivable/i.test(String(c.title ?? ''))) ?? rows[0];
+        if (!ar) return null;
+        return (
+          <DeskCall
+            key={String(h.id)}
+            invoiceId={String(inv.id)}
+            invoiceNumber={String(inv.invoice_number)}
+            supplier={String(sup?.name ?? 'Supplier')}
+            contactName={String(ar.name)}
+            contactPhone={String(ar.phone ?? '')}
+            holdCode={String(h.code)}
+            extraCents={Number(h.amount_cents) || 0}
+          />
+        );
+      })}
+
+      {bankHold && pendingPayees.map(p => (
+        <PayeeCall
+          key={p.id}
+          invoiceId={String(inv.id)}
+          invoiceNumber={String(inv.invoice_number)}
+          supplier={String(sup?.name ?? 'Supplier')}
+          oldLast4={oldLast4}
+          profile={p}
+          t={t}
+        />
+      ))}
+
+      {receiptHold && <ReceiptForm inv={inv} rev={rev} t={t} />}
+
+      <TrustCase bill={billTrust(t, inv)} />
 
       <div className="split">
         <div className="stack">
           {assessment ? <Reconciliation a={assessment} rev={rev!} holds={holds} /> : <div className="sheet pad muted">Still checking this bill.</div>}
-          {assessment && <Ledger a={assessment} holds={holds} t={t} invoiceId={id} />}
-          <Holds holds={holds} inv={inv} pur={pur} t={t} />
-          <DisputedLines inv={inv} a={assessment} t={t} />
+          {assessment && <Ledger a={assessment} holds={holds} t={t} />}
+          <Holds holds={holds} t={t} />
+          <DisputedLines inv={inv} a={assessment} t={t} persona={persona} />
           <Revisions revs={revs} active={inv.active_revision_id} t={t} />
         </div>
         <div className="stack">
           <Clarifications inv={inv} t={t} mode={mode} />
+          <VoiceRecord invoiceId={id} />
           <Thread inv={inv} sup={sup} pur={pur} t={t} />
           <details className="sheet pad activity">
             <summary>Activity</summary>
@@ -98,6 +172,184 @@ export default function InvoiceCase({ params }: { params: Promise<{ id: string }
         pur={pur}
       />
     </div>
+  );
+}
+
+function extraAsk(hold: Row): string {
+  const amt = money(hold.amount_cents);
+  if (hold.code === 'PROPOSED_CHARGE') {
+    return `Please send a revised invoice without the extra ${amt}, or a written agreement for that charge. We will not pay the extra from this bill unless we accept it in the app.`;
+  }
+  return `Please send a revised invoice at the agreed price. The extra ${amt} is not agreed.`;
+}
+
+function NextCard({
+  inv, holds, next, persona, drafts, t, assessment,
+}: {
+  inv: Row; holds: Row[]; next: { role: string; action: string }; persona: string | null;
+  drafts: Row[]; t: Tables; assessment?: Row;
+}) {
+  const [result, setResult] = useState<CallResult | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [note, setNote] = useState('');
+  if (inv.payment_status === 'settled') return null;
+  const ceiling = holds.find(h => h.code === 'PO_CEILING');
+  const extra = holds.find(h => h.code === 'PROPOSED_CHARGE' || h.code === 'PRICE_VARIANCE');
+  const reviewHold = holds.find(h => OWNER_RESOLVABLE.includes(String(h.code)));
+  const facts = ceiling ? ceilingFacts(ceiling.evidence_json) : null;
+  const draft = drafts.find(o => o.status === 'draft');
+  const sent = drafts.find(o => o.status === 'sent' || o.status === 'approved');
+  const who = nextWho(next.role);
+  const yours = !!next.role && persona === next.role;
+  const extraAmt = extra ? Number(extra.amount_cents) || 0 : 0;
+  const asked = assessment ? Number(assessment.claimed_cents) || 0 : 0;
+  const agreed = extraAmt > 0 && asked > extraAmt ? asked - extraAmt : (assessment ? Number(assessment.authorised_cents) || 0 : 0);
+  const ask = facts
+    ? `Please send a corrected invoice for ${facts.cap} at the agreed price, or a written change for the extra ${facts.extra} (${money(ceiling?.amount_cents)}). We will not pay the extra from this bill.`
+    : extra ? extraAsk(extra) : next.action;
+  const needLetter = !!(ceiling || extra);
+  const contacts = t.supplier_contact.filter(c => c.supplier_id === inv.supplier_id);
+  const ar = contacts.find(c => /receivable/i.test(String(c.title))) ?? contacts[0];
+  const mail = ar?.email
+    ? `mailto:${ar.email}?subject=${encodeURIComponent(`${inv.invoice_number}: this bill does not match the order`)}&body=${encodeURIComponent(ask)}`
+    : '';
+  const reviewedHidden = (t.hold ?? []).some(h =>
+    h.revision_id === inv.active_revision_id && h.code === 'PROMPT_INJECTION' && h.status !== 'open');
+
+  async function sendDraft() {
+    if (!draft) return;
+    setResult(await call('approve_outbox', { id: draft.id }));
+  }
+
+  async function copyAsk() {
+    try {
+      await navigator.clipboard.writeText(ask);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  async function recordReview() {
+    if (!reviewHold) return;
+    setResult(await call('resolve_hold', { id: reviewHold.id, note }));
+  }
+
+  return (
+    <section className={`next-card${yours ? ' yours' : ''}`} id="next" aria-labelledby="next-title">
+      <p className="card-kicker">{yours ? 'Your turn' : 'Waiting on someone'}</p>
+      <h2 id="next-title">{who}: {next.action}</h2>
+      <div className="row" style={{ margin: '8px 0 4px' }}>
+        <Hear
+          label="Hear this bill"
+          text={billSpeech({
+            supplier: String(t.supplier.find(s => s.id === inv.supplier_id)?.name ?? 'Supplier'),
+            invoiceNumber: String(inv.invoice_number),
+            story: billStory(inv, holds),
+            who,
+            action: next.action,
+            math: facts && ceiling
+              ? `Order allows ${facts.cap}. This bill is ${facts.billed}. Cannot pay ${money(ceiling.amount_cents)}.`
+              : extra && extraAmt > 0
+                ? `Matches the order ${money(agreed)}. They added ${money(extraAmt)}, not agreed.`
+                : '',
+          })}
+        />
+      </div>
+      {facts && ceiling && (
+        <div className="next-math" aria-label="Order versus this bill">
+          <div><span>Order allows</span><b>{facts.cap}</b></div>
+          <div><span>This bill</span><b>{facts.billed}</b></div>
+          <div className="hold"><span>Cannot pay</span><b>{money(ceiling.amount_cents)}</b></div>
+        </div>
+      )}
+      {extra && extraAmt > 0 && (
+        <div className="next-math" aria-label="Agreed versus extra">
+          <div><span>Matches the order</span><b>{money(agreed)}</b></div>
+          <div><span>They added</span><b>{money(extraAmt)}</b></div>
+          <div className="hold"><span>Not agreed</span><b>{money(extraAmt)}</b></div>
+        </div>
+      )}
+      {ceiling && (
+        <p className="small" style={{ marginTop: 0 }}>
+          The extra {facts?.extra ?? 'quantity'} needs a corrected invoice or a written change.
+          Dana cannot accept a quantity over the order from this screen.
+        </p>
+      )}
+      {extra && (
+        <p className="small" style={{ marginTop: 0 }}>
+          Buyer asks for a corrected invoice. If they will not correct it, Dana decides each{' '}
+          <a href="#disputed">disputed line</a>.
+        </p>
+      )}
+      {holds.some(h => h.code === 'RECEIPT_NOT_VERIFIED') && (
+        <p className="small" style={{ marginTop: 0 }}>Confirm the delivery in the form below. That is the only thing that clears this.</p>
+      )}
+      {holds.some(h => h.code === 'PAYEE_CHANGE_PENDING') && (
+        <p className="small" style={{ marginTop: 0 }}>Call the number already on file. Do not use a number from the email that asked for the change.</p>
+      )}
+      {reviewedHidden && !holds.some(h => h.code === 'PROMPT_INJECTION') && (
+        <p className="small" style={{ marginTop: 0 }}>
+          A hidden instruction on this invoice was treated as printed text and ignored. The amounts still match the order.
+        </p>
+      )}
+      {draft && !sent && (
+        <div className="stack" style={{ marginTop: 12 }}>
+          <details className="ask-box">
+            <summary><strong className="small">{draft.subject}</strong></summary>
+            <p className="small" style={{ margin: '6px 0 0' }}>{draft.body}</p>
+          </details>
+          <div className="row">
+            <Hear label="Hear the letter" text={letterSpeech(String(draft.subject), String(draft.body))} />
+            {(persona === 'purchasing' || persona === 'owner') ? (
+              <button className="btn" type="button" onClick={sendDraft}>Send this to the supplier</button>
+            ) : (
+              <p className="small">Switch I am to Buyer to send this letter.</p>
+            )}
+          </div>
+        </div>
+      )}
+      {sent && <p className="small">A letter was already sent. Waiting on the supplier.</p>}
+      {needLetter && !draft && !sent && (
+        <div className="stack" style={{ marginTop: 12 }}>
+          <p className="small" style={{ margin: 0 }}>
+            Clerk has no letter queued to send from here. Buyer emails the supplier.
+            {ar?.email ? ` ${ar.email}` : ''}
+          </p>
+          <div className="ask-box">{ask}</div>
+          <div className="row">
+            <Hear label="Hear the ask" text={ask} />
+            {mail && <a className="btn" href={mail}>Open in email</a>}
+            <button className={mail ? 'btn secondary' : 'btn'} type="button" onClick={copyAsk}>{copied ? 'Copied' : 'Copy the words'}</button>
+            {persona !== 'purchasing' && <p className="small muted" style={{ margin: 0 }}>Switch I am to Buyer when you send it.</p>}
+          </div>
+        </div>
+      )}
+      {reviewHold && persona !== 'owner' && (
+        <p className="small">Only Dana can record this review. Switch I am to Dana, Owner.</p>
+      )}
+      {reviewHold && persona === 'owner' && (
+        <form className="row" style={{ marginTop: 12 }} onSubmit={e => { e.preventDefault(); void recordReview(); }}>
+          <input
+            type="text"
+            placeholder={reviewHold.code === 'PROMPT_INJECTION' ? 'What you reviewed (required)' : 'Why you are clearing this (required)'}
+            value={note}
+            aria-label="Review note"
+            onChange={e => setNote(e.target.value)}
+            style={{ flex: 1, minWidth: 200 }}
+          />
+          <button className="btn" type="submit" disabled={!note.trim()}>
+            {reviewHold.code === 'PROMPT_INJECTION' ? 'Record review' : 'Clear this hold'}
+          </button>
+        </form>
+      )}
+      {next.role === 'owner' && next.action === 'Pay this bill.' && (
+        <div className="row" style={{ marginTop: 12 }}>
+          <Link className="btn" href={`/invoices/${inv.id}/approve`}>Pay this bill</Link>
+        </div>
+      )}
+      <Outcome r={result} />
+    </section>
   );
 }
 
@@ -139,7 +391,7 @@ function Reconciliation({ a, rev, holds }: { a: Row; rev: Row; holds: Row[] }) {
   );
 }
 
-function Ledger({ a, holds, t, invoiceId }: { a: Row; holds: Row[]; t: Tables; invoiceId: string }) {
+function Ledger({ a, holds, t }: { a: Row; holds: Row[]; t: Tables }) {
   const lines = assessmentLines(a.details_json);
   const over = holds.find(h => h.code === 'PO_CEILING');
   const total = (k: 'claimed_cents' | 'accepted_cents' | 'pending_cents' | 'variance_cents') =>
@@ -148,7 +400,6 @@ function Ledger({ a, holds, t, invoiceId }: { a: Row; holds: Row[]; t: Tables; i
     <section className="sheet" aria-labelledby="lines">
       <div className="pad" style={{ paddingBottom: 0 }}>
         <h2 id="lines">Line items</h2>
-        <p className="small muted" style={{ marginTop: -4 }}>Open a source to read the page of the document.</p>
       </div>
       <div className="scroll">
         <table className="ledger">
@@ -162,15 +413,12 @@ function Ledger({ a, holds, t, invoiceId }: { a: Row; holds: Row[]; t: Tables; i
                 <tr key={i} className={notAgreed ? 'under' : ''}>
                   <td className="desc">
                     <strong>{l.line}</strong>
-                    {l.calculation && <div className="calc">{plainCalc(l.calculation)}</div>}
                     {over && overAmt > 0 && <div className="calc">{ceilingCopy(over.evidence_json, over.reason)}</div>}
-                    {l.uncertainty && <div className="calc">{plainTerms(l.uncertainty)}</div>}
-                    <Evidence ids={l.fragment_ids} t={t} />
-                    <Why invoiceId={invoiceId} lineId={l.line_id} t={t} />
+                    <WhyFold line={l} t={t} />
                   </td>
                   <td className="num">{money(l.claimed_cents)}</td>
                   <td className="num">{money(l.accepted_cents)}</td>
-                  <td className="num" style={{ color: notAgreed ? 'var(--hold)' : undefined }}>{notAgreed ? money(notAgreed) : '—'}</td>
+                  <td className="num" style={{ color: notAgreed ? 'var(--hold)' : undefined }}>{notAgreed ? money(notAgreed) : '-'}</td>
                   <td>{overAmt > 0 ? <span className="st hold">Over the order</span>
                     : l.status === 'accepted' ? <span className="st ok">OK</span>
                       : l.status === 'pending' ? <span className="st hold">Waiting</span>
@@ -187,13 +435,11 @@ function Ledger({ a, holds, t, invoiceId }: { a: Row; holds: Row[]; t: Tables; i
   );
 }
 
-function Holds({ holds, inv, pur, t }: { holds: Row[]; inv: Row; pur?: Row; t: Tables }) {
-  const [note, setNote] = useState<Record<string, string>>({});
-  const [result, setResult] = useState<CallResult | null>(null);
+function Holds({ holds, t }: { holds: Row[]; t: Tables }) {
   return (
     <section className="sheet pad" aria-labelledby="holds">
       <h2 id="holds">What's blocking payment</h2>
-      {holds.length === 0 && <p className="muted" style={{ margin: 0 }}>Nothing is blocking. Each block clears on its own — clearing one never clears another.</p>}
+      {holds.length === 0 && <p className="muted" style={{ margin: 0 }}>Nothing is blocking. Each hold clears on its own. Clearing one never clears another.</p>}
       <div className="hold-list">
         {holds.map(h => {
           const injection = h.code === 'PROMPT_INJECTION';
@@ -206,59 +452,22 @@ function Holds({ holds, inv, pur, t }: { holds: Row[]; inv: Row; pur?: Row; t: T
                 {h.amount_cents > 0 && <span className="num small">{money(h.amount_cents)}</span>}
               </div>
               <p className="hold-copy">
-                {h.code === 'PO_CEILING'
-                  ? ceilingCopy(h.evidence_json, h.reason || HOLD_DETAIL[h.code])
-                  : (HOLD_DETAIL[h.code] ?? plainTerms(h.reason))}
+                {HOLD_DETAIL[h.code] ?? plainTerms(h.reason)}
               </p>
-              {injection ? (
-                <p className="hold-src">
-                  Found on {src || 'the invoice'}. The instruction was not followed.
-                </p>
-              ) : h.code === 'PO_CEILING' ? (
-                <p className="hold-src">
-                  {h.reason}
-                  {pur?.po_document_id || inv.active_revision_id ? ' Compare the purchase order and this invoice in Documents.' : ''}
-                </p>
-              ) : (
-                <Evidence ids={ids(h.evidence_json)} t={t} />
-              )}
-              {OWNER_RESOLVABLE.includes(h.code) ? (
-                <form className="row" style={{ marginTop: 12 }} onSubmit={async e => {
-                  e.preventDefault();
-                  setResult(await call('resolve_hold', { id: h.id, note: note[h.id] ?? '' }));
-                }}>
-                  <input
-                    type="text"
-                    placeholder={injection ? 'What you reviewed (required)' : 'Why you are clearing this (required)'}
-                    value={note[h.id] ?? ''}
-                    aria-label={injection ? 'Review note' : `Note for ${HOLD_LABEL[h.code] ?? h.code}`}
-                    onChange={e => setNote({ ...note, [h.id]: e.target.value })}
-                    style={{ flex: 1, minWidth: 200 }}
-                  />
-                  <button className="btn secondary" type="submit" disabled={!(note[h.id] ?? '').trim()}>
-                    {injection ? 'Record review' : 'Clear this hold'}
-                  </button>
-                </form>
-              ) : (
-                <div className="small muted" style={{ marginTop: 8 }}>
-                  {h.code === 'RECEIPT_NOT_VERIFIED' ? 'Clears when someone on site confirms the delivery.'
-                    : h.code === 'PAYEE_CHANGE_PENDING' ? 'Clears when the owner calls a number already on file — never a number from the request.'
-                      : MONEY_HOLD.includes(h.code) ? 'Ask the supplier for a corrected invoice, or the owner decides each disputed line below. This cannot be waved from here.'
-                        : 'This stays open until the matching event happens.'}
-                </div>
+              {injection && (
+                <p className="hold-src">Found on {src || 'the invoice'}. The instruction was not followed.</p>
               )}
             </div>
           );
         })}
       </div>
-      <Outcome r={result} />
     </section>
   );
 }
 
 /** §9.9: when the supplier won't correct the invoice, the owner decides each disputed line. Never pays short silently:
  * "pay agreed" drafts a notice to the supplier, and payment waits until it's sent. */
-function DisputedLines({ inv, a, t }: { inv: Row; a?: Row; t: Tables }) {
+function DisputedLines({ inv, a, t, persona }: { inv: Row; a?: Row; t: Tables; persona: string | null }) {
   const [note, setNote] = useState<Record<string, string>>({});
   const [to, setTo] = useState<Record<string, string>>({});
   const [result, setResult] = useState<CallResult | null>(null);
@@ -283,11 +492,14 @@ function DisputedLines({ inv, a, t }: { inv: Row; a?: Row; t: Tables }) {
   };
   return (
     <section className="sheet pad" aria-labelledby="disputed">
-      <h2 id="disputed">If they won&apos;t correct it</h2>
+      <h2 id="disputed">If they will not correct a price or extra</h2>
       <p className="small" style={{ marginTop: 0 }}>
-        The owner decides each disputed line. Accepting pays it as billed, within your limit. Paying the agreed part drafts a
-        notice to the supplier; nothing is paid until it&apos;s sent, and the rest stays open.
+        Only Dana can accept the extra or dispute it. Buyer sends the correction letter above.
+        A quantity over the purchase order is not decided here. That needs a corrected invoice.
       </p>
+      {persona !== 'owner' && (
+        <p className="small">You are not Dana. Switch I am to Dana, Owner to accept or dispute a line.</p>
+      )}
       {disputed.map(l => {
         const id = String(l.line_id);
         const d = decisions.find(x => x.invoice_line_id === id);
@@ -302,9 +514,9 @@ function DisputedLines({ inv, a, t }: { inv: Row; a?: Row; t: Tables }) {
             {d ? (
               <p className="small" style={{ marginBottom: 0 }}>
                 Paying the agreed part; {money(amount)} stays open. Notice to the supplier:{' '}
-                {notice ? (notice.status === 'sent' ? 'sent (simulated)' : notice.status === 'draft' ? 'draft — send it below' : notice.status) : 'none'}.
+                {notice ? (notice.status === 'sent' ? 'sent (simulated)' : notice.status === 'draft' ? 'draft: send it below' : notice.status) : 'none'}.
               </p>
-            ) : (
+            ) : persona === 'owner' ? (
               <form className="stack" style={{ marginTop: 10 }} onSubmit={e => e.preventDefault()}>
                 <input type="text" placeholder="Why (required, stays internal)" value={note[id] ?? ''} style={{ width: '100%' }}
                   aria-label={`Note for ${String(l.description ?? id)}`} onChange={e => setNote({ ...note, [id]: e.target.value })} />
@@ -318,6 +530,8 @@ function DisputedLines({ inv, a, t }: { inv: Row; a?: Row; t: Tables }) {
                   <button className="btn" type="button" disabled={!(note[id] ?? '').trim()} onClick={() => decide(l, 'pay_agreed_dispute_rest')}>Pay agreed, dispute the rest</button>
                 </div>
               </form>
+            ) : (
+              <p className="small muted" style={{ marginBottom: 0 }}>Dana decides this line. Buyer’s job is the letter at the top.</p>
             )}
           </div>
         );
@@ -331,32 +545,22 @@ function DisputedLines({ inv, a, t }: { inv: Row; a?: Row; t: Tables }) {
   );
 }
 
-/** A cited explanation of one line, from its own source documents (Claude, or a labelled fixture). Read-only. */
-function Why({ invoiceId, lineId, t }: { invoiceId: string; lineId: string; t: Tables }) {
-  const [state, setState] = useState<{ loading?: boolean; data?: Row; error?: string } | null>(null);
-  if (!lineId) return null;
-  const load = async () => {
-    setState({ loading: true });
-    try {
-      const r = await fetch(`/api/why/${encodeURIComponent(invoiceId)}?line=${encodeURIComponent(lineId)}`);
-      const d = await r.json();
-      setState(r.ok && d.status !== 'unavailable' ? { data: d } : { error: d.reason || d.message || d.detail || 'No explanation available.' });
-    } catch {
-      setState({ error: 'No explanation available.' });
-    }
-  };
-  if (!state) return <button className="btn secondary" type="button" style={{ marginTop: 8 }} onClick={load}>Why?</button>;
-  if (state.loading) return <div className="small muted" style={{ marginTop: 8 }}>Reading the sources…</div>;
-  if (state.error) return <div className="small muted" style={{ marginTop: 8 }}>{state.error}</div>;
-  const d = state.data!;
+function WhyFold({ line, t }: { line: AssessmentLine; t: Tables }) {
+  const copy = lineWhy(line);
+  if (!copy && !line.fragment_ids.length) return null;
   return (
-    <div className="calc" style={{ marginTop: 8 }}>
-      {(d.segments as Row[]).map((seg, i) => (
-        <span key={i}>{seg.text}{(seg.citations as Row[]).length > 0 && (
-          <Evidence ids={[...new Set((seg.citations as Row[]).flatMap(c => c.fragment_ids as string[]))]} t={t} />)}</span>
-      ))}
-      <div className="small muted">{d.mode === 'fixture' ? 'Fixture explanation (no model call)' : `Explained by Claude (${d.model})`} · {d.note}</div>
-    </div>
+    <details className="why-fold">
+      <summary>Why</summary>
+      <div className="why-open">
+        {copy && <p>{copy}</p>}
+        {line.fragment_ids.length > 0 && (
+          <div className="why-papers">
+            <div className="why-kicker">On the papers</div>
+            <Evidence ids={line.fragment_ids} t={t} />
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 

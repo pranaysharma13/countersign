@@ -12,7 +12,8 @@ test('BayMix demo clicks through to $73,700 settled with AP at $0', () => {
   expect(openHolds()).toEqual(['PRICE_VARIANCE', 'PROPOSED_CHARGE', 'RECEIPT_NOT_VERIFIED']);
   expect(s().outbox[0].status).toBe('draft');
   expect(s().invoice.map((i: any) => i.id).sort()).toEqual(
-    ['inv_bm23104', 'inv_cb8802', 'inv_hp220', 'inv_nl441', 'inv_pf77', 'inv_rh55', 'inv_vs310']);
+    ['inv_be1209', 'inv_bm23104', 'inv_cb8802', 'inv_dp418', 'inv_hp220', 'inv_nl441', 'inv_pf77', 'inv_rd612',
+     'inv_rh55', 'inv_vs310']);
 
   // Purchasing sends the clarification → simulated supplier sends a corrected invoice.
   expect(b.call('purchasing', 'approve_outbox', ['ob_bm23104_r1_clarify']).outcome).toBe('ok');

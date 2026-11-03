@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mode } from '@/lib/server/backend';
-import { coreBase } from '@/lib/server/core';
+import { coreBase, coreUnavailable } from '@/lib/server/core';
 import { GmailError, MESSAGE_ID, clearTokens, fetchRaw, liveTokens } from '@/lib/server/gmail';
 import { currentPersona } from '@/lib/server/session';
 
@@ -18,9 +18,12 @@ export async function POST(req: NextRequest) {
   if (!(await currentPersona()).unlocked) return NextResponse.json({ message: 'Enter the demo PIN first.' }, { status: 403 });
   if (mode() !== 'live') {
     return NextResponse.json({
-      message: 'Import needs live mode: SpacetimeDB, the Python API and worker, and DATA_SOURCE=live in web/.env.local. ' +
+      message: 'Import needs live mode: SpacetimeDB, the Python API and worker, and DATA_SOURCE=live. ' +
         'The offline demo only has the seeded documents.',
     }, { status: 409 });
+  }
+  if (!coreBase()) {
+    return NextResponse.json({ message: coreUnavailable('Gmail import') }, { status: 502 });
   }
   let raw: { raw: string; receivedAtIso: string };
   try {
@@ -43,9 +46,7 @@ export async function POST(req: NextRequest) {
       cache: 'no-store',
     });
   } catch {
-    return NextResponse.json({
-      message: "The Clerk API isn't running. Start it: uv run --project core uvicorn countersign.api:app --port 8000",
-    }, { status: 502 });
+    return NextResponse.json({ message: coreUnavailable('Gmail import') }, { status: 502 });
   }
   const body = await r.json().catch(() => ({})) as { detail?: unknown };
   if (!r.ok) {
